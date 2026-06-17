@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import OrderTable from "../components/OrderTable.jsx";
 import { MOCK_COMPANY_ID, getCompanyOrders } from "../services/companyService.js";
+import { getOrdersByCompanyFromSupabase } from "../services/orderService.js";
 
 export default function CompanyOrdersPage({
   orders,
@@ -9,7 +11,36 @@ export default function CompanyOrdersPage({
   onRejectOrder,
   onAssignDriver,
 }) {
-  const companyOrders = getCompanyOrders(MOCK_COMPANY_ID, orders);
+  const [companyOrders, setCompanyOrders] = useState(() => getCompanyOrders(MOCK_COMPANY_ID, orders));
+  const [dataMode, setDataMode] = useState("mock");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOrders() {
+      try {
+        const supabaseOrders = await getOrdersByCompanyFromSupabase(MOCK_COMPANY_ID);
+        if (!cancelled && supabaseOrders.length > 0) {
+          setCompanyOrders(supabaseOrders);
+          setDataMode("supabase");
+        } else if (!cancelled) {
+          setCompanyOrders(getCompanyOrders(MOCK_COMPANY_ID, orders));
+          setDataMode("mock");
+        }
+      } catch {
+        if (!cancelled) {
+          setCompanyOrders(getCompanyOrders(MOCK_COMPANY_ID, orders));
+          setDataMode("mock");
+        }
+      }
+    }
+
+    loadOrders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orders]);
 
   return (
     <div className="page">
@@ -18,6 +49,9 @@ export default function CompanyOrdersPage({
           <p className="eyebrow">الشركة</p>
           <h1>كل الطلبات</h1>
         </div>
+        <span className="checkpoint">
+          {dataMode === "supabase" ? "متصل بقاعدة البيانات" : "وضع تجريبي"}
+        </span>
       </header>
 
       <section className="panel">
