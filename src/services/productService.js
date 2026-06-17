@@ -1,4 +1,29 @@
 import { mockProducts } from "../data/mockData.js";
+import { supabase } from "../lib/supabaseClient.js";
+
+const SUPABASE_COMPANY_ID_BY_MOCK_ID = {
+  "company-1": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+};
+
+function normalizeSupabaseProduct(product) {
+  return {
+    id: product.id,
+    companyId: product.company_id,
+    nameAr: product.name_ar,
+    nameEn: product.name_en,
+    category: product.category,
+    waterType: product.water_type,
+    sizeLabel: product.size_label,
+    volumeLiters: product.volume_liters,
+    price: Number(product.price) || 0,
+    imageUrl: product.image_url,
+    imagePath: product.image_path,
+    isAvailable: product.is_available,
+    deliveryEstimate: product.delivery_estimate,
+    description: product.description,
+    sortOrder: product.sort_order ?? 0,
+  };
+}
 
 export function getProductsByCompany(companyId, products = mockProducts) {
   if (!companyId) return products;
@@ -9,6 +34,43 @@ export function getProductsByCompany(companyId, products = mockProducts) {
 
 export function getAvailableProductsByCompany(companyId, products = mockProducts) {
   return getProductsByCompany(companyId, products).filter((product) => product.isAvailable);
+}
+
+export async function getProductsByCompanyFromSupabase(companyId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      [
+        "id",
+        "company_id",
+        "name_ar",
+        "name_en",
+        "category",
+        "water_type",
+        "size_label",
+        "volume_liters",
+        "price",
+        "image_url",
+        "image_path",
+        "is_available",
+        "delivery_estimate",
+        "description",
+        "sort_order",
+      ].join(",")
+    )
+    .eq("company_id", supabaseCompanyId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(normalizeSupabaseProduct);
 }
 
 export function getProductCatalogForCustomer(companyId, products = mockProducts) {

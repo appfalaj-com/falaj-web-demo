@@ -1,6 +1,11 @@
+import { useEffect, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
 import { MOCK_COMPANY_ID } from "../services/companyService.js";
-import { getProductMetrics, getProductsByCompany } from "../services/productService.js";
+import {
+  getProductMetrics,
+  getProductsByCompany,
+  getProductsByCompanyFromSupabase,
+} from "../services/productService.js";
 
 function formatPrice(value) {
   return `${Number(value || 0).toFixed(3)} ر.ع`;
@@ -20,8 +25,34 @@ function categoryLabel(category) {
 }
 
 export default function CompanyProductsPage() {
-  const products = getProductsByCompany(MOCK_COMPANY_ID);
-  const metrics = getProductMetrics(MOCK_COMPANY_ID);
+  const [products, setProducts] = useState(() => getProductsByCompany(MOCK_COMPANY_ID));
+  const [dataMode, setDataMode] = useState("mock");
+  const metrics = getProductMetrics(null, products);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        const supabaseProducts = await getProductsByCompanyFromSupabase(MOCK_COMPANY_ID);
+        if (!cancelled && supabaseProducts.length > 0) {
+          setProducts(supabaseProducts);
+          setDataMode("supabase");
+        }
+      } catch {
+        if (!cancelled) {
+          setProducts(getProductsByCompany(MOCK_COMPANY_ID));
+          setDataMode("mock");
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="page">
@@ -30,7 +61,9 @@ export default function CompanyProductsPage() {
           <p className="eyebrow">الشركة</p>
           <h1>المنتجات والأسعار</h1>
         </div>
-        <button type="button">إضافة منتج mock</button>
+        <span className="checkpoint">
+          {dataMode === "supabase" ? "متصل بقاعدة البيانات" : "وضع تجريبي"}
+        </span>
       </header>
 
       <section className="metrics-grid">
