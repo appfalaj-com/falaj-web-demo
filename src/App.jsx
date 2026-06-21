@@ -201,7 +201,7 @@ export default function App() {
     if (authState.status === "loading") {
       return (
         <main className="login-page" dir="rtl">
-          <section className="login-panel">
+          <section className="login-panel falaj-auth-card">
             <p className="eyebrow">فلج</p>
             <h1>جاري التحقق من صلاحية الدخول...</h1>
           </section>
@@ -234,7 +234,7 @@ export default function App() {
     if (authState.status === "loading") {
       return (
         <main className="login-page" dir="rtl">
-          <section className="login-panel">
+          <section className="login-panel falaj-auth-card">
             <p className="eyebrow">فلج</p>
             <h1>جاري التحقق من صلاحية الإدارة...</h1>
           </section>

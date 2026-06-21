@@ -26,8 +26,8 @@ export default function Layout({
   const links = role === "admin" ? adminLinks : role === "company" ? companyLinks : driverLinks;
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className="app-shell falaj-shell">
+      <aside className="sidebar falaj-sidebar">
         <a
           className="brand"
           href="/"
@@ -48,7 +48,7 @@ export default function Layout({
           {links.map((link) => (
             <a
               key={link.href}
-              className={currentPath === link.href ? "nav-link active" : "nav-link"}
+              className={currentPath === link.href ? "nav-link falaj-nav-link active" : "nav-link falaj-nav-link"}
               href={link.href}
               onClick={(event) => {
                 event.preventDefault();
@@ -67,7 +67,7 @@ export default function Layout({
         ) : null}
       </aside>
 
-      <main className="main-content">{children}</main>
+      <main className="main-content falaj-main">{children}</main>
     </div>
   );
 }

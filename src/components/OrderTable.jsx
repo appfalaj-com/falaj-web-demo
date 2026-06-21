@@ -12,7 +12,7 @@ export default function OrderTable({
   return (
     <>
       <div className="table-wrap">
-        <table>
+        <table className="falaj-table">
           <thead>
             <tr>
               <th>رقم الطلب</th>
@@ -44,7 +44,7 @@ export default function OrderTable({
                 <td>{getDriverName(order.driverId, drivers)}</td>
                 <td>{order.amount.toFixed(3)} ر.ع</td>
                 <td>
-                  <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
+                  <span className={`status falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
                 </td>
                 <td>
                   <PaymentBadge order={order} />
@@ -79,7 +79,7 @@ export default function OrderTable({
             <div className="order-mobile-head">
               <strong className="mono">{order.id}</strong>
               <span className="badge-pair">
-                <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
+                <span className={`status falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
                 <PaymentBadge order={order} />
               </span>
             </div>
@@ -134,7 +134,7 @@ function OrderActions({ orderId, onAcceptOrder, onRejectOrder, onAssignDriver })
 
 function PaymentBadge({ order }) {
   return (
-    <span className={`payment-badge ${order.paymentStatus}`}>
+    <span className={`payment-badge falaj-badge ${order.paymentStatus}`}>
       {paymentMethodLabel(order.paymentMethod)} - {paymentStatusLabel(order.paymentStatus)}
     </span>
   );
