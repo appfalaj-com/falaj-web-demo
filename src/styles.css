@@ -1581,6 +1581,8 @@ tbody tr:hover td {
     align-items: flex-start;
     display: grid;
     grid-template-columns: 1fr;
+    position: static;
+    top: auto;
   }
 
   .landing-hero {
