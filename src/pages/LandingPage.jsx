@@ -203,6 +203,40 @@ export default function LandingPage({ onNavigate }) {
         </button>
       </section>
 
+      <section className="landing-section supplier-join-section">
+        <div>
+          <p className="landing-eyebrow">انضم إلى شبكة فلج</p>
+          <h2>انضم كمورد مياه في فلج</h2>
+          <p>
+            افتح قناة بيع رقمية جديدة لشركتك، واستقبل طلبات المياه من العملاء القريبين منك عبر منصة واحدة.
+          </p>
+        </div>
+
+        <div className="supplier-benefits-grid">
+          <article>
+            <span>01</span>
+            <strong>استقبال طلبات أكثر</strong>
+          </article>
+          <article>
+            <span>02</span>
+            <strong>إدارة التوصيل بسهولة</strong>
+          </article>
+          <article>
+            <span>03</span>
+            <strong>الظهور للعملاء في منطقتك</strong>
+          </article>
+        </div>
+
+        <div className="supplier-join-actions">
+          <a className="falaj-button" href="https://wa.me/968XXXXXXXX" target="_blank" rel="noreferrer">
+            تواصل معنا للانضمام
+          </a>
+          <a className="falaj-button ghost-link" href="mailto:info@appfalaj.com">
+            info@appfalaj.com
+          </a>
+        </div>
+      </section>
+
       <section className="landing-section split-section">
         <article className="admin-card">
           <p className="landing-eyebrow">للإدارة</p>

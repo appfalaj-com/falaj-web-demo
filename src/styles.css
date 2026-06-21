@@ -794,6 +794,75 @@ button:disabled {
   z-index: 1;
 }
 
+.supplier-join-section {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(144, 209, 202, 0.24), transparent 18rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 251, 222, 0.82));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  gap: 22px;
+  padding: 30px;
+}
+
+.supplier-join-section h2,
+.supplier-join-section p {
+  margin: 0;
+}
+
+.supplier-join-section h2 {
+  color: var(--dark);
+  font-size: 32px;
+  line-height: 1.35;
+}
+
+.supplier-join-section p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.8;
+  margin-top: 10px;
+  max-width: 760px;
+}
+
+.supplier-benefits-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.supplier-benefits-grid article {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(9, 107, 104, 0.08);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.supplier-benefits-grid span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.supplier-benefits-grid strong {
+  color: var(--dark);
+  font-size: 18px;
+}
+
+.supplier-join-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.supplier-join-actions .ghost-link {
+  background: rgba(18, 153, 144, 0.1);
+  box-shadow: none;
+  color: var(--dark);
+}
+
 .split-section {
   grid-template-columns: 0.9fr 1.1fr;
 }
@@ -1596,6 +1665,7 @@ tbody tr:hover td {
 
   .steps-grid,
   .services-grid,
+  .supplier-benefits-grid,
   .split-section {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1735,9 +1805,23 @@ tbody tr:hover td {
 
   .steps-grid,
   .services-grid,
+  .supplier-benefits-grid,
   .split-section,
   .soon-grid {
     grid-template-columns: 1fr;
+  }
+
+  .supplier-join-section {
+    padding: 20px;
+  }
+
+  .supplier-join-section h2 {
+    font-size: 25px;
+  }
+
+  .supplier-join-actions,
+  .supplier-join-actions .falaj-button {
+    width: 100%;
   }
 
   .landing-section h2 {
