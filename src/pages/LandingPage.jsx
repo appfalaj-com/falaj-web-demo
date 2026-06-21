@@ -228,11 +228,8 @@ export default function LandingPage({ onNavigate }) {
         </div>
 
         <div className="supplier-join-actions">
-          <a className="falaj-button" href="https://wa.me/968XXXXXXXX" target="_blank" rel="noreferrer">
-            تواصل معنا للانضمام
-          </a>
-          <a className="falaj-button ghost-link" href="mailto:info@appfalaj.com">
-            info@appfalaj.com
+          <a className="falaj-button" href="mailto:info@appfalaj.com">
+            راسلنا للانضمام
           </a>
         </div>
       </section>
