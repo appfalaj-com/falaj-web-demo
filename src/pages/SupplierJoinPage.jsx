@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../lib/supabaseClient.js";
 
 const initialForm = {
   companyName: "",
@@ -12,28 +13,61 @@ const initialForm = {
 
 export default function SupplierJoinPage({ onNavigate }) {
   const [form, setForm] = useState(initialForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    const subject = "طلب انضمام مورد مياه - فلج";
-    const body = [
-      "طلب انضمام مورد مياه في فلج",
-      "",
-      `اسم الشركة: ${form.companyName}`,
-      `اسم المسؤول: ${form.managerName}`,
-      `رقم الهاتف: ${form.phone}`,
-      `البريد الإلكتروني: ${form.email}`,
-      `الولاية / المنطقة: ${form.area}`,
-      `نوع الخدمة: ${form.serviceType}`,
-      `ملاحظات إضافية: ${form.notes || "لا يوجد"}`,
-    ].join("\n");
+    if (!supabase) {
+      setStatusMessage("");
+      setErrorMessage("تعذر الاتصال بقاعدة البيانات حاليًا. يرجى المحاولة لاحقًا.");
+      return;
+    }
 
-    window.location.href = `mailto:info@appfalaj.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setIsSubmitting(true);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      const requestId = crypto.randomUUID();
+      const { error } = await supabase
+        .from("supplier_join_requests")
+        .insert({
+          id: requestId,
+          company_name: form.companyName,
+          contact_name: form.managerName,
+          phone: form.phone,
+          email: form.email,
+          area: form.area,
+          service_type: form.serviceType,
+          notes: form.notes || null,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const { error: notifyError } = await supabase.functions.invoke("notify-supplier-join-request", {
+        body: { request_id: requestId },
+      });
+
+      if (notifyError) {
+        console.warn("Supplier join notification failed:", notifyError.message);
+      }
+
+      setForm(initialForm);
+      setStatusMessage("تم إرسال طلب الانضمام بنجاح. سيقوم فريق فلج بمراجعة البيانات والتواصل معكم.");
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر إرسال طلب الانضمام حاليًا. يرجى المحاولة لاحقًا.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -51,6 +85,9 @@ export default function SupplierJoinPage({ onNavigate }) {
 
       <section className="supplier-join-form-card">
         <form className="supplier-join-form" onSubmit={handleSubmit}>
+          {statusMessage ? <p className="auth-alert success supplier-join-message">{statusMessage}</p> : null}
+          {errorMessage ? <p className="auth-alert error supplier-join-message">{errorMessage}</p> : null}
+
           <label>
             اسم الشركة
             <input
@@ -123,8 +160,8 @@ export default function SupplierJoinPage({ onNavigate }) {
             />
           </label>
 
-          <button type="submit" className="supplier-join-submit">
-            إرسال طلب الانضمام
+          <button type="submit" className="supplier-join-submit" disabled={isSubmitting}>
+            {isSubmitting ? "جاري إرسال الطلب..." : "إرسال طلب الانضمام"}
           </button>
         </form>
       </section>

@@ -65,6 +65,9 @@ export default function AdminPage({ orders, onNavigate }) {
           <button type="button" onClick={() => onNavigate?.("/admin/suppliers")}>
             إدارة الموردين
           </button>
+          <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
+            طلبات انضمام الموردين
+          </button>
           <button type="button" onClick={() => onNavigate?.("/admin/finance")}>
             المالية والتسويات
           </button>

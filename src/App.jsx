@@ -8,6 +8,7 @@ import AdminLiveTrackingPage from "./pages/AdminLiveTrackingPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import AdminSupplierAccountPage from "./pages/AdminSupplierAccountPage.jsx";
+import AdminSupplierRequestsPage from "./pages/AdminSupplierRequestsPage.jsx";
 import AdminSuppliersPage from "./pages/AdminSuppliersPage.jsx";
 import CompanyDashboard from "./pages/CompanyDashboard.jsx";
 import CompanyDriversLivePage from "./pages/CompanyDriversLivePage.jsx";
@@ -171,6 +172,7 @@ export default function App() {
     "/company/drivers/live": <CompanyDriversLivePage {...workflow} />,
     "/admin": <AdminPage orders={orders} drivers={drivers} onNavigate={navigate} />,
     "/admin/suppliers": <AdminSuppliersPage onNavigate={navigate} />,
+    "/admin/supplier-requests": <AdminSupplierRequestsPage />,
     "/admin/finance": <AdminFinancePage orders={orders} onNavigate={navigate} />,
     "/admin/live-tracking": <AdminLiveTrackingPage orders={orders} drivers={drivers} />,
   };

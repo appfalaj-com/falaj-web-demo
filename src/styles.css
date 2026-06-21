@@ -1005,6 +1005,7 @@ button:disabled {
 }
 
 .supplier-join-notes,
+.supplier-join-message,
 .supplier-join-submit {
   grid-column: 1 / -1;
 }
@@ -1228,6 +1229,11 @@ tbody tr:hover td {
 
 .status.pending {
   background: rgba(18, 153, 144, 0.12);
+  color: var(--dark);
+}
+
+.status.new {
+  background: rgba(144, 209, 202, 0.24);
   color: var(--dark);
 }
 
