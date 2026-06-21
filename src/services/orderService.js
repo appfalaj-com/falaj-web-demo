@@ -12,7 +12,7 @@ const SUPABASE_DRIVER_ID_BY_MOCK_ID = {
 function normalizeSupabaseOrder(order) {
   return {
     id: order.public_code,
-    companyId: "company-1",
+    companyId: order.company_id,
     customer: order.customer_name_snapshot,
     phone: order.customer_phone_snapshot,
     area: order.delivery_area,

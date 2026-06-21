@@ -1,31 +1,77 @@
+import { useEffect, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
-import { getAdminMetrics } from "../services/adminService.js";
+import {
+  getFinancialRows,
+  getSuppliers,
+  summarizeFinance,
+} from "../services/adminFinanceService.js";
+import { getAdminDashboardMetrics } from "../services/adminService.js";
 
-export default function AdminPage({ orders, drivers }) {
-  const { totalOrders, paidOrders, unpaidOrders, uncollectedCash } = getAdminMetrics(orders);
+export default function AdminPage({ orders, onNavigate }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [financialRows, setFinancialRows] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAdminData() {
+      try {
+        const nextSuppliers = await getSuppliers();
+        const nextFinancialRows = await getFinancialRows(orders, nextSuppliers);
+        if (!cancelled) {
+          setSuppliers(nextSuppliers);
+          setFinancialRows(nextFinancialRows);
+        }
+      } catch {
+        if (!cancelled) {
+          setSuppliers([]);
+          setFinancialRows([]);
+        }
+      }
+    }
+
+    loadAdminData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orders]);
+
+  const finance = summarizeFinance(financialRows);
+  const metrics = getAdminDashboardMetrics(orders, suppliers, finance);
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
           <p className="eyebrow">الإدارة</p>
-          <h1>نظرة عامة على المنصة</h1>
+          <h1>لوحة تحكم فلج</h1>
         </div>
       </header>
 
-      <section className="metrics-grid">
-        <MetricCard label="إجمالي الطلبات" value={totalOrders} tone="primary" />
-        <MetricCard label="المدفوع" value={paidOrders} />
-        <MetricCard label="غير المدفوع" value={unpaidOrders} />
-        <MetricCard label="الكاش غير المحصل" value={`${uncollectedCash.toFixed(3)} ر.ع`} tone="cash" />
+      <section className="metrics-grid admin-metrics-grid">
+        <MetricCard label="موردون قيد المراجعة" value={metrics.pendingSuppliers} tone="cash" />
+        <MetricCard label="موردون معتمدون" value={metrics.approvedSuppliers} tone="primary" />
+        <MetricCard label="طلبات اليوم" value={metrics.todayOrders} />
+        <MetricCard label="مبيعات اليوم" value={metrics.todaySales} />
+        <MetricCard label="عمولة فلج اليوم" value={metrics.todayCommission} />
+        <MetricCard label="طلبات قيد التوصيل" value={metrics.activeDeliveries} />
+        <MetricCard label="طلبات متأخرة" value={metrics.lateOrders} />
       </section>
 
-      <section className="panel overview">
-        <h2>حالة المرحلة</h2>
-        <p>
-          هذه واجهة mock فقط للشركة والسائق والإدارة. لا يوجد اتصال بقاعدة بيانات أو
-          Supabase في هذه المرحلة.
-        </p>
+      <section className="panel overview admin-actions-panel">
+        <h2>مراكز الإدارة</h2>
+        <div className="admin-action-grid">
+          <button type="button" onClick={() => onNavigate?.("/admin/suppliers")}>
+            إدارة الموردين
+          </button>
+          <button type="button" onClick={() => onNavigate?.("/admin/finance")}>
+            المالية والتسويات
+          </button>
+          <button type="button" onClick={() => onNavigate?.("/admin/live-tracking")}>
+            التتبع العام
+          </button>
+        </div>
       </section>
     </div>
   );

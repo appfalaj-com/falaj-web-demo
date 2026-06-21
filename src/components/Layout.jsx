@@ -1,29 +1,46 @@
-const links = [
+const companyLinks = [
   { href: "/company", label: "لوحة الشركة" },
   { href: "/company/orders", label: "طلبات الشركة" },
   { href: "/company/products", label: "المنتجات والأسعار" },
   { href: "/company/drivers", label: "السائقون" },
-  { href: "/driver", label: "واجهة السائق" },
-  { href: "/admin", label: "الإدارة" },
+  { href: "/company/drivers/live", label: "متابعة السائقين" },
 ];
 
-export default function Layout({ children, currentPath = "/company", onNavigate }) {
+const adminLinks = [
+  { href: "/admin", label: "الإدارة" },
+  { href: "/admin/suppliers", label: "الموردون" },
+  { href: "/admin/finance", label: "المالية" },
+  { href: "/admin/live-tracking", label: "التتبع العام" },
+];
+
+const driverLinks = [{ href: "/driver", label: "دخول السائق" }];
+
+export default function Layout({
+  children,
+  companyName,
+  currentPath = "/company",
+  role,
+  onNavigate,
+  onSignOut,
+}) {
+  const links = role === "admin" ? adminLinks : role === "company" ? companyLinks : driverLinks;
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <a
           className="brand"
-          href="/company"
+          href="/"
           aria-label="Falaj"
           onClick={(event) => {
             event.preventDefault();
-            onNavigate?.("/company");
+            onNavigate?.("/");
           }}
         >
           <span className="brand-mark">ف</span>
           <span>
             <strong>فلج</strong>
-            <small>منصة التشغيل</small>
+            <small>{role === "admin" ? "لوحة الإدارة" : companyName || "منصة التشغيل"}</small>
           </span>
         </a>
 
@@ -42,6 +59,12 @@ export default function Layout({ children, currentPath = "/company", onNavigate 
             </a>
           ))}
         </nav>
+
+        {onSignOut ? (
+          <button type="button" className="sidebar-signout" onClick={onSignOut}>
+            تسجيل الخروج
+          </button>
+        ) : null}
       </aside>
 
       <main className="main-content">{children}</main>

@@ -24,8 +24,8 @@ function categoryLabel(category) {
   return labels[category] ?? category;
 }
 
-export default function CompanyProductsPage() {
-  const [products, setProducts] = useState(() => getProductsByCompany(MOCK_COMPANY_ID));
+export default function CompanyProductsPage({ companyId = MOCK_COMPANY_ID }) {
+  const [products, setProducts] = useState(() => getProductsByCompany(companyId));
   const [dataMode, setDataMode] = useState("mock");
   const metrics = getProductMetrics(null, products);
 
@@ -34,14 +34,14 @@ export default function CompanyProductsPage() {
 
     async function loadProducts() {
       try {
-        const supabaseProducts = await getProductsByCompanyFromSupabase(MOCK_COMPANY_ID);
+        const supabaseProducts = await getProductsByCompanyFromSupabase(companyId);
         if (!cancelled && supabaseProducts.length > 0) {
           setProducts(supabaseProducts);
           setDataMode("supabase");
         }
       } catch {
         if (!cancelled) {
-          setProducts(getProductsByCompany(MOCK_COMPANY_ID));
+          setProducts(getProductsByCompany(companyId));
           setDataMode("mock");
         }
       }
@@ -52,7 +52,7 @@ export default function CompanyProductsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [companyId]);
 
   return (
     <div className="page">

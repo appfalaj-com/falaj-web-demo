@@ -6,12 +6,13 @@ import { getOrdersByCompanyFromSupabase } from "../services/orderService.js";
 export default function CompanyOrdersPage({
   orders,
   drivers,
+  companyId = MOCK_COMPANY_ID,
   onSelectOrder,
   onAcceptOrder,
   onRejectOrder,
   onAssignDriver,
 }) {
-  const [companyOrders, setCompanyOrders] = useState(() => getCompanyOrders(MOCK_COMPANY_ID, orders));
+  const [companyOrders, setCompanyOrders] = useState(() => getCompanyOrders(companyId, orders));
   const [dataMode, setDataMode] = useState("mock");
 
   useEffect(() => {
@@ -19,17 +20,17 @@ export default function CompanyOrdersPage({
 
     async function loadOrders() {
       try {
-        const supabaseOrders = await getOrdersByCompanyFromSupabase(MOCK_COMPANY_ID);
+        const supabaseOrders = await getOrdersByCompanyFromSupabase(companyId);
         if (!cancelled && supabaseOrders.length > 0) {
           setCompanyOrders(supabaseOrders);
           setDataMode("supabase");
         } else if (!cancelled) {
-          setCompanyOrders(getCompanyOrders(MOCK_COMPANY_ID, orders));
+          setCompanyOrders(getCompanyOrders(companyId, orders));
           setDataMode("mock");
         }
       } catch {
         if (!cancelled) {
-          setCompanyOrders(getCompanyOrders(MOCK_COMPANY_ID, orders));
+          setCompanyOrders(getCompanyOrders(companyId, orders));
           setDataMode("mock");
         }
       }
@@ -40,7 +41,7 @@ export default function CompanyOrdersPage({
     return () => {
       cancelled = true;
     };
-  }, [orders]);
+  }, [companyId, orders]);
 
   return (
     <div className="page">

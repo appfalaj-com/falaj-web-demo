@@ -1,9 +1,8 @@
 import { MOCK_DRIVER_ID, getDriverWorkflow } from "../services/driverService.js";
 
 const DRIVER_ID = MOCK_DRIVER_ID;
-const ACTIVE_STATUSES = ["assigned", "en_route", "arrived"];
 const DONE_STATUSES = ["delivered", "failed"];
-const TIMELINE = ["assigned", "en_route", "arrived", "delivered"];
+const TIMELINE = ["accepted", "assigned", "en_route", "arrived", "delivered"];
 
 export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid }) {
   const { driver, currentOrder, nextOrders, completedOrders } = getDriverWorkflow(
@@ -11,6 +10,7 @@ export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid })
     orders,
     drivers
   );
+  const todayOrders = [...(currentOrder ? [currentOrder] : []), ...nextOrders, ...completedOrders];
 
   return (
     <div className="page driver-page">
@@ -20,6 +20,17 @@ export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid })
           <h1>طلبات {driver?.name ?? "السائق"} اليوم</h1>
         </div>
       </header>
+
+      <section className="panel overview">
+        <h2>تتبع الموقع</h2>
+        <p>
+          لم يتم تشغيل GPS حقيقي في هذه المرحلة. يحتاج التتبع الفعلي إلى تطبيق سائق أو Web GPS مع تصريح
+          موقع واضح وحدود للخلفية.
+        </p>
+        <button type="button" className="ghost">
+          تجهيز طلب صلاحية الموقع لاحقًا
+        </button>
+      </section>
 
       <DriverSection title="الطلب الحالي">
         {currentOrder ? (
@@ -34,7 +45,7 @@ export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid })
         )}
       </DriverSection>
 
-      <DriverSection title="الطلبات التالية">
+      <DriverSection title="الطلبات المعينة">
         {nextOrders.length > 0 ? (
           nextOrders.map((order) => (
             <DriverOrderCard
@@ -45,22 +56,22 @@ export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid })
             />
           ))
         ) : (
-          <EmptyDriverCard text="لا توجد طلبات تالية." />
+          <EmptyDriverCard text="لا توجد طلبات معينة تالية." />
         )}
       </DriverSection>
 
-      <DriverSection title="الطلبات المكتملة">
-        {completedOrders.length > 0 ? (
-          completedOrders.map((order) => (
+      <DriverSection title="كل طلبات اليوم">
+        {todayOrders.length > 0 ? (
+          todayOrders.map((order) => (
             <DriverOrderCard
-              key={order.id}
+              key={`${order.id}-today`}
               order={order}
               onSetStatus={onSetStatus}
               onMarkPaid={onMarkPaid}
             />
           ))
         ) : (
-          <EmptyDriverCard text="لا توجد طلبات مكتملة بعد." />
+          <EmptyDriverCard text="لا توجد طلبات اليوم." />
         )}
       </DriverSection>
     </div>
@@ -77,6 +88,8 @@ function DriverSection({ title, children }) {
 }
 
 function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) {
+  const canAccept = order.status === "pending";
+  const canPickup = order.status === "accepted";
   const canStart = order.status === "assigned";
   const canArrive = order.status === "en_route";
   const canDeliver = order.status === "arrived";
@@ -94,7 +107,9 @@ function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) 
       </div>
 
       <h3>{order.customer}</h3>
-      <p>{order.area} - {order.address}</p>
+      <p>
+        {order.area} - {order.address}
+      </p>
 
       <DriverTimeline status={order.status} />
 
@@ -103,7 +118,7 @@ function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) 
         <strong>{order.volume}</strong>
       </div>
       <div className="order-detail-row">
-        <span>{order.paymentMethod}</span>
+        <span>حالة الدفع</span>
         <strong>{paymentStatusLabel(order.paymentStatus)}</strong>
       </div>
       <div className="order-detail-row">
@@ -116,6 +131,16 @@ function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) 
       </div>
 
       <div className="driver-actions">
+        {canAccept && (
+          <button type="button" onClick={() => onSetStatus(order.id, "accepted")}>
+            قبول الطلب
+          </button>
+        )}
+        {canPickup && (
+          <button type="button" onClick={() => onSetStatus(order.id, "assigned")}>
+            استلام الطلب
+          </button>
+        )}
         {canStart && (
           <button type="button" onClick={() => onSetStatus(order.id, "en_route")}>
             بدء التوصيل
@@ -123,7 +148,7 @@ function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) 
         )}
         {canArrive && (
           <button type="button" onClick={() => onSetStatus(order.id, "arrived")}>
-            وصلت
+            وصلت للموقع
           </button>
         )}
         {canDeliver && (
@@ -138,7 +163,7 @@ function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) 
         )}
         {canFail && (
           <button type="button" className="ghost danger-action" onClick={() => onSetStatus(order.id, "failed")}>
-            فشل التسليم
+            تعذر التسليم
           </button>
         )}
       </div>
@@ -176,7 +201,7 @@ function timelineIndex(status) {
 }
 
 function paymentStatusLabel(paymentStatus) {
-  return paymentStatus === "paid" ? "paid" : "unpaid";
+  return paymentStatus === "paid" ? "مدفوع" : "غير مدفوع";
 }
 
 function cashCollectedLabel(order) {
@@ -186,11 +211,13 @@ function cashCollectedLabel(order) {
 
 function statusLabel(status) {
   const labels = {
+    pending: "جديد",
+    accepted: "مقبول",
     assigned: "مسند",
     en_route: "في الطريق",
     arrived: "وصل",
     delivered: "تم التسليم",
-    failed: "فشل التسليم",
+    failed: "تعذر التسليم",
   };
 
   return labels[status] ?? status;

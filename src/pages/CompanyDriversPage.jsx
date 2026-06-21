@@ -1,7 +1,33 @@
-import { getDrivers } from "../services/driverService.js";
+import { useEffect, useState } from "react";
+import { getDriversByCompany, getDriversByCompanyFromSupabase } from "../services/driverService.js";
 
-export default function CompanyDriversPage({ drivers }) {
-  const companyDrivers = getDrivers(drivers);
+export default function CompanyDriversPage({ companyId, drivers }) {
+  const [companyDrivers, setCompanyDrivers] = useState(() => getDriversByCompany(companyId, drivers));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDrivers() {
+      try {
+        const supabaseDrivers = await getDriversByCompanyFromSupabase(companyId);
+        if (!cancelled && supabaseDrivers.length > 0) {
+          setCompanyDrivers(supabaseDrivers);
+        } else if (!cancelled) {
+          setCompanyDrivers(getDriversByCompany(companyId, drivers));
+        }
+      } catch {
+        if (!cancelled) {
+          setCompanyDrivers(getDriversByCompany(companyId, drivers));
+        }
+      }
+    }
+
+    loadDrivers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, drivers]);
 
   return (
     <div className="page">
