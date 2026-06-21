@@ -16,6 +16,11 @@ function requireSupabase() {
   return supabase;
 }
 
+function logAuthDebug(label, payload) {
+  if (!import.meta.env.DEV) return;
+  console.debug(`[Falaj auth] ${label}`, payload);
+}
+
 function isPhoneAuthError(error) {
   const message = `${error?.message ?? ""} ${error?.name ?? ""}`.toLowerCase();
   return (
@@ -26,42 +31,86 @@ function isPhoneAuthError(error) {
   );
 }
 
-export function getProfileRole(profile) {
-  return profile?.role ?? profile?.account_type ?? null;
+function userIdentity(userOrId, email) {
+  if (typeof userOrId === "string") {
+    return { id: userOrId, email };
+  }
+
+  return { id: userOrId?.id, email: userOrId?.email ?? email };
 }
 
-export async function getCurrentProfile(userId) {
+function profileLookupFilter(identity) {
+  return [
+    identity.id ? `id.eq.${identity.id}` : null,
+    identity.email ? `email.eq.${identity.email}` : null,
+  ]
+    .filter(Boolean)
+    .join(",");
+}
+
+export function getProfileRole(profile) {
+  return (profile?.role ?? profile?.account_type ?? "").toString().trim().toLowerCase() || null;
+}
+
+export async function getCurrentProfile(userOrId, email) {
   const client = requireSupabase();
+  const identity = userIdentity(userOrId, email);
+
+  if (!identity.id && !identity.email) {
+    logAuthDebug("profile lookup rejected", { reason: "missing user id and email" });
+    return null;
+  }
+
+  const lookupFilter = profileLookupFilter(identity);
   const withRole = await client
     .from("profiles")
     .select("id, full_name, phone, email, role, account_type")
-    .eq("id", userId)
-    .maybeSingle();
+    .or(lookupFilter)
+    .limit(1);
 
   if (!withRole.error) {
-    return withRole.data;
+    const profile = withRole.data?.[0] ?? null;
+    logAuthDebug("profile lookup", {
+      userId: identity.id,
+      userEmail: identity.email,
+      profile,
+      role: getProfileRole(profile),
+      foundBy: profile?.id === identity.id ? "id" : profile?.email === identity.email ? "email" : "none",
+    });
+    return profile;
   }
 
   const fallback = await client
     .from("profiles")
     .select("id, full_name, phone, email, account_type")
-    .eq("id", userId)
-    .maybeSingle();
+    .or(lookupFilter)
+    .limit(1);
 
   if (fallback.error) {
+    logAuthDebug("profile lookup failed", {
+      userId: identity.id,
+      userEmail: identity.email,
+      reason: fallback.error.message,
+    });
     throw fallback.error;
   }
 
-  return fallback.data;
+  const profile = fallback.data?.[0] ?? null;
+  logAuthDebug("profile lookup fallback", {
+    userId: identity.id,
+    userEmail: identity.email,
+    profile,
+    role: getProfileRole(profile),
+  });
+
+  return profile;
 }
 
 export async function getCompanyForUser(userId) {
   const client = requireSupabase();
   const withStatus = await client
     .from("companies")
-    .select(
-      "id, name, email, phone, is_active, status, commission_rate, owner_user_id, owner_id"
-    )
+    .select("id, name, email, phone, is_active, status, commission_rate, owner_user_id, owner_id")
     .eq("owner_user_id", userId)
     .maybeSingle();
 
@@ -97,9 +146,17 @@ export async function getAuthContext() {
     return { session: null, profile: null, role: null, company: null };
   }
 
-  const profile = await getCurrentProfile(user.id);
+  const profile = await getCurrentProfile(user);
   const role = getProfileRole(profile);
   const company = role === "company" ? await getCompanyForUser(user.id) : null;
+
+  logAuthDebug("auth context", {
+    userId: user.id,
+    userEmail: user.email,
+    role,
+    hasProfile: Boolean(profile),
+    hasCompany: Boolean(company),
+  });
 
   return { session, profile, role, company };
 }
@@ -111,8 +168,15 @@ export async function buildCompanySession(session) {
     return { session: null, profile: null, company: null };
   }
 
-  const profile = await getCurrentProfile(user.id);
-  if (getProfileRole(profile) !== "company") {
+  const profile = await getCurrentProfile(user);
+  const role = getProfileRole(profile);
+  if (role !== "company") {
+    logAuthDebug("company rejected", {
+      userId: user.id,
+      userEmail: user.email,
+      role,
+      reason: "profile role is not company",
+    });
     throw new Error(COMPANY_AUTH_ERRORS.NOT_COMPANY);
   }
 
@@ -154,11 +218,28 @@ export async function signInAdminWithEmail(email, password) {
     throw error;
   }
 
-  const profile = await getCurrentProfile(data.session.user.id);
-  if (getProfileRole(profile) !== "admin") {
+  const user = data.session.user;
+  const profile = await getCurrentProfile(user);
+  const role = getProfileRole(profile);
+
+  if (role !== "admin") {
+    logAuthDebug("admin rejected", {
+      userId: user.id,
+      userEmail: user.email,
+      profile,
+      role,
+      reason: profile ? "profile role/account_type is not admin" : "profile not readable or missing",
+    });
     await client.auth.signOut();
     throw new Error(COMPANY_AUTH_ERRORS.NOT_ADMIN);
   }
+
+  logAuthDebug("admin accepted", {
+    userId: user.id,
+    userEmail: user.email,
+    profile,
+    role,
+  });
 
   return { session: data.session, profile, role: "admin", company: null };
 }

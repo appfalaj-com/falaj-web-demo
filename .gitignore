@@ -3,4 +3,5 @@ dist
 .env
 .env.local
 .env.*.local
+.env.admin.local
 .DS_Store
