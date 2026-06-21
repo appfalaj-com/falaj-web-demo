@@ -18,6 +18,7 @@ import CompanyPendingReviewPage from "./pages/CompanyPendingReviewPage.jsx";
 import CompanyProductsPage from "./pages/CompanyProductsPage.jsx";
 import DriverLoginPendingPage from "./pages/DriverLoginPendingPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import SupplierJoinPage from "./pages/SupplierJoinPage.jsx";
 import { getAuthContext, signOutCompany } from "./services/companyAuthService.js";
 import { getDrivers } from "./services/driverService.js";
 import { getOrders } from "./services/orderService.js";
@@ -187,6 +188,10 @@ export default function App() {
 
   if (currentPath === "/") {
     return <LandingPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/supplier-join") {
+    return <SupplierJoinPage onNavigate={navigate} />;
   }
 
   if (currentPath === "/admin/login") {

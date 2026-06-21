@@ -333,6 +333,7 @@ button:disabled {
     radial-gradient(circle at 12% 8%, rgba(144, 209, 202, 0.44), transparent 28%),
     linear-gradient(180deg, #fffbde 0%, #f4fbfa 38%, #ffffff 100%);
   color: var(--text);
+  direction: ltr;
   display: grid;
   gap: 54px;
   min-height: 100vh;
@@ -911,6 +912,106 @@ button:disabled {
 
 .landing-footer strong {
   color: var(--dark);
+}
+
+.supplier-join-page {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(144, 209, 202, 0.36), transparent 28rem),
+    linear-gradient(180deg, var(--cream), #f4fbfa 42%, #ffffff);
+  color: var(--text);
+  display: grid;
+  gap: 22px;
+  min-height: 100vh;
+  overflow-x: clip;
+  padding: 24px;
+}
+
+.supplier-join-header,
+.supplier-join-form-card {
+  direction: rtl;
+  margin: 0 auto;
+  max-width: 920px;
+  min-width: 0;
+  width: 100%;
+}
+
+.supplier-join-header {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+}
+
+.supplier-join-header h1,
+.supplier-join-header p {
+  margin: 0;
+}
+
+.supplier-join-header h1 {
+  color: var(--dark);
+  font-size: 44px;
+  line-height: 1.25;
+}
+
+.supplier-join-header p:not(.landing-eyebrow) {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.8;
+  max-width: 720px;
+}
+
+.supplier-join-form-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.supplier-join-form {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.supplier-join-form label {
+  color: var(--dark);
+  display: grid;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.supplier-join-form input,
+.supplier-join-form select,
+.supplier-join-form textarea {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.supplier-join-form textarea {
+  resize: vertical;
+}
+
+.supplier-join-form input:focus,
+.supplier-join-form select:focus,
+.supplier-join-form textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(18, 153, 144, 0.16);
+  outline: none;
+}
+
+.supplier-join-notes,
+.supplier-join-submit {
+  grid-column: 1 / -1;
+}
+
+.supplier-join-submit {
+  justify-self: start;
+  min-width: 220px;
 }
 
 .page,
@@ -1822,6 +1923,34 @@ tbody tr:hover td {
   .supplier-join-actions,
   .supplier-join-actions .falaj-button {
     width: 100%;
+  }
+
+  .supplier-join-page {
+    padding: 16px;
+  }
+
+  .supplier-join-header,
+  .supplier-join-form-card {
+    justify-self: stretch;
+    margin-inline: 0;
+    max-width: 100%;
+  }
+
+  .supplier-join-header h1 {
+    font-size: 30px;
+  }
+
+  .supplier-join-form-card {
+    padding: 18px;
+  }
+
+  .supplier-join-form {
+    grid-template-columns: 1fr;
+  }
+
+  .supplier-join-submit {
+    justify-self: stretch;
+    min-width: 0;
   }
 
   .landing-section h2 {

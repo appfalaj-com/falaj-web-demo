@@ -228,9 +228,9 @@ export default function LandingPage({ onNavigate }) {
         </div>
 
         <div className="supplier-join-actions">
-          <a className="falaj-button" href="mailto:info@appfalaj.com">
+          <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
             راسلنا للانضمام
-          </a>
+          </button>
         </div>
       </section>
 
