@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 
 const STATUS_LABELS = {
-  new: "جديد",
+  new: "قيد المراجعة",
+  pending: "قيد المراجعة",
   approved: "مقبول",
   rejected: "مرفوض",
 };
@@ -119,40 +120,7 @@ export default function AdminSupplierRequestsPage() {
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr key={request.id}>
-                    <td>{request.company_name}</td>
-                    <td>{request.contact_name}</td>
-                    <td className="mono">{request.phone}</td>
-                    <td>{request.email}</td>
-                    <td>{request.area}</td>
-                    <td>{request.service_type}</td>
-                    <td>
-                      <span className={`status ${request.status}`}>
-                        {STATUS_LABELS[request.status] ?? request.status}
-                      </span>
-                    </td>
-                    <td>{formatDate(request.created_at)}</td>
-                    <td>{request.notes || "-"}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          onClick={() => reviewRequest(request.id, "approved")}
-                          disabled={request.status === "approved"}
-                        >
-                          قبول
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => reviewRequest(request.id, "rejected")}
-                          disabled={request.status === "rejected"}
-                        >
-                          رفض
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <SupplierRequestRow key={request.id} request={request} onReview={reviewRequest} />
                 ))}
               </tbody>
             </table>
@@ -161,6 +129,45 @@ export default function AdminSupplierRequestsPage() {
       </section>
     </div>
   );
+}
+
+function SupplierRequestRow({ request, onReview }) {
+  const status = normalizeStatus(request.status);
+
+  return (
+    <tr>
+      <td>{request.company_name}</td>
+      <td>{request.contact_name}</td>
+      <td className="mono">{request.phone}</td>
+      <td>{request.email}</td>
+      <td>{request.area}</td>
+      <td>{request.service_type}</td>
+      <td>
+        <span className={`status ${status}`}>{STATUS_LABELS[status] ?? status}</span>
+      </td>
+      <td>{formatDate(request.created_at)}</td>
+      <td>{request.notes || "-"}</td>
+      <td>
+        <div className="row-actions">
+          <button type="button" onClick={() => onReview(request.id, "approved")} disabled={status === "approved"}>
+            قبول
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => onReview(request.id, "rejected")}
+            disabled={status === "rejected"}
+          >
+            رفض
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function normalizeStatus(status) {
+  return status === "new" ? "pending" : status || "pending";
 }
 
 async function fetchSupplierRequests() {

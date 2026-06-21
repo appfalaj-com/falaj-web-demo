@@ -10,7 +10,7 @@ create table if not exists supplier_join_requests (
   area text not null,
   service_type text not null,
   notes text,
-  status text not null default 'new',
+  status text not null default 'pending',
   reviewed_at timestamptz,
   reviewed_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -20,6 +20,13 @@ create table if not exists supplier_join_requests (
 alter table supplier_join_requests
   add column if not exists reviewed_at timestamptz,
   add column if not exists reviewed_by uuid references auth.users(id) on delete set null;
+
+alter table supplier_join_requests
+  alter column status set default 'pending';
+
+update supplier_join_requests
+set status = 'pending'
+where status = 'new';
 
 drop trigger if exists set_supplier_join_requests_updated_at on supplier_join_requests;
 create trigger set_supplier_join_requests_updated_at

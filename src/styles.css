@@ -1232,7 +1232,8 @@ tbody tr:hover td {
   color: var(--dark);
 }
 
-.status.new {
+.status.new,
+.status.pending {
   background: rgba(144, 209, 202, 0.24);
   color: var(--dark);
 }
