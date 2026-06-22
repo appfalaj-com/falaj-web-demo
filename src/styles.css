@@ -1346,6 +1346,49 @@ tbody tr:hover td {
   gap: 16px;
 }
 
+.admin-supplier-requests-card {
+  align-items: center;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 251, 222, 0.28), transparent 18rem),
+    linear-gradient(135deg, var(--dark), var(--primary));
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  color: var(--white);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 22px;
+}
+
+.admin-supplier-requests-card .eyebrow,
+.admin-supplier-requests-card h2,
+.admin-supplier-requests-card p {
+  color: var(--white);
+  margin: 0;
+}
+
+.admin-supplier-requests-card p {
+  opacity: 0.82;
+  margin-top: 6px;
+}
+
+.admin-supplier-requests-count {
+  align-items: center;
+  background: var(--cream);
+  border-radius: 14px;
+  color: var(--dark);
+  display: grid;
+  font-size: 28px;
+  min-height: 58px;
+  min-width: 72px;
+  place-items: center;
+}
+
+.admin-supplier-requests-card button {
+  background: var(--cream);
+  color: var(--dark);
+}
+
 .supplier-detail-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -1983,6 +2026,15 @@ tbody tr:hover td {
   .supplier-detail-grid,
   .driver-actions {
     grid-template-columns: 1fr;
+  }
+
+  .admin-supplier-requests-card {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-supplier-requests-count {
+    justify-self: start;
   }
 
   .panel-header {

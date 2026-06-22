@@ -6,10 +6,12 @@ import {
   summarizeFinance,
 } from "../services/adminFinanceService.js";
 import { getAdminDashboardMetrics } from "../services/adminService.js";
+import { supabase } from "../lib/supabaseClient.js";
 
 export default function AdminPage({ orders, onNavigate }) {
   const [suppliers, setSuppliers] = useState([]);
   const [financialRows, setFinancialRows] = useState([]);
+  const [pendingJoinRequests, setPendingJoinRequests] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,14 +20,17 @@ export default function AdminPage({ orders, onNavigate }) {
       try {
         const nextSuppliers = await getSuppliers();
         const nextFinancialRows = await getFinancialRows(orders, nextSuppliers);
+        const nextPendingJoinRequests = await getPendingJoinRequestsCount();
         if (!cancelled) {
           setSuppliers(nextSuppliers);
           setFinancialRows(nextFinancialRows);
+          setPendingJoinRequests(nextPendingJoinRequests);
         }
       } catch {
         if (!cancelled) {
           setSuppliers([]);
           setFinancialRows([]);
+          setPendingJoinRequests(null);
         }
       }
     }
@@ -48,6 +53,20 @@ export default function AdminPage({ orders, onNavigate }) {
           <h1>لوحة تحكم فلج</h1>
         </div>
       </header>
+
+      <section className="admin-supplier-requests-card">
+        <div>
+          <p className="eyebrow">طلبات الموردين</p>
+          <h2>طلبات انضمام الموردين</h2>
+          <p>مراجعة طلبات الشركات الراغبة بالانضمام إلى فلج</p>
+        </div>
+        {pendingJoinRequests !== null ? (
+          <strong className="admin-supplier-requests-count">{pendingJoinRequests}</strong>
+        ) : null}
+        <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
+          فتح الطلبات
+        </button>
+      </section>
 
       <section className="metrics-grid admin-metrics-grid">
         <MetricCard label="موردون قيد المراجعة" value={metrics.pendingSuppliers} tone="cash" />
@@ -78,4 +97,20 @@ export default function AdminPage({ orders, onNavigate }) {
       </section>
     </div>
   );
+}
+
+async function getPendingJoinRequestsCount() {
+  if (!supabase) return null;
+
+  try {
+    const { count, error } = await supabase
+      .from("supplier_join_requests")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["pending", "new"]);
+
+    if (error) throw error;
+    return count ?? 0;
+  } catch {
+    return null;
+  }
 }
