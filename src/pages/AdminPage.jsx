@@ -1,36 +1,36 @@
 import { useEffect, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
-import {
-  getFinancialRows,
-  getSuppliers,
-  summarizeFinance,
-} from "../services/adminFinanceService.js";
-import { getAdminDashboardMetrics } from "../services/adminService.js";
 import { supabase } from "../lib/supabaseClient.js";
 
-export default function AdminPage({ orders, onNavigate }) {
-  const [suppliers, setSuppliers] = useState([]);
-  const [financialRows, setFinancialRows] = useState([]);
-  const [pendingJoinRequests, setPendingJoinRequests] = useState(null);
+const ZERO_METRICS = {
+  totalSuppliers: 0,
+  approvedSuppliers: 0,
+  pendingJoinRequests: 0,
+  todayOrders: 0,
+  totalDrivers: 0,
+  todaySales: 0,
+  todayCommission: 0,
+  activeDeliveries: 0,
+  failedOrders: 0,
+};
+
+export default function AdminPage({ onNavigate }) {
+  const [metrics, setMetrics] = useState(ZERO_METRICS);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadAdminData() {
+      setErrorMessage("");
+
       try {
-        const nextSuppliers = await getSuppliers();
-        const nextFinancialRows = await getFinancialRows(orders, nextSuppliers);
-        const nextPendingJoinRequests = await getPendingJoinRequestsCount();
+        const nextMetrics = await getAdminMetricsFromSupabase();
+        if (!cancelled) setMetrics(nextMetrics);
+      } catch (error) {
         if (!cancelled) {
-          setSuppliers(nextSuppliers);
-          setFinancialRows(nextFinancialRows);
-          setPendingJoinRequests(nextPendingJoinRequests);
-        }
-      } catch {
-        if (!cancelled) {
-          setSuppliers([]);
-          setFinancialRows([]);
-          setPendingJoinRequests(null);
+          setMetrics(ZERO_METRICS);
+          setErrorMessage(error.message || "تعذر تحميل مؤشرات لوحة الإدارة من قاعدة البيانات.");
         }
       }
     }
@@ -40,10 +40,7 @@ export default function AdminPage({ orders, onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, [orders]);
-
-  const finance = summarizeFinance(financialRows);
-  const metrics = getAdminDashboardMetrics(orders, suppliers, finance);
+  }, []);
 
   return (
     <div className="page">
@@ -54,28 +51,32 @@ export default function AdminPage({ orders, onNavigate }) {
         </div>
       </header>
 
+      {errorMessage ? (
+        <p className="auth-alert error">تعذر تحميل مؤشرات لوحة الإدارة من قاعدة البيانات.</p>
+      ) : null}
+
       <section className="admin-supplier-requests-card">
         <div>
           <p className="eyebrow">طلبات الموردين</p>
           <h2>طلبات انضمام الموردين</h2>
           <p>مراجعة طلبات الشركات الراغبة بالانضمام إلى فلج</p>
         </div>
-        {pendingJoinRequests !== null ? (
-          <strong className="admin-supplier-requests-count">{pendingJoinRequests}</strong>
-        ) : null}
+        <strong className="admin-supplier-requests-count">{metrics.pendingJoinRequests}</strong>
         <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
           فتح الطلبات
         </button>
       </section>
 
       <section className="metrics-grid admin-metrics-grid">
-        <MetricCard label="موردون قيد المراجعة" value={metrics.pendingSuppliers} tone="cash" />
-        <MetricCard label="موردون معتمدون" value={metrics.approvedSuppliers} tone="primary" />
+        <MetricCard label="إجمالي الموردين" value={metrics.totalSuppliers} tone="primary" />
+        <MetricCard label="موردون مفعلون" value={metrics.approvedSuppliers} tone="primary" />
+        <MetricCard label="طلبات الانضمام" value={metrics.pendingJoinRequests} tone="cash" />
         <MetricCard label="طلبات اليوم" value={metrics.todayOrders} />
-        <MetricCard label="مبيعات اليوم" value={metrics.todaySales} />
-        <MetricCard label="عمولة فلج اليوم" value={metrics.todayCommission} />
+        <MetricCard label="إجمالي السائقين" value={metrics.totalDrivers} />
+        <MetricCard label="مبيعات اليوم" value={formatMoney(metrics.todaySales)} />
+        <MetricCard label="عمولة فلج اليوم" value={formatMoney(metrics.todayCommission)} />
         <MetricCard label="طلبات قيد التوصيل" value={metrics.activeDeliveries} />
-        <MetricCard label="طلبات متأخرة" value={metrics.lateOrders} />
+        <MetricCard label="طلبات متعثرة" value={metrics.failedOrders} />
       </section>
 
       <section className="panel overview admin-actions-panel">
@@ -86,6 +87,9 @@ export default function AdminPage({ orders, onNavigate }) {
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
             طلبات انضمام الموردين
+          </button>
+          <button type="button" onClick={() => onNavigate?.("/admin/product-moderation")}>
+            مراجعة الكتالوج
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/finance")}>
             المالية والتسويات
@@ -99,18 +103,66 @@ export default function AdminPage({ orders, onNavigate }) {
   );
 }
 
-async function getPendingJoinRequestsCount() {
-  if (!supabase) return null;
-
-  try {
-    const { count, error } = await supabase
-      .from("supplier_join_requests")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "new"]);
-
-    if (error) throw error;
-    return count ?? 0;
-  } catch {
-    return null;
+async function getAdminMetricsFromSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase غير مفعّل حاليًا.");
   }
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayIso = todayStart.toISOString();
+
+  const [
+    totalSuppliers,
+    approvedSuppliers,
+    pendingJoinRequests,
+    todayOrders,
+    totalDrivers,
+    activeDeliveries,
+    failedOrders,
+    financialRows,
+  ] = await Promise.all([
+    countRows("companies"),
+    countRows("companies", (query) => query.eq("is_active", true)),
+    countRows("supplier_join_requests", (query) => query.in("status", ["pending", "new"])),
+    countRows("orders", (query) => query.gte("created_at", todayIso)),
+    countRows("drivers"),
+    countRows("orders", (query) => query.in("status", ["accepted", "assigned", "en_route", "arrived"])),
+    countRows("orders", (query) => query.eq("status", "failed")),
+    getTodayFinancialRows(todayIso),
+  ]);
+
+  return {
+    totalSuppliers,
+    approvedSuppliers,
+    pendingJoinRequests,
+    todayOrders,
+    totalDrivers,
+    activeDeliveries,
+    failedOrders,
+    todaySales: financialRows.reduce((sum, row) => sum + Number(row.gross_amount || 0), 0),
+    todayCommission: financialRows.reduce((sum, row) => sum + Number(row.falaj_commission_amount || 0), 0),
+  };
+}
+
+async function countRows(tableName, applyFilters = (query) => query) {
+  const query = applyFilters(supabase.from(tableName).select("id", { count: "exact", head: true }));
+  const { count, error } = await query;
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function getTodayFinancialRows(todayIso) {
+  const { data, error } = await supabase
+    .from("order_financials")
+    .select("gross_amount, falaj_commission_amount")
+    .gte("created_at", todayIso);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+function formatMoney(value) {
+  return `${Number(value || 0).toFixed(3)} ر.ع`;
 }

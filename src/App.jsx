@@ -194,7 +194,7 @@ export default function App() {
     "/company/products": <CompanyProductsPage companyId={companyId} />,
     "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
     "/company/drivers/live": <CompanyDriversLivePage companyId={companyId} />,
-    "/admin": <AdminPage orders={orders} drivers={drivers} onNavigate={navigate} />,
+    "/admin": <AdminPage onNavigate={navigate} />,
     "/admin/product-moderation": <AdminProductModerationPage />,
     "/admin/suppliers": <AdminSuppliersPage onNavigate={navigate} />,
     "/admin/supplier-requests": <AdminSupplierRequestsPage />,
