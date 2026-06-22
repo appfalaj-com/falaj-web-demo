@@ -5,6 +5,7 @@ export const COMPANY_AUTH_ERRORS = {
   NOT_COMPANY: "هذا الحساب غير مصرح له بالدخول إلى لوحة الموردين",
   NOT_ADMIN: "هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة",
   NO_COMPANY: "لا توجد شركة مرتبطة بهذا الحساب. يرجى التواصل مع إدارة فلج.",
+  COMPANY_LOAD_FAILED: "تعذر تحميل بيانات الشركة المرتبطة بالحساب.",
   PHONE_DISABLED: "الدخول بالهاتف غير مفعل حاليًا. يرجى استخدام الدخول بالإيميل أو التواصل مع إدارة فلج.",
 };
 
@@ -167,29 +168,42 @@ export async function getAuthContext() {
   const user = session?.user;
 
   if (!user) {
-    return { session: null, profile: null, role: null, company: null };
+    return { session: null, user: null, profile: null, role: null, company: null, companyError: "" };
   }
 
   const profile = await getCurrentProfile(user);
   const role = getProfileRole(profile);
-  const company = role === "company" ? await getCompanyForUser(user) : null;
+  let company = null;
+  let companyError = "";
+
+  if (role === "company") {
+    try {
+      company = await getCompanyForUser(user);
+    } catch (error) {
+      companyError = error.message || COMPANY_AUTH_ERRORS.COMPANY_LOAD_FAILED;
+    }
+  }
 
   logAuthDebug("auth context", {
     userId: user.id,
     userEmail: user.email,
+    metadataCompanyId: user.user_metadata?.company_id,
     role,
     hasProfile: Boolean(profile),
     hasCompany: Boolean(company),
+    companyId: company?.id,
+    companyOnboardingStatus: company?.onboarding_status,
+    companyError,
   });
 
-  return { session, profile, role, company };
+  return { session, user, profile, role, company, companyError };
 }
 
 export async function buildCompanySession(session) {
   const user = session?.user;
 
   if (!user) {
-    return { session: null, profile: null, company: null };
+    return { session: null, user: null, profile: null, company: null };
   }
 
   const profile = await getCurrentProfile(user);
@@ -209,7 +223,7 @@ export async function buildCompanySession(session) {
     throw new Error(COMPANY_AUTH_ERRORS.NO_COMPANY);
   }
 
-  return { session, profile, role: "company", company };
+  return { session, user, profile, role: "company", company };
 }
 
 export async function getCompanySession() {
@@ -265,7 +279,7 @@ export async function signInAdminWithEmail(email, password) {
     role,
   });
 
-  return { session: data.session, profile, role: "admin", company: null };
+  return { session: data.session, user, profile, role: "admin", company: null };
 }
 
 export async function sendCompanyPhoneOtp(phone) {

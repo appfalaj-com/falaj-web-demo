@@ -56,8 +56,10 @@ export default function App() {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [authState, setAuthState] = useState({
     status: "loading",
+    user: null,
     profile: null,
     company: null,
+    companyError: "",
     error: "",
   });
   const [currentPath, setCurrentPath] = useState(
@@ -120,7 +122,7 @@ export default function App() {
 
   async function handleSignOut() {
     await signOutCompany();
-    setAuthState({ status: "anonymous", profile: null, company: null, error: "" });
+    setAuthState({ status: "anonymous", user: null, profile: null, company: null, companyError: "", error: "" });
     replacePath("/");
   }
 
@@ -143,15 +145,24 @@ export default function App() {
         if (!cancelled) {
           setAuthState({
             status: nextAuthState.session ? "authenticated" : "anonymous",
+            user: nextAuthState.user,
             profile: nextAuthState.profile,
             role: nextAuthState.role,
             company: nextAuthState.company,
+            companyError: nextAuthState.companyError || "",
             error: "",
           });
         }
       } catch (error) {
         if (!cancelled) {
-          setAuthState({ status: "anonymous", profile: null, company: null, error: error.message });
+          setAuthState({
+            status: "anonymous",
+            user: null,
+            profile: null,
+            company: null,
+            companyError: "",
+            error: error.message,
+          });
         }
       }
     }
@@ -214,6 +225,21 @@ export default function App() {
   }
 
   if (PROTECTED_COMPANY_PATHS.has(currentPath)) {
+    const logCompanyGuardDecision = (decision) => {
+      console.info("[Falaj company guard]", {
+        userId: authState.user?.id,
+        userEmail: authState.user?.email,
+        metadataCompanyId: authState.user?.user_metadata?.company_id,
+        profileRole: authState.profile?.role,
+        profileAccountType: authState.profile?.account_type,
+        selectedCompanyId: authState.company?.id,
+        selectedCompanyOnboardingStatus: authState.company?.onboarding_status,
+        selectedCompanyIsActive: authState.company?.is_active,
+        companyError: authState.companyError,
+        decision,
+      });
+    };
+
     if (authState.status === "loading") {
       return (
         <main className="login-page" dir="rtl">
@@ -226,10 +252,12 @@ export default function App() {
     }
 
     if (authState.status !== "authenticated") {
+      logCompanyGuardDecision("login_required");
       return <CompanyLoginPage onAuthenticated={handleAuthenticated} />;
     }
 
-    if (authState.role !== "company" || !authState.company) {
+    if (authState.role !== "company") {
+      logCompanyGuardDecision("unauthorized");
       return (
         <AccessDeniedPage
           message="هذا الحساب غير مصرح له بالدخول إلى لوحة الموردين"
@@ -238,17 +266,43 @@ export default function App() {
       );
     }
 
-    if (isRejectedCompany(authState.company)) {
+    if (authState.company) {
+      if (isRejectedCompany(authState.company)) {
+        logCompanyGuardDecision("rejected");
+        return (
+          <AccessDeniedPage
+            message="طلب المورد المرتبط بهذا الحساب مرفوض. يمكنكم تقديم طلب انضمام جديد."
+            onNavigate={navigate}
+          />
+        );
+      }
+
+      if (isPendingCompany(authState.company)) {
+        logCompanyGuardDecision("pending");
+        return <CompanyPendingReviewPage onSignedOut={handleSignOut} />;
+      }
+
+      logCompanyGuardDecision("active");
+    }
+
+    if (authState.companyError) {
+      logCompanyGuardDecision("company_load_failed");
       return (
         <AccessDeniedPage
-          message="طلب المورد المرتبط بهذا الحساب مرفوض. يمكنكم تقديم طلب انضمام جديد."
+          message="تعذر تحميل بيانات الشركة المرتبطة بالحساب."
           onNavigate={navigate}
         />
       );
     }
 
-    if (isPendingCompany(authState.company)) {
-      return <CompanyPendingReviewPage onSignedOut={handleSignOut} />;
+    if (!authState.company) {
+      logCompanyGuardDecision("company_missing");
+      return (
+        <AccessDeniedPage
+          message="تعذر تحميل بيانات الشركة المرتبطة بالحساب."
+          onNavigate={navigate}
+        />
+      );
     }
   }
 
