@@ -62,7 +62,7 @@ export default function AdminProductModerationPage() {
     setErrorMessage("");
 
     if (!supabase) {
-      setErrorMessage("Supabase غير مفعّل حاليًا.");
+      setErrorMessage("Supabase غير مفعل حاليًا.");
       return;
     }
 
@@ -132,7 +132,10 @@ export default function AdminProductModerationPage() {
         {isLoading ? (
           <p className="empty-state">جاري تحميل المنتجات...</p>
         ) : visibleProducts.length === 0 ? (
-          <p className="empty-state">لا توجد منتجات للمراجعة حاليًا.</p>
+          <div className="empty-state">
+            <strong>لا توجد منتجات للمراجعة حاليًا</strong>
+            <span>ستظهر هنا المنتجات التي يضيفها الموردون من لوحة الشركة.</span>
+          </div>
         ) : (
           <div className="table-wrap">
             <table className="falaj-table">
@@ -143,7 +146,8 @@ export default function AdminProductModerationPage() {
                   <th>السعر</th>
                   <th>الصورة</th>
                   <th>الوصف</th>
-                  <th>الحالة</th>
+                  <th>حالة المراجعة</th>
+                  <th>الظهور</th>
                   <th>تاريخ الإضافة</th>
                   <th>ملاحظات الأدمن</th>
                   <th>الإجراءات</th>
@@ -153,7 +157,7 @@ export default function AdminProductModerationPage() {
                 {visibleProducts.map((product) => (
                   <tr key={product.id}>
                     <td>{product.companies?.name || "مورد غير محدد"}</td>
-                    <td>{product.name_ar}</td>
+                    <td>{product.name_ar || product.name_en || "-"}</td>
                     <td>{formatPrice(product.price)}</td>
                     <td>
                       {product.image_url ? (
@@ -170,6 +174,7 @@ export default function AdminProductModerationPage() {
                         {STATUS_LABELS[normalizeStatus(product.approval_status)]}
                       </span>
                     </td>
+                    <td>{product.is_visible ? "ظاهر للعملاء" : "غير ظاهر"}</td>
                     <td>{formatDate(product.created_at)}</td>
                     <td>{product.admin_review_notes || "-"}</td>
                     <td>
@@ -179,7 +184,7 @@ export default function AdminProductModerationPage() {
                           onClick={() => reviewProduct(product, "approved")}
                           disabled={reviewingProductId === product.id}
                         >
-                          اعتماد المنتج
+                          {normalizeStatus(product.approval_status) === "hidden" ? "إظهار واعتماد" : "اعتماد"}
                         </button>
                         <button
                           type="button"
@@ -187,7 +192,7 @@ export default function AdminProductModerationPage() {
                           onClick={() => reviewProduct(product, "rejected")}
                           disabled={reviewingProductId === product.id}
                         >
-                          رفض المنتج
+                          رفض
                         </button>
                         <button
                           type="button"
@@ -195,7 +200,7 @@ export default function AdminProductModerationPage() {
                           onClick={() => reviewProduct(product, "hidden")}
                           disabled={reviewingProductId === product.id}
                         >
-                          إخفاء المنتج
+                          إخفاء
                         </button>
                       </div>
                     </td>
@@ -229,6 +234,7 @@ function productModerationSelect() {
     "id",
     "company_id",
     "name_ar",
+    "name_en",
     "price",
     "image_url",
     "description",
@@ -237,6 +243,7 @@ function productModerationSelect() {
     "reviewed_by",
     "reviewed_at",
     "is_visible",
+    "is_available",
     "created_at",
     "companies(name, is_active, onboarding_status)",
   ].join(",");
@@ -244,7 +251,7 @@ function productModerationSelect() {
 
 async function fetchProductsForModeration() {
   if (!supabase) {
-    throw new Error("Supabase غير مفعّل حاليًا.");
+    throw new Error("Supabase غير مفعل حاليًا.");
   }
 
   const { data, error } = await supabase
@@ -277,7 +284,7 @@ function formatDate(value) {
 }
 
 function productActionMessage(status) {
-  if (status === "approved") return "تم اعتماد المنتج وسيظهر للعملاء بعد تحقق شروط ظهور الشركة.";
+  if (status === "approved") return "تم اعتماد المنتج. سيظهر للعملاء عند توفره وتفعيل الشركة.";
   if (status === "rejected") return "تم رفض المنتج وإخفاؤه عن العملاء.";
   return "تم إخفاء المنتج عن العملاء.";
 }
