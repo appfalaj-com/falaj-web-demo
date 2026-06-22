@@ -28,6 +28,7 @@ function normalizeSupabaseDriver(driver) {
     profileId: driver.profile_id,
     name: driver.name,
     phone: driver.phone,
+    email: driver.email,
     vehiclePlate: driver.vehicle_plate,
     vehicleLabel: driver.vehicle_label,
     vehicle: driver.vehicle_label || driver.vehicle_plate || "غير محدد",
@@ -102,6 +103,7 @@ export async function createCompanyDriverInSupabase(companyId, driver) {
       company_id: supabaseCompanyId,
       name: driver.name,
       phone: driver.phone || null,
+      email: driver.email || null,
       is_active: true,
       profile_id: null,
     })
@@ -126,6 +128,7 @@ export async function updateCompanyDriverInSupabase(companyId, driverId, driver)
     .update({
       name: driver.name,
       phone: driver.phone || null,
+      email: driver.email || null,
       is_active: Boolean(driver.isActive),
     })
     .eq("id", driverId)
@@ -213,6 +216,30 @@ export async function saveDriverLocationInSupabase(driver, position) {
   return data;
 }
 
+export async function sendDriverInviteFromSupabase(driverId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  if (!driverId) {
+    throw new Error("تعذر تحديد السائق لإرسال الدعوة.");
+  }
+
+  const { data, error } = await supabase.functions.invoke("send-driver-invite", {
+    body: { driver_id: driverId },
+  });
+
+  if (error) {
+    throw new Error(data?.error || data?.message || error.message || "تعذر إرسال دعوة دخول السائق.");
+  }
+
+  if (!data?.ok) {
+    throw new Error(data?.error || data?.message || "تعذر إرسال دعوة دخول السائق.");
+  }
+
+  return data;
+}
+
 export function getDriverById(driverId, drivers = mockDrivers) {
   return drivers.find((driver) => driver.id === driverId) ?? null;
 }
@@ -237,6 +264,7 @@ function driverSelectColumns() {
     "profile_id",
     "name",
     "phone",
+    "email",
     "vehicle_plate",
     "vehicle_label",
     "is_active",

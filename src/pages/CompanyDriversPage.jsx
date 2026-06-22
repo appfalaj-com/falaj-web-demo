@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import {
   createCompanyDriverInSupabase,
   getDriversByCompanyFromSupabase,
+  sendDriverInviteFromSupabase,
   updateCompanyDriverInSupabase,
 } from "../services/driverService.js";
 
 const initialDriverForm = {
   name: "",
   phone: "",
+  email: "",
   isActive: true,
 };
 
@@ -18,6 +20,7 @@ export default function CompanyDriversPage({ companyId }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDriverId, setEditingDriverId] = useState(null);
   const [form, setForm] = useState(initialDriverForm);
+  const [invitingDriverId, setInvitingDriverId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
 
@@ -61,6 +64,7 @@ export default function CompanyDriversPage({ companyId }) {
     setForm({
       name: driver.name || "",
       phone: driver.phone || "",
+      email: driver.email || "",
       isActive: Boolean(driver.isActive),
     });
     setMessage("");
@@ -99,6 +103,7 @@ export default function CompanyDriversPage({ companyId }) {
         const updatedDriver = await updateCompanyDriverInSupabase(companyId, editingDriverId, {
           name: form.name.trim(),
           phone: form.phone.trim(),
+          email: form.email.trim(),
           isActive: form.isActive,
         });
         setCompanyDrivers((current) =>
@@ -109,6 +114,7 @@ export default function CompanyDriversPage({ companyId }) {
         const createdDriver = await createCompanyDriverInSupabase(companyId, {
           name: form.name.trim(),
           phone: form.phone.trim(),
+          email: form.email.trim(),
         });
         setCompanyDrivers((current) => [createdDriver, ...current]);
         setMessage("تم إضافة السائق. يمكن ربطه بحساب دخول لاحقًا.");
@@ -131,6 +137,7 @@ export default function CompanyDriversPage({ companyId }) {
       const updatedDriver = await updateCompanyDriverInSupabase(companyId, driver.id, {
         name: driver.name,
         phone: driver.phone || "",
+        email: driver.email || "",
         isActive: !driver.isActive,
       });
       setCompanyDrivers((current) =>
@@ -141,6 +148,34 @@ export default function CompanyDriversPage({ companyId }) {
       setErrorMessage(error.message || "تعذر تحديث حالة السائق.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function sendDriverInvite(driver) {
+    setMessage("");
+    setErrorMessage("");
+
+    if (!driver.id) {
+      setErrorMessage("تعذر تحديد السائق لإرسال الدعوة.");
+      return;
+    }
+
+    if (!isValidEmail(driver.email)) {
+      setErrorMessage("يرجى إضافة بريد السائق قبل إرسال دعوة الدخول.");
+      return;
+    }
+
+    setInvitingDriverId(driver.id);
+    try {
+      const result = await sendDriverInviteFromSupabase(driver.id);
+      setMessage(result.message || "تم إرسال دعوة دخول السائق.");
+
+      const refreshedDrivers = await getDriversByCompanyFromSupabase(companyId);
+      setCompanyDrivers(refreshedDrivers);
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر إرسال دعوة دخول السائق.");
+    } finally {
+      setInvitingDriverId(null);
     }
   }
 
@@ -178,6 +213,16 @@ export default function CompanyDriversPage({ companyId }) {
             <label>
               رقم الهاتف
               <input value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} />
+            </label>
+
+            <label>
+              بريد السائق
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => updateForm("email", event.target.value)}
+                placeholder="driver@example.com"
+              />
             </label>
 
             <label className="product-form-check">
@@ -240,6 +285,10 @@ export default function CompanyDriversPage({ companyId }) {
                   </dd>
                 </div>
                 <div>
+                  <dt>بريد الدخول</dt>
+                  <dd>{driver.email || "-"}</dd>
+                </div>
+                <div>
                   <dt>Profile ID</dt>
                   <dd>{driver.profileId || "-"}</dd>
                 </div>
@@ -260,6 +309,20 @@ export default function CompanyDriversPage({ companyId }) {
                 <button type="button" className="ghost" onClick={() => toggleDriverActive(driver)} disabled={isSaving}>
                   {driver.isActive ? "إيقاف" : "تفعيل"}
                 </button>
+                {isValidEmail(driver.email) ? (
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => sendDriverInvite(driver)}
+                    disabled={invitingDriverId === driver.id || !driver.id}
+                  >
+                    {invitingDriverId === driver.id
+                      ? "جاري الإرسال..."
+                      : driver.profileId
+                        ? "إعادة إرسال رابط الدخول"
+                        : "إرسال دعوة دخول"}
+                  </button>
+                ) : null}
                 <button type="button" className="ghost" disabled title="الحذف غير متاح حاليًا">
                   الحذف غير متاح
                 </button>
@@ -275,4 +338,8 @@ export default function CompanyDriversPage({ companyId }) {
 function formatDate(value) {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("ar-OM");
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
