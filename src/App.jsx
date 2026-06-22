@@ -198,7 +198,7 @@ export default function App() {
     "/admin/product-moderation": <AdminProductModerationPage />,
     "/admin/suppliers": <AdminSuppliersPage onNavigate={navigate} />,
     "/admin/supplier-requests": <AdminSupplierRequestsPage />,
-    "/admin/finance": <AdminFinancePage orders={orders} onNavigate={navigate} />,
+    "/admin/finance": <AdminFinancePage onNavigate={navigate} />,
     "/admin/live-tracking": <AdminLiveTrackingPage orders={orders} drivers={drivers} />,
   };
   const supplierAccountCompanyId = getSupplierAccountCompanyId(currentPath);

@@ -3,24 +3,32 @@ import MetricCard from "../components/MetricCard.jsx";
 import {
   formatMoney,
   getFinancialRows,
-  getSuppliers,
   summarizeFinance,
   summarizeFinanceBySupplier,
 } from "../services/adminFinanceService.js";
 
-export default function AdminFinancePage({ orders, onNavigate }) {
+export default function AdminFinancePage({ onNavigate }) {
   const [rows, setRows] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadFinance() {
+      setIsLoading(true);
+      setErrorMessage("");
+
       try {
-        const suppliers = await getSuppliers();
-        const nextRows = await getFinancialRows(orders, suppliers);
+        const nextRows = await getFinancialRows();
         if (!cancelled) setRows(nextRows);
-      } catch {
-        if (!cancelled) setRows([]);
+      } catch (error) {
+        if (!cancelled) {
+          setRows([]);
+          setErrorMessage(error.message || "تعذر تحميل البيانات المالية من قاعدة البيانات.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     }
 
@@ -29,7 +37,7 @@ export default function AdminFinancePage({ orders, onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, [orders]);
+  }, []);
 
   const summary = summarizeFinance(rows);
   const supplierRows = summarizeFinanceBySupplier(rows);
@@ -42,6 +50,8 @@ export default function AdminFinancePage({ orders, onNavigate }) {
           <h1>المالية والتسويات</h1>
         </div>
       </header>
+
+      {errorMessage ? <p className="auth-alert error">تعذر تحميل البيانات المالية من قاعدة البيانات.</p> : null}
 
       <section className="metrics-grid admin-metrics-grid">
         <MetricCard label="إجمالي المبيعات" value={formatMoney(summary.totalSales)} tone="primary" />
@@ -57,50 +67,62 @@ export default function AdminFinancePage({ orders, onNavigate }) {
         <div className="panel-header">
           <div>
             <h2>حسب المورد</h2>
-            <p>الأرقام مبنية على القيود المالية المكتملة، مع fallback آمن من الطلبات الحالية.</p>
+            <p>الأرقام مبنية على القيود المالية الحقيقية المسجلة في قاعدة البيانات.</p>
           </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>المورد</th>
-                <th>عدد الطلبات</th>
-                <th>إجمالي المبيعات</th>
-                <th>كاش</th>
-                <th>بطاقة</th>
-                <th>عمولة فلج</th>
-                <th>صافي المورد</th>
-                <th>مستحق على المورد</th>
-                <th>التسوية</th>
-                <th>إجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {supplierRows.map((supplier) => (
-                <tr key={supplier.companyId}>
-                  <td>{supplier.supplierName}</td>
-                  <td>{supplier.orderCount}</td>
-                  <td>{formatMoney(supplier.totalSales)}</td>
-                  <td>{formatMoney(supplier.cashSales)}</td>
-                  <td>{formatMoney(supplier.cardSales)}</td>
-                  <td>{formatMoney(supplier.falajCommission)}</td>
-                  <td>{formatMoney(supplier.supplierNet)}</td>
-                  <td>{formatMoney(supplier.supplierOwesFalaj)}</td>
-                  <td>{supplier.settlementStatus}</td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate?.(`/admin/suppliers/${supplier.companyId}/account`)}
-                    >
-                      عرض حساب المورد
-                    </button>
-                  </td>
+
+        {isLoading ? (
+          <p className="empty-state">جاري تحميل البيانات المالية...</p>
+        ) : errorMessage ? (
+          <p className="empty-state">تعذر تحميل البيانات المالية من قاعدة البيانات.</p>
+        ) : supplierRows.length === 0 ? (
+          <div className="empty-state">
+            <strong>لا توجد بيانات مالية حتى الآن</strong>
+            <span>ستظهر هنا العمولات والتسويات بعد إنشاء الطلبات الحقيقية.</span>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>المورد</th>
+                  <th>عدد الطلبات</th>
+                  <th>إجمالي المبيعات</th>
+                  <th>كاش</th>
+                  <th>بطاقة</th>
+                  <th>عمولة فلج</th>
+                  <th>صافي المورد</th>
+                  <th>مستحق على المورد</th>
+                  <th>التسوية</th>
+                  <th>إجراء</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {supplierRows.map((supplier) => (
+                  <tr key={supplier.companyId}>
+                    <td>{supplier.supplierName}</td>
+                    <td>{supplier.orderCount}</td>
+                    <td>{formatMoney(supplier.totalSales)}</td>
+                    <td>{formatMoney(supplier.cashSales)}</td>
+                    <td>{formatMoney(supplier.cardSales)}</td>
+                    <td>{formatMoney(supplier.falajCommission)}</td>
+                    <td>{formatMoney(supplier.supplierNet)}</td>
+                    <td>{formatMoney(supplier.supplierOwesFalaj)}</td>
+                    <td>{supplier.settlementStatus}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate?.(`/admin/suppliers/${supplier.companyId}/account`)}
+                      >
+                        عرض حساب المورد
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

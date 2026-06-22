@@ -1,39 +1,9 @@
-import { mockOrders } from "../data/mockData.js";
 import { supabase } from "../lib/supabaseClient.js";
 
-export const MOCK_SUPPLIERS = [
-  {
-    id: "company-1",
-    name: "فلج للمياه",
-    phone: "968 9000 1111",
-    email: "company@falaj.test",
-    status: "approved",
-    commissionRate: 8,
-    createdAt: "2026-06-15T08:00:00Z",
-    bankName: "بنك مسقط",
-    bankAccountName: "شركة فلج للمياه",
-    bankAccountNumber: "1234567890",
-    iban: "OM0000000000000000000000",
-  },
-  {
-    id: "company-pending",
-    name: "مورد قيد المراجعة",
-    phone: "968 9111 2222",
-    email: "pending@falaj.test",
-    status: "pending",
-    commissionRate: 10,
-    createdAt: "2026-06-20T08:00:00Z",
-    bankName: "",
-    bankAccountName: "",
-    bankAccountNumber: "",
-    iban: "",
-  },
-];
-
 const STATUS_LABELS = {
-  pending: "قيد المراجعة",
-  approved: "معتمد",
-  rejected: "مرفوض",
+  pending: "قيد الإعداد",
+  approved: "نشط",
+  rejected: "غير نشط",
   suspended: "موقوف",
 };
 
@@ -47,6 +17,8 @@ const COMPANY_SELECT_COLUMNS = [
   "created_at",
   "onboarding_status",
 ].join(",");
+
+export const MOCK_SUPPLIERS = [];
 
 export function supplierStatusLabel(status) {
   return STATUS_LABELS[status] ?? status;
@@ -79,9 +51,8 @@ function resolveCompanyStatus(company) {
   return "pending";
 }
 
-export async function getSuppliers({ allowMockFallback = true } = {}) {
+export async function getSuppliers() {
   if (!supabase) {
-    if (allowMockFallback) return MOCK_SUPPLIERS;
     throw new Error("Supabase غير مفعّل حاليًا.");
   }
 
@@ -90,16 +61,14 @@ export async function getSuppliers({ allowMockFallback = true } = {}) {
     .select(COMPANY_SELECT_COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    if (allowMockFallback) return MOCK_SUPPLIERS;
-    throw error;
-  }
-
+  if (error) throw error;
   return (data ?? []).map(normalizeCompany);
 }
 
 export async function updateSupplierStatus(companyId, status) {
-  if (!supabase) return { id: companyId, status };
+  if (!supabase) {
+    throw new Error("Supabase غير مفعّل حاليًا.");
+  }
 
   const patch =
     status === "approved"
@@ -118,7 +87,9 @@ export async function updateSupplierStatus(companyId, status) {
 }
 
 export async function updateSupplierCommission(companyId, commissionRate) {
-  if (!supabase) return { id: companyId, commissionRate };
+  if (!supabase) {
+    throw new Error("Supabase غير مفعّل حاليًا.");
+  }
 
   const { data, error } = await supabase
     .from("companies")
@@ -131,35 +102,34 @@ export async function updateSupplierCommission(companyId, commissionRate) {
   return normalizeCompany(data);
 }
 
-export function buildFinancialRows(orders = mockOrders, suppliers = MOCK_SUPPLIERS) {
-  return orders
-    .filter((order) => order.status === "delivered" || order.status === "completed")
-    .map((order) => {
-      const companyId = order.companyId ?? "company-1";
-      const supplier = suppliers.find((item) => item.id === companyId) ?? suppliers[0];
-      const commissionRate = Number(supplier?.commissionRate ?? 8);
-      const grossAmount = Number(order.amount || 0);
-      const falajCommissionAmount = (grossAmount * commissionRate) / 100;
-      const supplierNetAmount = grossAmount - falajCommissionAmount;
-      const cashCollectedBy = order.paymentMethod === "cash" ? "company_driver" : null;
+export async function getFinancialRows() {
+  if (!supabase) {
+    throw new Error("Supabase غير مفعّل حاليًا.");
+  }
 
-      return {
-        id: `mock-fin-${order.id}`,
-        orderId: order.id,
-        companyId,
-        supplierName: supplier?.name ?? "مورد غير محدد",
-        grossAmount,
-        paymentMethod: order.paymentMethod,
-        cashCollectedBy,
-        commissionRate,
-        falajCommissionAmount,
-        supplierNetAmount,
-        settlementStatus: "unsettled",
-        customer: order.customer,
-        area: order.area,
-        createdAt: new Date().toISOString(),
-      };
-    });
+  const { data, error } = await supabase
+    .from("order_financials")
+    .select(
+      "id, order_id, company_id, gross_amount, payment_method, cash_collected_by, commission_rate, falaj_commission_amount, supplier_net_amount, settlement_status, created_at, companies(name)"
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    orderId: row.order_id,
+    companyId: row.company_id,
+    supplierName: row.companies?.name ?? "مورد غير محدد",
+    grossAmount: Number(row.gross_amount || 0),
+    paymentMethod: row.payment_method,
+    cashCollectedBy: row.cash_collected_by,
+    commissionRate: Number(row.commission_rate || 0),
+    falajCommissionAmount: Number(row.falaj_commission_amount || 0),
+    supplierNetAmount: Number(row.supplier_net_amount || 0),
+    settlementStatus: row.settlement_status,
+    createdAt: row.created_at,
+  }));
 }
 
 export function summarizeFinance(rows) {
@@ -215,36 +185,4 @@ export function summarizeFinanceBySupplier(rows) {
   });
 
   return Array.from(grouped.values());
-}
-
-export async function getFinancialRows(orders = mockOrders, suppliers = MOCK_SUPPLIERS) {
-  if (!supabase) return buildFinancialRows(orders, suppliers);
-
-  const { data, error } = await supabase
-    .from("order_financials")
-    .select(
-      "id, order_id, company_id, gross_amount, payment_method, cash_collected_by, commission_rate, falaj_commission_amount, supplier_net_amount, settlement_status, created_at, companies(name)"
-    )
-    .order("created_at", { ascending: false });
-
-  if (error) return buildFinancialRows(orders, suppliers);
-
-  if (!data || data.length === 0) {
-    return buildFinancialRows(orders, suppliers);
-  }
-
-  return data.map((row) => ({
-    id: row.id,
-    orderId: row.order_id,
-    companyId: row.company_id,
-    supplierName: row.companies?.name ?? "مورد غير محدد",
-    grossAmount: Number(row.gross_amount || 0),
-    paymentMethod: row.payment_method,
-    cashCollectedBy: row.cash_collected_by,
-    commissionRate: Number(row.commission_rate || 0),
-    falajCommissionAmount: Number(row.falaj_commission_amount || 0),
-    supplierNetAmount: Number(row.supplier_net_amount || 0),
-    settlementStatus: row.settlement_status,
-    createdAt: row.created_at,
-  }));
 }
