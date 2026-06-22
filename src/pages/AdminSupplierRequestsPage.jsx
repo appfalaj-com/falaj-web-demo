@@ -8,19 +8,35 @@ const STATUS_LABELS = {
   rejected: "مرفوض",
   company_created: "تم إنشاء ملف المورد",
   invitation_pending: "بانتظار دعوة الدخول",
+  invitation_sent: "تم إرسال الدعوة",
   activated: "مفعل",
 };
 
 export default function AdminSupplierRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [invitingRequestId, setInvitingRequestId] = useState(null);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  async function loadRequests() {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const data = await fetchSupplierRequests();
+      setRequests(data);
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر تحميل طلبات الانضمام.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRequests() {
+    async function loadInitialRequests() {
       setIsLoading(true);
       setErrorMessage("");
 
@@ -34,7 +50,7 @@ export default function AdminSupplierRequestsPage() {
       }
     }
 
-    loadRequests();
+    loadInitialRequests();
 
     return () => {
       cancelled = true;
@@ -109,9 +125,31 @@ export default function AdminSupplierRequestsPage() {
     );
   }
 
-  function showInvitationPlaceholder() {
-    setMessage("سيتم تفعيل دعوات الدخول في المرحلة التالية.");
+  async function sendSupplierInvite(requestId) {
+    setMessage("");
     setErrorMessage("");
+
+    if (!supabase) {
+      setErrorMessage("Supabase غير مفعّل حاليًا.");
+      return;
+    }
+
+    setInvitingRequestId(requestId);
+
+    try {
+      const { error } = await supabase.functions.invoke("send-supplier-invite", {
+        body: { request_id: requestId },
+      });
+
+      if (error) throw error;
+
+      setMessage("تم إرسال دعوة الدخول إلى بريد المورد.");
+      await loadRequests();
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر إرسال دعوة الدخول.");
+    } finally {
+      setInvitingRequestId(null);
+    }
   }
 
   return (
@@ -161,7 +199,8 @@ export default function AdminSupplierRequestsPage() {
                     key={request.id}
                     request={request}
                     onReview={reviewRequest}
-                    onInvite={showInvitationPlaceholder}
+                    onInvite={sendSupplierInvite}
+                    isInviting={invitingRequestId === request.id}
                   />
                 ))}
               </tbody>
@@ -173,7 +212,7 @@ export default function AdminSupplierRequestsPage() {
   );
 }
 
-function SupplierRequestRow({ request, onReview, onInvite }) {
+function SupplierRequestRow({ request, onReview, onInvite, isInviting }) {
   const status = normalizeStatus(request.status);
   const hasCompany = Boolean(request.company);
 
@@ -213,8 +252,8 @@ function SupplierRequestRow({ request, onReview, onInvite }) {
             رفض
           </button>
           {canShowInviteButton(status, hasCompany) ? (
-            <button type="button" className="ghost" onClick={onInvite}>
-              إرسال دعوة الدخول
+            <button type="button" className="ghost" onClick={() => onInvite(request.id)} disabled={isInviting}>
+              {isInviting ? "جاري إرسال الدعوة..." : "إرسال دعوة الدخول"}
             </button>
           ) : null}
         </div>
@@ -227,8 +266,8 @@ function SupplierRequestTimeline({ request, status, hasCompany }) {
   const steps = [
     { label: "تم استلام الطلب", done: Boolean(request.created_at) },
     { label: "تمت المراجعة", done: Boolean(request.reviewed_at) },
-    { label: "تم إنشاء ملف المورد", done: hasCompany || ["company_created", "invitation_pending", "activated"].includes(status) },
-    { label: "دعوة الدخول", done: ["invitation_pending", "activated"].includes(status) },
+    { label: "تم إنشاء ملف المورد", done: hasCompany || ["company_created", "invitation_pending", "invitation_sent", "activated"].includes(status) },
+    { label: "دعوة الدخول", done: ["invitation_sent", "activated"].includes(status) },
     { label: "التفعيل النهائي", done: status === "activated" },
   ];
 
@@ -252,7 +291,7 @@ function canApprove(status) {
 }
 
 function canShowInviteButton(status, hasCompany) {
-  return hasCompany || ["company_created", "invitation_pending"].includes(status);
+  return (hasCompany || ["company_created", "invitation_pending"].includes(status)) && status !== "invitation_sent";
 }
 
 async function fetchSupplierRequests() {

@@ -1282,6 +1282,7 @@ tbody tr:hover td {
 
 .status.company_created,
 .status.invitation_pending,
+.status.invitation_sent,
 .status.activated {
   background: rgba(18, 153, 144, 0.14);
   color: var(--dark);
