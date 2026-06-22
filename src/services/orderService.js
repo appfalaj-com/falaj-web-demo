@@ -79,21 +79,7 @@ export async function getOrdersByCompanyFromSupabase(companyId) {
     throw error;
   }
 
-  if ((data ?? []).length > 0) {
-    return data.map(normalizeSupabaseOrder);
-  }
-
-  const { data: demoData, error: demoError } = await supabase
-    .from("orders")
-    .select(query)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (demoError) {
-    throw demoError;
-  }
-
-  return (demoData ?? []).map(normalizeSupabaseOrder);
+  return (data ?? []).map(normalizeSupabaseOrder);
 }
 
 export function getOrdersByDriver(driverId, orders = mockOrders) {

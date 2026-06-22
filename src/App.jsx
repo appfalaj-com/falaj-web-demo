@@ -185,7 +185,7 @@ export default function App() {
   };
 
   const routes = {
-    "/company": <CompanyDashboard {...workflow} />,
+    "/company": <CompanyDashboard {...workflow} companyId={companyId} />,
     "/company/orders": <CompanyOrdersPage {...workflow} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,
     "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
