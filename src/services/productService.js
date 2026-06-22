@@ -19,6 +19,8 @@ function normalizeSupabaseProduct(product) {
     imageUrl: product.image_url,
     imagePath: product.image_path,
     isAvailable: product.is_available,
+    approvalStatus: product.approval_status ?? "pending_review",
+    isVisible: product.is_visible ?? false,
     deliveryEstimate: product.delivery_estimate,
     description: product.description,
     sortOrder: product.sort_order ?? 0,
@@ -58,6 +60,8 @@ export async function getProductsByCompanyFromSupabase(companyId) {
         "image_url",
         "image_path",
         "is_available",
+        "approval_status",
+        "is_visible",
         "delivery_estimate",
         "description",
         "sort_order",
@@ -89,6 +93,51 @@ export function getProductCatalogForCustomer(companyId, products = mockProducts)
     deliveryEstimate: product.deliveryEstimate,
     description: product.description,
   }));
+}
+
+export async function getApprovedVisibleProductsForCustomer(companyId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      [
+        "id",
+        "company_id",
+        "name_ar",
+        "name_en",
+        "category",
+        "water_type",
+        "size_label",
+        "volume_liters",
+        "price",
+        "image_url",
+        "image_path",
+        "is_available",
+        "approval_status",
+        "is_visible",
+        "delivery_estimate",
+        "description",
+        "sort_order",
+        "companies!inner(is_active, onboarding_status)",
+      ].join(",")
+    )
+    .eq("company_id", supabaseCompanyId)
+    .eq("approval_status", "approved")
+    .eq("is_visible", true)
+    .eq("is_available", true)
+    .eq("companies.is_active", true)
+    .eq("companies.onboarding_status", "activated")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(normalizeSupabaseProduct);
 }
 
 export function getProductMetrics(companyId, products = mockProducts) {

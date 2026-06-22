@@ -7,6 +7,7 @@ import AdminFinancePage from "./pages/AdminFinancePage.jsx";
 import AdminLiveTrackingPage from "./pages/AdminLiveTrackingPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
+import AdminProductModerationPage from "./pages/AdminProductModerationPage.jsx";
 import AdminSupplierAccountPage from "./pages/AdminSupplierAccountPage.jsx";
 import AdminSupplierRequestsPage from "./pages/AdminSupplierRequestsPage.jsx";
 import AdminSuppliersPage from "./pages/AdminSuppliersPage.jsx";
@@ -191,6 +192,7 @@ export default function App() {
     "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
     "/company/drivers/live": <CompanyDriversLivePage companyId={companyId} />,
     "/admin": <AdminPage orders={orders} drivers={drivers} onNavigate={navigate} />,
+    "/admin/product-moderation": <AdminProductModerationPage />,
     "/admin/suppliers": <AdminSuppliersPage onNavigate={navigate} />,
     "/admin/supplier-requests": <AdminSupplierRequestsPage />,
     "/admin/finance": <AdminFinancePage orders={orders} onNavigate={navigate} />,

@@ -174,6 +174,9 @@ export default function AdminSuppliersPage({ onNavigate }) {
                         <button type="button" onClick={() => onNavigate?.(`/admin/suppliers/${supplier.id}/account`)}>
                           عرض التفاصيل
                         </button>
+                        <button type="button" className="ghost" onClick={() => onNavigate?.("/admin/product-moderation")}>
+                          عرض كتالوج المورد
+                        </button>
                         <button type="button" className="ghost" onClick={() => setStatus(supplier.id, "approved")} disabled={!canRunActions}>
                           اعتماد
                         </button>

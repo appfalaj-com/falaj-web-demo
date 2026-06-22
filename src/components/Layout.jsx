@@ -9,6 +9,7 @@ const companyLinks = [
 const adminLinks = [
   { href: "/admin", label: "الإدارة" },
   { href: "/admin/suppliers", label: "الموردون المعتمدون" },
+  { href: "/admin/product-moderation", label: "مراجعة الكتالوج" },
   { href: "/admin/supplier-requests", label: "طلبات الانضمام" },
   { href: "/admin/finance", label: "المالية" },
   { href: "/admin/live-tracking", label: "التتبع العام" },
