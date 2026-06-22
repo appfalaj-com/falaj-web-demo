@@ -77,6 +77,62 @@ export async function getProductsByCompanyFromSupabase(companyId) {
   return (data ?? []).map(normalizeSupabaseProduct);
 }
 
+export async function createCompanyProductForReview(companyId, product) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      company_id: supabaseCompanyId,
+      name_ar: product.nameAr,
+      name_en: product.nameEn || null,
+      category: product.category,
+      water_type: product.waterType,
+      size_label: product.sizeLabel || null,
+      volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
+      price: Number(product.price),
+      image_url: product.imageUrl || null,
+      description: product.description || null,
+      delivery_estimate: product.deliveryEstimate || null,
+      is_available: Boolean(product.isAvailable),
+      approval_status: "pending_review",
+      is_visible: false,
+      reviewed_by: null,
+      reviewed_at: null,
+    })
+    .select(
+      [
+        "id",
+        "company_id",
+        "name_ar",
+        "name_en",
+        "category",
+        "water_type",
+        "size_label",
+        "volume_liters",
+        "price",
+        "image_url",
+        "image_path",
+        "is_available",
+        "approval_status",
+        "is_visible",
+        "delivery_estimate",
+        "description",
+        "sort_order",
+      ].join(",")
+    )
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseProduct(data);
+}
+
 export function getProductCatalogForCustomer(companyId, products = mockProducts) {
   return getAvailableProductsByCompany(companyId, products).map((product) => ({
     id: product.id,

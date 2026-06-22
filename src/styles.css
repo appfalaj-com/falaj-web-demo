@@ -1814,6 +1814,95 @@ tbody tr:hover td {
   flex-wrap: wrap;
 }
 
+.product-form-panel {
+  overflow: visible;
+}
+
+.product-form {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0 20px 20px;
+}
+
+.product-form label {
+  color: var(--dark);
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  min-width: 0;
+}
+
+.product-form input,
+.product-form select,
+.product-form textarea {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  min-width: 0;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.product-form textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.product-form input:focus,
+.product-form select:focus,
+.product-form textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(18, 153, 144, 0.14);
+  outline: 0;
+}
+
+.product-form-wide {
+  grid-column: span 2;
+}
+
+.product-form-check {
+  align-content: center;
+  align-items: center;
+  background: rgba(144, 209, 202, 0.12);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 14px;
+}
+
+.product-form-check input {
+  accent-color: var(--primary);
+  inline-size: 18px;
+  width: auto;
+}
+
+.product-form-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.product-status-stack {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.availability.pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #9a5f00;
+}
+
 .details-backdrop {
   align-items: stretch;
   background: rgba(10, 61, 58, 0.32);
@@ -1988,6 +2077,21 @@ tbody tr:hover td {
     padding: 0 14px 14px;
   }
 
+  .product-form {
+    grid-template-columns: 1fr;
+    padding: 0 14px 14px;
+  }
+
+  .product-form-wide,
+  .product-form-actions {
+    grid-column: auto;
+  }
+
+  .product-form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .product-card {
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -1998,6 +2102,12 @@ tbody tr:hover td {
 
   .product-title-row {
     display: grid;
+  }
+
+  .product-status-stack {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .product-meta {
