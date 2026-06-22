@@ -37,6 +37,17 @@ const STATUS_LABELS = {
   suspended: "موقوف",
 };
 
+const COMPANY_SELECT_COLUMNS = [
+  "id",
+  "name",
+  "phone",
+  "email",
+  "is_active",
+  "commission_rate",
+  "created_at",
+  "onboarding_status",
+].join(",");
+
 export function supplierStatusLabel(status) {
   return STATUS_LABELS[status] ?? status;
 }
@@ -51,7 +62,7 @@ function normalizeCompany(company) {
     name: company.name,
     phone: company.phone,
     email: company.email,
-    status: company.status ?? (company.is_active ? "approved" : "pending"),
+    status: resolveCompanyStatus(company),
     commissionRate: Number(company.commission_rate ?? 0),
     createdAt: company.created_at,
     bankName: company.bank_name ?? "",
@@ -61,41 +72,45 @@ function normalizeCompany(company) {
   };
 }
 
-export async function getSuppliers() {
-  if (!supabase) return MOCK_SUPPLIERS;
+function resolveCompanyStatus(company) {
+  if (company.is_active) return "approved";
+  if (company.onboarding_status === "suspended") return "suspended";
+  if (company.onboarding_status === "rejected") return "rejected";
+  return "pending";
+}
+
+export async function getSuppliers({ allowMockFallback = true } = {}) {
+  if (!supabase) {
+    if (allowMockFallback) return MOCK_SUPPLIERS;
+    throw new Error("Supabase غير مفعّل حاليًا.");
+  }
 
   const { data, error } = await supabase
     .from("companies")
-    .select(
-      [
-        "id",
-        "name",
-        "phone",
-        "email",
-        "status",
-        "is_active",
-        "commission_rate",
-        "created_at",
-        "bank_name",
-        "bank_account_name",
-        "bank_account_number",
-        "iban",
-      ].join(",")
-    )
+    .select(COMPANY_SELECT_COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (error) return MOCK_SUPPLIERS;
+  if (error) {
+    if (allowMockFallback) return MOCK_SUPPLIERS;
+    throw error;
+  }
+
   return (data ?? []).map(normalizeCompany);
 }
 
 export async function updateSupplierStatus(companyId, status) {
   if (!supabase) return { id: companyId, status };
 
+  const patch =
+    status === "approved"
+      ? { is_active: true, onboarding_status: "activated" }
+      : { is_active: false, onboarding_status: status === "pending" ? "pending_setup" : status };
+
   const { data, error } = await supabase
     .from("companies")
-    .update({ status, is_active: status === "approved" })
+    .update(patch)
     .eq("id", companyId)
-    .select()
+    .select(COMPANY_SELECT_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -109,7 +124,7 @@ export async function updateSupplierCommission(companyId, commissionRate) {
     .from("companies")
     .update({ commission_rate: commissionRate })
     .eq("id", companyId)
-    .select()
+    .select(COMPANY_SELECT_COLUMNS)
     .single();
 
   if (error) throw error;

@@ -12,8 +12,17 @@ const STATUS_LABELS = {
   activated: "مفعل",
 };
 
+const REQUEST_FILTERS = [
+  { value: "all", label: "الكل" },
+  { value: "pending", label: "قيد المراجعة" },
+  { value: "company_created", label: "تم إنشاء ملف المورد" },
+  { value: "invitation_sent", label: "تم إرسال الدعوة" },
+  { value: "rejected", label: "مرفوض" },
+];
+
 export default function AdminSupplierRequestsPage() {
   const [requests, setRequests] = useState([]);
+  const [activeStatus, setActiveStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [invitingRequestId, setInvitingRequestId] = useState(null);
   const [message, setMessage] = useState("");
@@ -56,6 +65,11 @@ export default function AdminSupplierRequestsPage() {
       cancelled = true;
     };
   }, []);
+
+  const visibleRequests =
+    activeStatus === "all"
+      ? requests
+      : requests.filter((request) => requestMatchesFilter(request, activeStatus));
 
   async function reviewRequest(requestId, status) {
     setMessage("");
@@ -157,24 +171,38 @@ export default function AdminSupplierRequestsPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">الإدارة</p>
-          <h1>طلبات انضمام الموردين</h1>
+          <h1>طلبات الانضمام</h1>
+          <p>مراجعة طلبات الشركات الراغبة بالانضمام إلى منصة فلج.</p>
         </div>
       </header>
 
       {message ? <p className="auth-alert success">{message}</p> : null}
       {errorMessage ? <p className="auth-alert error">{errorMessage}</p> : null}
 
+      <section className="status-tabs" aria-label="تصفية طلبات الانضمام">
+        {REQUEST_FILTERS.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            className={activeStatus === filter.value ? "active" : "ghost"}
+            onClick={() => setActiveStatus(filter.value)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </section>
+
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h2>طلبات الموردين الجديدة</h2>
-            <p>راجع طلبات الانضمام الواردة من الصفحة العامة.</p>
+            <h2>طلبات الشركات</h2>
+            <p>تابع حالة كل طلب من المراجعة حتى إرسال دعوة الدخول.</p>
           </div>
         </div>
 
         {isLoading ? (
           <p className="empty-state">جاري تحميل طلبات الانضمام...</p>
-        ) : requests.length === 0 ? (
+        ) : visibleRequests.length === 0 ? (
           <p className="empty-state">لا توجد طلبات انضمام حاليًا.</p>
         ) : (
           <div className="table-wrap">
@@ -194,7 +222,7 @@ export default function AdminSupplierRequestsPage() {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((request) => (
+                {visibleRequests.map((request) => (
                   <SupplierRequestRow
                     key={request.id}
                     request={request}
@@ -284,6 +312,16 @@ function SupplierRequestTimeline({ request, status, hasCompany }) {
 
 function normalizeStatus(status) {
   return status === "new" ? "pending" : status || "pending";
+}
+
+function requestMatchesFilter(request, filter) {
+  const status = normalizeStatus(request.status);
+
+  if (filter === "company_created") {
+    return status === "company_created" || status === "invitation_pending";
+  }
+
+  return status === filter;
 }
 
 function canApprove(status) {
