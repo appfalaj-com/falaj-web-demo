@@ -1280,6 +1280,13 @@ tbody tr:hover td {
   color: var(--dark);
 }
 
+.status.company_created,
+.status.invitation_pending,
+.status.activated {
+  background: rgba(18, 153, 144, 0.14);
+  color: var(--dark);
+}
+
 .status.suspended {
   background: rgba(90, 119, 116, 0.16);
   color: var(--muted);
@@ -1307,6 +1314,52 @@ tbody tr:hover td {
 
 .wide-actions button {
   white-space: nowrap;
+}
+
+.supplier-request-notes {
+  display: grid;
+  gap: 10px;
+  min-width: 260px;
+  white-space: normal;
+}
+
+.supplier-request-notes p {
+  margin: 0;
+}
+
+.supplier-request-timeline {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.supplier-request-timeline li {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding-inline-start: 18px;
+  position: relative;
+}
+
+.supplier-request-timeline li::before {
+  background: rgba(90, 119, 116, 0.28);
+  border-radius: 999px;
+  content: "";
+  height: 8px;
+  inset-inline-start: 0;
+  position: absolute;
+  top: 7px;
+  width: 8px;
+}
+
+.supplier-request-timeline li.done {
+  color: var(--dark);
+}
+
+.supplier-request-timeline li.done::before {
+  background: var(--primary);
 }
 
 .status-tabs,

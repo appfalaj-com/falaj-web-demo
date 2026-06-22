@@ -6,6 +6,9 @@ const STATUS_LABELS = {
   pending: "قيد المراجعة",
   approved: "مقبول",
   rejected: "مرفوض",
+  company_created: "تم إنشاء ملف المورد",
+  invitation_pending: "بانتظار دعوة الدخول",
+  activated: "مفعل",
 };
 
 export default function AdminSupplierRequestsPage() {
@@ -46,6 +49,30 @@ export default function AdminSupplierRequestsPage() {
       const userId = await getCurrentUserId();
       const reviewedAt = new Date().toISOString();
 
+      if (status === "approved") {
+        const request = requests.find((item) => item.id === requestId);
+        if (!request) throw new Error("تعذر العثور على طلب الانضمام.");
+
+        const company = await ensureCompanyForJoinRequest(request);
+
+        const { data, error } = await supabase
+          .from("supplier_join_requests")
+          .update({
+            status: "company_created",
+            reviewed_at: reviewedAt,
+            reviewed_by: userId,
+          })
+          .eq("id", requestId)
+          .select("id, status, reviewed_at, reviewed_by")
+          .single();
+
+        if (error) throw error;
+
+        updateRequestState(data, company);
+        setMessage("تم قبول الطلب وإنشاء ملف المورد المبدئي. الخطوة التالية إرسال دعوة الدخول.");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("supplier_join_requests")
         .update({
@@ -59,22 +86,32 @@ export default function AdminSupplierRequestsPage() {
 
       if (error) throw error;
 
-      setRequests((current) =>
-        current.map((request) =>
-          request.id === requestId
-            ? {
-                ...request,
-                status: data.status,
-                reviewed_at: data.reviewed_at,
-                reviewed_by: data.reviewed_by,
-              }
-            : request
-        )
-      );
-      setMessage(status === "approved" ? "تم قبول طلب الانضمام." : "تم رفض طلب الانضمام.");
+      updateRequestState(data);
+      setMessage("تم رفض طلب الانضمام.");
     } catch (error) {
       setErrorMessage(error.message || "تعذر تحديث حالة الطلب.");
     }
+  }
+
+  function updateRequestState(data, company = null) {
+    setRequests((current) =>
+      current.map((request) =>
+        request.id === data.id
+          ? {
+              ...request,
+              status: data.status,
+              reviewed_at: data.reviewed_at,
+              reviewed_by: data.reviewed_by,
+              company,
+            }
+          : request
+      )
+    );
+  }
+
+  function showInvitationPlaceholder() {
+    setMessage("سيتم تفعيل دعوات الدخول في المرحلة التالية.");
+    setErrorMessage("");
   }
 
   return (
@@ -120,7 +157,12 @@ export default function AdminSupplierRequestsPage() {
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <SupplierRequestRow key={request.id} request={request} onReview={reviewRequest} />
+                  <SupplierRequestRow
+                    key={request.id}
+                    request={request}
+                    onReview={reviewRequest}
+                    onInvite={showInvitationPlaceholder}
+                  />
                 ))}
               </tbody>
             </table>
@@ -131,8 +173,9 @@ export default function AdminSupplierRequestsPage() {
   );
 }
 
-function SupplierRequestRow({ request, onReview }) {
+function SupplierRequestRow({ request, onReview, onInvite }) {
   const status = normalizeStatus(request.status);
+  const hasCompany = Boolean(request.company);
 
   return (
     <tr>
@@ -146,10 +189,19 @@ function SupplierRequestRow({ request, onReview }) {
         <span className={`status ${status}`}>{STATUS_LABELS[status] ?? status}</span>
       </td>
       <td>{formatDate(request.created_at)}</td>
-      <td>{request.notes || "-"}</td>
+      <td>
+        <div className="supplier-request-notes">
+          <p>{request.notes || "-"}</p>
+          <SupplierRequestTimeline request={request} status={status} hasCompany={hasCompany} />
+        </div>
+      </td>
       <td>
         <div className="row-actions">
-          <button type="button" onClick={() => onReview(request.id, "approved")} disabled={status === "approved"}>
+          <button
+            type="button"
+            onClick={() => onReview(request.id, "approved")}
+            disabled={!canApprove(status)}
+          >
             قبول
           </button>
           <button
@@ -160,14 +212,47 @@ function SupplierRequestRow({ request, onReview }) {
           >
             رفض
           </button>
+          {canShowInviteButton(status, hasCompany) ? (
+            <button type="button" className="ghost" onClick={onInvite}>
+              إرسال دعوة الدخول
+            </button>
+          ) : null}
         </div>
       </td>
     </tr>
   );
 }
 
+function SupplierRequestTimeline({ request, status, hasCompany }) {
+  const steps = [
+    { label: "تم استلام الطلب", done: Boolean(request.created_at) },
+    { label: "تمت المراجعة", done: Boolean(request.reviewed_at) },
+    { label: "تم إنشاء ملف المورد", done: hasCompany || ["company_created", "invitation_pending", "activated"].includes(status) },
+    { label: "دعوة الدخول", done: ["invitation_pending", "activated"].includes(status) },
+    { label: "التفعيل النهائي", done: status === "activated" },
+  ];
+
+  return (
+    <ol className="supplier-request-timeline" aria-label="مراحل طلب الانضمام">
+      {steps.map((step) => (
+        <li key={step.label} className={step.done ? "done" : undefined}>
+          {step.label}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function normalizeStatus(status) {
   return status === "new" ? "pending" : status || "pending";
+}
+
+function canApprove(status) {
+  return status === "pending";
+}
+
+function canShowInviteButton(status, hasCompany) {
+  return hasCompany || ["company_created", "invitation_pending"].includes(status);
 }
 
 async function fetchSupplierRequests() {
@@ -183,7 +268,7 @@ async function fetchSupplierRequests() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return attachCompaniesToRequests(data ?? []);
 }
 
 async function getCurrentUserId() {
@@ -200,4 +285,54 @@ async function getCurrentUserId() {
 function formatDate(value) {
   if (!value) return "-";
   return new Date(value).toLocaleString("ar-OM");
+}
+
+async function attachCompaniesToRequests(requests) {
+  if (requests.length === 0) return requests;
+
+  const requestIds = requests.map((request) => request.id);
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, name, supplier_join_request_id, onboarding_status")
+    .in("supplier_join_request_id", requestIds);
+
+  if (error) return requests;
+
+  const companiesByRequestId = new Map(
+    (data ?? []).map((company) => [company.supplier_join_request_id, company])
+  );
+
+  return requests.map((request) => ({
+    ...request,
+    company: companiesByRequestId.get(request.id) ?? null,
+  }));
+}
+
+async function ensureCompanyForJoinRequest(request) {
+  const { data: existingCompany, error: findError } = await supabase
+    .from("companies")
+    .select("id, name, supplier_join_request_id, onboarding_status")
+    .eq("supplier_join_request_id", request.id)
+    .maybeSingle();
+
+  if (findError) throw findError;
+  if (existingCompany) return existingCompany;
+
+  const { data, error } = await supabase
+    .from("companies")
+    .insert({
+      name: request.company_name,
+      phone: request.phone,
+      email: request.email,
+      is_active: false,
+      status: "pending",
+      onboarding_status: "pending_setup",
+      supplier_join_request_id: request.id,
+      approved_join_request_id: request.id,
+    })
+    .select("id, name, supplier_join_request_id, onboarding_status")
+    .single();
+
+  if (error) throw error;
+  return data;
 }
