@@ -25,6 +25,13 @@ type AuthUser = {
   email?: string;
 };
 
+type Profile = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  account_type: string | null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,6 +62,9 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    const adminCheck = await requireAdminCaller(supabase, req);
+    if (adminCheck.error) return adminCheck.error;
 
     const { data: joinRequest, error: requestError } = await supabase
       .from("supplier_join_requests")
@@ -199,6 +209,54 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function requireAdminCaller(
+  supabase: ReturnType<typeof createClient>,
+  req: Request,
+): Promise<{ error: Response | null }> {
+  const authorization = req.headers.get("Authorization") ?? "";
+  const jwt = authorization.replace("Bearer ", "").trim();
+
+  if (!jwt) {
+    return { error: jsonResponse({ ok: false, error: "Missing authenticated user token" }, 401) };
+  }
+
+  const { data: callerData, error: callerError } = await supabase.auth.getUser(jwt);
+  const caller = callerData?.user;
+
+  if (callerError || !caller) {
+    return {
+      error: jsonResponse({ ok: false, error: "Invalid authenticated user token" }, 401),
+    };
+  }
+
+  const lookupFilter = [
+    caller.id ? `id.eq.${caller.id}` : null,
+    caller.email ? `email.eq.${caller.email}` : null,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, email, role, account_type")
+    .or(lookupFilter)
+    .limit(1);
+
+  if (profileError) {
+    return { error: jsonResponse({ ok: false, error: "Could not verify caller permissions" }, 500) };
+  }
+
+  const profile = (profiles?.[0] ?? null) as Profile | null;
+  const role = profile?.role?.trim().toLowerCase();
+  const accountType = profile?.account_type?.trim().toLowerCase();
+
+  if (role !== "admin" && accountType !== "admin") {
+    return { error: jsonResponse({ ok: false, error: "Admin access is required" }, 403) };
+  }
+
+  return { error: null };
+}
 
 async function findUserByEmail(supabase: ReturnType<typeof createClient>, email: string): Promise<AuthUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
