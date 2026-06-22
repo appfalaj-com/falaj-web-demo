@@ -9,6 +9,7 @@ const companyLinks = [
 const adminLinks = [
   { href: "/admin", label: "الإدارة" },
   { href: "/admin/suppliers", label: "الموردون" },
+  { href: "/admin/supplier-requests", label: "طلبات انضمام الموردين" },
   { href: "/admin/finance", label: "المالية" },
   { href: "/admin/live-tracking", label: "التتبع العام" },
 ];
@@ -24,6 +25,17 @@ export default function Layout({
   onSignOut,
 }) {
   const links = role === "admin" ? adminLinks : role === "company" ? companyLinks : driverLinks;
+  const isActiveLink = (href) => {
+    if (href === "/admin") {
+      return currentPath === "/admin";
+    }
+
+    if (href === "/admin/suppliers") {
+      return currentPath === href || currentPath.startsWith("/admin/suppliers/");
+    }
+
+    return currentPath === href;
+  };
 
   return (
     <div className="app-shell falaj-shell">
@@ -48,7 +60,7 @@ export default function Layout({
           {links.map((link) => (
             <a
               key={link.href}
-              className={currentPath === link.href ? "nav-link falaj-nav-link active" : "nav-link falaj-nav-link"}
+              className={isActiveLink(link.href) ? "nav-link falaj-nav-link active" : "nav-link falaj-nav-link"}
               href={link.href}
               onClick={(event) => {
                 event.preventDefault();

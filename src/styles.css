@@ -235,6 +235,13 @@ button:disabled {
   margin-top: 2px;
 }
 
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 .login-header h1,
 .login-header p,
 .pending-panel h1,
