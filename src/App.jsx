@@ -6,6 +6,7 @@ import AccessDeniedPage from "./pages/AccessDeniedPage.jsx";
 import AdminFinancePage from "./pages/AdminFinancePage.jsx";
 import AdminLiveTrackingPage from "./pages/AdminLiveTrackingPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
+import AdminOrdersPage from "./pages/AdminOrdersPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import AdminProductModerationPage from "./pages/AdminProductModerationPage.jsx";
 import AdminSupplierAccountPage from "./pages/AdminSupplierAccountPage.jsx";
@@ -195,6 +196,7 @@ export default function App() {
     "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
     "/company/drivers/live": <CompanyDriversLivePage companyId={companyId} />,
     "/admin": <AdminPage onNavigate={navigate} />,
+    "/admin/orders": <AdminOrdersPage />,
     "/admin/product-moderation": <AdminProductModerationPage />,
     "/admin/suppliers": <AdminSuppliersPage onNavigate={navigate} />,
     "/admin/supplier-requests": <AdminSupplierRequestsPage />,

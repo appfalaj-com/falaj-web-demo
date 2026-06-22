@@ -15,6 +15,7 @@ function normalizeSupabaseOrder(order) {
     rawId: order.id,
     publicCode: order.public_code,
     companyId: order.company_id,
+    companyName: order.companies?.name,
     customer: order.customer_name_snapshot,
     phone: order.customer_phone_snapshot,
     area: order.delivery_area,
@@ -90,6 +91,23 @@ export async function getOrdersByCompanyFromSupabase(companyId) {
   return (data ?? []).map(normalizeSupabaseOrder);
 }
 
+export async function getAdminOrdersFromSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`${orderSelectColumns()}, companies(name)`)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(normalizeSupabaseOrder);
+}
+
 export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nextStatus) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
@@ -112,7 +130,31 @@ export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nex
     throw error;
   }
 
-  await addOrderStatusHistory(orderId, nextStatus);
+  await addOrderStatusHistory(orderId, nextStatus, "تحديث من لوحة المورد");
+  return normalizeSupabaseOrder(data);
+}
+
+export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const patch = { status: nextStatus };
+  const timestampField = timestampFieldByStatus(nextStatus);
+  if (timestampField) patch[timestampField] = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update(patch)
+    .eq("id", orderId)
+    .select(`${orderSelectColumns()}, companies(name)`)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await addOrderStatusHistory(orderId, nextStatus, "تحديث من لوحة الأدمن");
   return normalizeSupabaseOrder(data);
 }
 
@@ -152,13 +194,13 @@ export function getCompletedOrders(orders = mockOrders) {
   return orders.filter((order) => ["completed", "delivered"].includes(order.status));
 }
 
-async function addOrderStatusHistory(orderId, status) {
+async function addOrderStatusHistory(orderId, status, note) {
   const { data: userData } = await supabase.auth.getUser();
   const { error } = await supabase.from("order_status_history").insert({
     order_id: orderId,
     status,
     changed_by_profile_id: userData?.user?.id ?? null,
-    note: "تحديث من لوحة المورد",
+    note,
   });
 
   if (error) {
