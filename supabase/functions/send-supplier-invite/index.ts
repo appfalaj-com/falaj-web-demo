@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const existingUser = await findUserByEmail(supabase, supplierJoinRequest.email);
 
     if (!existingUser) {
-      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
         supplierJoinRequest.email,
         {
           data: {
@@ -142,8 +142,30 @@ Deno.serve(async (req) => {
         return jsonResponse({ ok: false, error: inviteError.message }, 500);
       }
 
+      const invitedUser = inviteData?.user
+        ? { id: inviteData.user.id, email: inviteData.user.email ?? supplierJoinRequest.email }
+        : await findUserByEmail(supabase, supplierJoinRequest.email);
+
+      if (!invitedUser) {
+        return jsonResponse(
+          { ok: false, error: "Invite was sent, but the invited user could not be found for profile linking" },
+          500,
+        );
+      }
+
+      const linkResult = await ensureSupplierAccountLink(
+        supabase,
+        invitedUser,
+        supplierJoinRequest,
+        company.id,
+      );
+      if (linkResult.error) return linkResult.error;
+
       const stateError = await markInvitationSent(supabase, request_id, company.id);
       if (stateError) return stateError;
+
+      const verifyResult = await verifySupplierAccountLink(supabase, invitedUser.id, company.id);
+      if (verifyResult.error) return verifyResult.error;
 
       return jsonResponse({
         ok: true,
@@ -195,12 +217,11 @@ async function findUserByEmail(supabase: ReturnType<typeof createClient>, email:
   return null;
 }
 
-async function linkExistingUserAndSendMagicLink(
+async function ensureSupplierAccountLink(
   supabase: ReturnType<typeof createClient>,
   user: AuthUser,
   request: SupplierJoinRequest,
   companyId: string,
-  requestId: string,
 ): Promise<{ error: Response | null }> {
   const email = request.email;
   if (!email) {
@@ -250,6 +271,24 @@ async function linkExistingUserAndSendMagicLink(
     return { error: jsonResponse({ ok: false, error: companyError.message }, 500) };
   }
 
+  return { error: null };
+}
+
+async function linkExistingUserAndSendMagicLink(
+  supabase: ReturnType<typeof createClient>,
+  user: AuthUser,
+  request: SupplierJoinRequest,
+  companyId: string,
+  requestId: string,
+): Promise<{ error: Response | null }> {
+  const email = request.email;
+  if (!email) {
+    return { error: jsonResponse({ ok: false, error: "Supplier join request does not have an email" }, 400) };
+  }
+
+  const linkResult = await ensureSupplierAccountLink(supabase, user, request, companyId);
+  if (linkResult.error) return linkResult;
+
   const { error: magicLinkError } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -265,7 +304,7 @@ async function linkExistingUserAndSendMagicLink(
   const stateError = await markInvitationSent(supabase, requestId, companyId);
   if (stateError) return { error: stateError };
 
-  return { error: null };
+  return verifySupplierAccountLink(supabase, user.id, companyId);
 }
 
 async function markInvitationSent(
@@ -292,6 +331,53 @@ async function markInvitationSent(
   }
 
   return null;
+}
+
+async function verifySupplierAccountLink(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  companyId: string,
+): Promise<{ error: Response | null }> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role, account_type")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    return { error: jsonResponse({ ok: false, error: profileError.message }, 500) };
+  }
+
+  if (!profile || profile.role !== "company" || profile.account_type !== "company") {
+    return {
+      error: jsonResponse(
+        { ok: false, error: "Supplier profile was not linked correctly after sending the invite" },
+        500,
+      ),
+    };
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, owner_id, onboarding_status")
+    .eq("id", companyId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (companyError) {
+    return { error: jsonResponse({ ok: false, error: companyError.message }, 500) };
+  }
+
+  if (!company || company.onboarding_status !== "invitation_sent") {
+    return {
+      error: jsonResponse(
+        { ok: false, error: "Supplier company was not linked correctly after sending the invite" },
+        500,
+      ),
+    };
+  }
+
+  return { error: null };
 }
 
 function isExistingUserError(message: string) {

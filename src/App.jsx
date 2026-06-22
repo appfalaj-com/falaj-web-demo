@@ -258,6 +258,16 @@ export default function App() {
       return <CompanyLoginPage onAuthenticated={handleAuthenticated} />;
     }
 
+    if (!authState.profile) {
+      logCompanyGuardDecision("incomplete_profile_link");
+      return (
+        <AccessDeniedPage
+          message="حساب المورد غير مكتمل الربط. يرجى التواصل مع إدارة فلج."
+          onNavigate={navigate}
+        />
+      );
+    }
+
     if (authState.role !== "company") {
       logCompanyGuardDecision("unauthorized");
       return (

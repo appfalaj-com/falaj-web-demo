@@ -64,6 +64,7 @@ export default function AdminSupplierRequestsPage() {
     try {
       const userId = await getCurrentUserId();
       const reviewedAt = new Date().toISOString();
+      await validateSupplierLinkBeforeActivation(request.company.id);
 
       const { error: companyError } = await supabase
         .from("companies")
@@ -464,7 +465,7 @@ async function attachCompaniesToRequests(requests) {
   const requestIds = requests.map((request) => request.id);
   const { data, error } = await supabase
     .from("companies")
-    .select("id, name, supplier_join_request_id, onboarding_status")
+    .select("id, name, owner_id, supplier_join_request_id, onboarding_status")
     .in("supplier_join_request_id", requestIds);
 
   if (error) return requests;
@@ -479,10 +480,36 @@ async function attachCompaniesToRequests(requests) {
   }));
 }
 
+async function validateSupplierLinkBeforeActivation(companyId) {
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, owner_id, onboarding_status")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (companyError) throw companyError;
+
+  if (!company?.owner_id) {
+    throw new Error("لا يمكن التفعيل: حساب المورد غير مربوط بالشركة. أعد إرسال دعوة الدخول.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role, account_type")
+    .eq("id", company.owner_id)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+
+  if (!profile || profile.role !== "company" || profile.account_type !== "company") {
+    throw new Error("لا يمكن التفعيل: حساب المورد غير مربوط بالشركة. أعد إرسال دعوة الدخول.");
+  }
+}
+
 async function ensureCompanyForJoinRequest(request) {
   const { data: existingCompany, error: findError } = await supabase
     .from("companies")
-    .select("id, name, supplier_join_request_id, onboarding_status")
+    .select("id, name, owner_id, supplier_join_request_id, onboarding_status")
     .eq("supplier_join_request_id", request.id)
     .maybeSingle();
 
@@ -500,7 +527,7 @@ async function ensureCompanyForJoinRequest(request) {
       supplier_join_request_id: request.id,
       approved_join_request_id: request.id,
     })
-    .select("id, name, supplier_join_request_id, onboarding_status")
+    .select("id, name, owner_id, supplier_join_request_id, onboarding_status")
     .single();
 
   if (error) throw error;

@@ -132,9 +132,16 @@ export async function getCompanyForUser(userOrId) {
       throw byMetadataCompany.error;
     }
 
-    if (byMetadataCompany.data && (!byMetadataCompany.data.owner_id || byMetadataCompany.data.owner_id === userId)) {
+    if (byMetadataCompany.data?.owner_id === userId) {
       return byMetadataCompany.data;
     }
+
+    logAuthDebug("metadata company rejected", {
+      userId,
+      metadataCompanyId,
+      companyOwnerId: byMetadataCompany.data?.owner_id,
+      reason: "company owner_id does not match authenticated user",
+    });
   }
 
   const byLegacyOwnerId = await client
@@ -142,7 +149,7 @@ export async function getCompanyForUser(userOrId) {
     .select(COMPANY_SESSION_COLUMNS)
     .eq("owner_id", userId)
     .order("updated_at", { ascending: false })
-    .limit(1);
+    .limit(20);
 
   if (byLegacyOwnerId.error) {
     throw byLegacyOwnerId.error;
@@ -208,6 +215,15 @@ export async function buildCompanySession(session) {
 
   const profile = await getCurrentProfile(user);
   const role = getProfileRole(profile);
+  if (!profile) {
+    logAuthDebug("company rejected", {
+      userId: user.id,
+      userEmail: user.email,
+      reason: "profile is missing",
+    });
+    throw new Error("حساب المورد غير مكتمل الربط. يرجى التواصل مع إدارة فلج.");
+  }
+
   if (role !== "company") {
     logAuthDebug("company rejected", {
       userId: user.id,
