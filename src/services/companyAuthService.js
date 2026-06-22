@@ -106,7 +106,14 @@ export async function getCurrentProfile(userOrId, email) {
   return profile;
 }
 
-const COMPANY_SESSION_COLUMNS = "id, name, email, phone, is_active, commission_rate, owner_id, onboarding_status";
+const COMPANY_SESSION_COLUMNS =
+  "id, name, email, phone, is_active, commission_rate, owner_id, onboarding_status, updated_at";
+const ACTIVE_ONBOARDING_STATUSES = new Set([
+  "invitation_sent",
+  "pending_setup",
+  "company_created",
+  "activated",
+]);
 
 export async function getCompanyForUser(userOrId) {
   const client = requireSupabase();
@@ -118,14 +125,13 @@ export async function getCompanyForUser(userOrId) {
       .from("companies")
       .select(COMPANY_SESSION_COLUMNS)
       .eq("id", metadataCompanyId)
-      .eq("owner_id", userId)
       .maybeSingle();
 
     if (byMetadataCompany.error) {
       throw byMetadataCompany.error;
     }
 
-    if (byMetadataCompany.data) {
+    if (byMetadataCompany.data && (!byMetadataCompany.data.owner_id || byMetadataCompany.data.owner_id === userId)) {
       return byMetadataCompany.data;
     }
   }
@@ -141,7 +147,12 @@ export async function getCompanyForUser(userOrId) {
     throw byLegacyOwnerId.error;
   }
 
-  return byLegacyOwnerId.data?.[0] ?? null;
+  const companies = byLegacyOwnerId.data ?? [];
+  const currentCompany = companies.find((company) =>
+    ACTIVE_ONBOARDING_STATUSES.has(company.onboarding_status)
+  );
+
+  return currentCompany ?? companies.find((company) => company.onboarding_status === "rejected") ?? null;
 }
 
 export async function getAuthContext() {

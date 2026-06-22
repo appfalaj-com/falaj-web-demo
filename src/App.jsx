@@ -42,6 +42,14 @@ function getSupplierAccountCompanyId(path) {
   return match?.[1] ?? null;
 }
 
+function isRejectedCompany(company) {
+  return company?.onboarding_status === "rejected";
+}
+
+function isPendingCompany(company) {
+  return Boolean(company) && (!company.is_active || company.onboarding_status !== "activated");
+}
+
 export default function App() {
   const [orders, setOrders] = useState(() => getOrders(mockOrders));
   const drivers = getDrivers(mockDrivers);
@@ -230,10 +238,16 @@ export default function App() {
       );
     }
 
-    if (
-      authState.company &&
-      (authState.company.status ? authState.company.status !== "approved" : !authState.company.is_active)
-    ) {
+    if (isRejectedCompany(authState.company)) {
+      return (
+        <AccessDeniedPage
+          message="طلب المورد المرتبط بهذا الحساب مرفوض. يمكنكم تقديم طلب انضمام جديد."
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (isPendingCompany(authState.company)) {
       return <CompanyPendingReviewPage onSignedOut={handleSignOut} />;
     }
   }
