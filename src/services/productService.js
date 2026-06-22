@@ -20,6 +20,7 @@ function normalizeSupabaseProduct(product) {
     imagePath: product.image_path,
     isAvailable: product.is_available,
     approvalStatus: product.approval_status ?? "pending_review",
+    adminReviewNotes: product.admin_review_notes,
     isVisible: product.is_visible ?? false,
     deliveryEstimate: product.delivery_estimate,
     description: product.description,
@@ -63,6 +64,7 @@ export async function getProductsByCompanyFromSupabase(companyId) {
         "image_path",
         "is_available",
         "approval_status",
+        "admin_review_notes",
         "is_visible",
         "delivery_estimate",
         "description",
@@ -122,6 +124,7 @@ export async function createCompanyProductForReview(companyId, product) {
         "image_path",
         "is_available",
         "approval_status",
+        "admin_review_notes",
         "is_visible",
         "delivery_estimate",
         "description",
@@ -130,6 +133,86 @@ export async function createCompanyProductForReview(companyId, product) {
         "updated_at",
       ].join(",")
     )
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseProduct(data);
+}
+
+export async function updateCompanyProductForReview(companyId, productId, product) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .update({
+      name_ar: product.nameAr,
+      name_en: product.nameEn || null,
+      category: product.category,
+      water_type: product.waterType,
+      size_label: product.sizeLabel || null,
+      volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
+      price: Number(product.price),
+      image_url: product.imageUrl || null,
+      description: product.description || null,
+      delivery_estimate: product.deliveryEstimate || null,
+      is_available: Boolean(product.isAvailable),
+      approval_status: "pending_review",
+      is_visible: false,
+      reviewed_by: null,
+      reviewed_at: null,
+    })
+    .eq("id", productId)
+    .eq("company_id", supabaseCompanyId)
+    .select(productSelectColumns())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseProduct(data);
+}
+
+export async function updateCompanyProductAvailability(companyId, productId, isAvailable) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_available: Boolean(isAvailable) })
+    .eq("id", productId)
+    .eq("company_id", supabaseCompanyId)
+    .select(productSelectColumns())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseProduct(data);
+}
+
+export async function updateApprovedCompanyProductVisibility(companyId, productId, isVisible) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_visible: Boolean(isVisible) })
+    .eq("id", productId)
+    .eq("company_id", supabaseCompanyId)
+    .eq("approval_status", "approved")
+    .select(productSelectColumns())
     .single();
 
   if (error) {
@@ -180,6 +263,7 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
         "image_path",
         "is_available",
         "approval_status",
+        "admin_review_notes",
         "is_visible",
         "delivery_estimate",
         "description",
@@ -219,4 +303,29 @@ export function getProductMetrics(companyId, products = mockProducts) {
     unavailableProducts: unavailableProducts.length,
     averagePrice,
   };
+}
+
+function productSelectColumns() {
+  return [
+    "id",
+    "company_id",
+    "name_ar",
+    "name_en",
+    "category",
+    "water_type",
+    "size_label",
+    "volume_liters",
+    "price",
+    "image_url",
+    "image_path",
+    "is_available",
+    "approval_status",
+    "admin_review_notes",
+    "is_visible",
+    "delivery_estimate",
+    "description",
+    "sort_order",
+    "created_at",
+    "updated_at",
+  ].join(",");
 }
