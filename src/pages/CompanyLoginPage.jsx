@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   COMPANY_AUTH_ERRORS,
+  sendCompanyEmailMagicLink,
   sendCompanyPhoneOtp,
   signInCompanyWithEmail,
   verifyCompanyPhoneOtp,
@@ -10,6 +11,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
   const [activeTab, setActiveTab] = useState("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [linkEmail, setLinkEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -45,6 +47,22 @@ export default function CompanyLoginPage({ onAuthenticated }) {
       setStatus("تم إرسال رمز التحقق إلى رقم الهاتف.");
     } catch (authError) {
       setError(authError.message || COMPANY_AUTH_ERRORS.PHONE_DISABLED);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSendEmailLink(event) {
+    event.preventDefault();
+    setError("");
+    setStatus("");
+    setIsSubmitting(true);
+
+    try {
+      await sendCompanyEmailMagicLink(linkEmail.trim());
+      setStatus("تم إرسال رابط دخول آمن إلى بريد المورد. افتح الرابط لإعداد كلمة المرور أو الدخول.");
+    } catch (authError) {
+      setError(authError.message || "تعذر إرسال رابط الدخول الآمن. تأكد من البريد وحاول مرة أخرى.");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,7 +112,20 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               setStatus("");
             }}
           >
-            الدخول بالإيميل
+            الدخول بكلمة المرور
+          </button>
+          <button
+            type="button"
+            className={activeTab === "link" ? "active" : ""}
+            role="tab"
+            aria-selected={activeTab === "link"}
+            onClick={() => {
+              setActiveTab("link");
+              setError("");
+              setStatus("");
+            }}
+          >
+            الدخول برابط آمن
           </button>
           <button
             type="button"
@@ -138,6 +169,23 @@ export default function CompanyLoginPage({ onAuthenticated }) {
             </label>
             <button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "جاري الدخول..." : "دخول"}
+            </button>
+          </form>
+        ) : activeTab === "link" ? (
+          <form className="auth-form" onSubmit={handleSendEmailLink}>
+            <label>
+              البريد الإلكتروني
+              <input
+                type="email"
+                autoComplete="email"
+                value={linkEmail}
+                onChange={(event) => setLinkEmail(event.target.value)}
+                required
+              />
+            </label>
+            <p className="auth-note">سنرسل رابط دخول آمن إلى بريد المورد بدون إرسال أي كلمة مرور.</p>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "جاري إرسال الرابط..." : "إرسال رابط آمن"}
             </button>
           </form>
         ) : (

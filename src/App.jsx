@@ -18,6 +18,7 @@ import CompanyLoginPage from "./pages/CompanyLoginPage.jsx";
 import CompanyOrdersPage from "./pages/CompanyOrdersPage.jsx";
 import CompanyPendingReviewPage from "./pages/CompanyPendingReviewPage.jsx";
 import CompanyProductsPage from "./pages/CompanyProductsPage.jsx";
+import CompanySetPasswordPage from "./pages/CompanySetPasswordPage.jsx";
 import DriverLoginPendingPage from "./pages/DriverLoginPendingPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -28,6 +29,7 @@ import { getOrders } from "./services/orderService.js";
 
 const PROTECTED_COMPANY_PATHS = new Set([
   "/company",
+  "/company/set-password",
   "/company/orders",
   "/company/products",
   "/company/drivers",
@@ -187,6 +189,7 @@ export default function App() {
 
   const routes = {
     "/company": <CompanyDashboard {...workflow} companyId={companyId} />,
+    "/company/set-password": <CompanySetPasswordPage onSaved={() => replacePath("/company")} />,
     "/company/orders": <CompanyOrdersPage {...workflow} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,
     "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
@@ -289,7 +292,7 @@ export default function App() {
         );
       }
 
-      if (isPendingCompany(authState.company)) {
+      if (isPendingCompany(authState.company) && currentPath !== "/company/set-password") {
         logCompanyGuardDecision("pending");
         return <CompanyPendingReviewPage onSignedOut={handleSignOut} />;
       }

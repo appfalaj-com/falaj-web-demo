@@ -264,6 +264,21 @@ export async function signInCompanyWithEmail(email, password) {
   return buildCompanySession(data.session);
 }
 
+export async function sendCompanyEmailMagicLink(email) {
+  const client = requireSupabase();
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/company/set-password`,
+      shouldCreateUser: false,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function signInAdminWithEmail(email, password) {
   const client = requireSupabase();
   const { data, error } = await client.auth.signInWithPassword({ email, password });
