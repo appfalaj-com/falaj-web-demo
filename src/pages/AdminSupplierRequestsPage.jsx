@@ -151,11 +151,15 @@ export default function AdminSupplierRequestsPage() {
     setInvitingRequestId(requestId);
 
     try {
-      const { error } = await supabase.functions.invoke("send-supplier-invite", {
+      const { data, error } = await supabase.functions.invoke("send-supplier-invite", {
         body: { request_id: requestId },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Invite function error:", error, data);
+        setErrorMessage(await getInviteFunctionErrorMessage(error, data));
+        return;
+      }
 
       setMessage("تم إرسال دعوة الدخول إلى بريد المورد.");
       await loadRequests();
@@ -330,6 +334,26 @@ function canApprove(status) {
 
 function canShowInviteButton(status, hasCompany) {
   return (hasCompany || ["company_created", "invitation_pending"].includes(status)) && status !== "invitation_sent";
+}
+
+async function getInviteFunctionErrorMessage(error, data) {
+  if (data?.error || data?.message) {
+    return data.error || data.message;
+  }
+
+  const response = error?.context;
+  if (response && typeof response.json === "function") {
+    try {
+      const body = await response.json();
+      if (body?.error || body?.message) {
+        return body.error || body.message;
+      }
+    } catch {
+      // Ignore invalid response bodies and fall back to the SDK error message.
+    }
+  }
+
+  return error?.message || "تعذر إرسال دعوة الدخول.";
 }
 
 async function fetchSupplierRequests() {

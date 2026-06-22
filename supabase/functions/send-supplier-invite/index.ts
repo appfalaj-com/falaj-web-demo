@@ -24,7 +24,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { request_id } = await req.json();
+    let payload: { request_id?: string };
+
+    try {
+      payload = await req.json();
+    } catch {
+      return jsonResponse({ ok: false, error: "Request body must be valid JSON" }, 400);
+    }
+
+    const { request_id } = payload;
 
     if (!request_id) {
       return jsonResponse({ ok: false, error: "request_id is required" }, 400);
@@ -60,7 +68,7 @@ Deno.serve(async (req) => {
 
     if (!allowedStatuses.includes(normalizedStatus)) {
       return jsonResponse(
-        { ok: false, error: "Supplier join request is not ready for an invite" },
+        { ok: false, error: `Supplier join request is not ready for an invite. Current status: ${normalizedStatus}` },
         409,
       );
     }
@@ -122,7 +130,10 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: true, invitation_sent: true });
   } catch (error) {
     console.error("send-supplier-invite error:", error);
-    return jsonResponse({ ok: false, error: "Unexpected function error" }, 500);
+    return jsonResponse(
+      { ok: false, error: error instanceof Error ? error.message : "Unexpected function error" },
+      500,
+    );
   }
 });
 
