@@ -77,8 +77,7 @@ export default function LandingPage({ onNavigate }) {
             onNavigate?.("/");
           }}
         >
-          <span className="landing-logo-mark">ف</span>
-          <span>فلج</span>
+          <img className="landing-logo-image" src="/brand/Falaj_Logo.png" alt="Falaj" />
         </a>
 
         <nav className="landing-nav" aria-label="روابط الصفحة">
@@ -264,7 +263,7 @@ export default function LandingPage({ onNavigate }) {
 
       <footer className="landing-footer" id="contact">
         <div>
-          <strong>Falaj</strong>
+          <img className="footer-logo-image" src="/brand/Falaj_Logo.png" alt="Falaj" />
           <span>appfalaj.com</span>
           <span>info@appfalaj.com</span>
           <span>© Falaj</span>

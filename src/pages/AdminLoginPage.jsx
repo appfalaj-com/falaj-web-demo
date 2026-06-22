@@ -26,7 +26,7 @@ export default function AdminLoginPage({ onAuthenticated }) {
     <main className="login-page" dir="rtl">
       <section className="login-panel" aria-labelledby="admin-login-title">
         <div className="login-brand">
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <div>
             <strong>فلج</strong>
             <small>دخول الإدارة</small>

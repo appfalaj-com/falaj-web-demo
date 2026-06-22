@@ -59,7 +59,7 @@ export default function DriverLoginPendingPage({ onNavigate }) {
     <main className="login-page" dir="rtl">
       <section className="login-panel">
         <div className="login-brand">
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <div>
             <strong>فلج</strong>
             <small>دخول السائقين</small>

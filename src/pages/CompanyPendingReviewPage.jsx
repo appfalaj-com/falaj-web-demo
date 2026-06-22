@@ -10,7 +10,7 @@ export default function CompanyPendingReviewPage({ onSignedOut }) {
     <main className="login-page" dir="rtl">
       <section className="login-panel pending-panel">
         <div className="login-brand">
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <div>
             <strong>فلج</strong>
             <small>لوحة الموردين</small>

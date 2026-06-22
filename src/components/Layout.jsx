@@ -50,7 +50,7 @@ export default function Layout({
             onNavigate?.("/");
           }}
         >
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <span>
             <strong>فلج</strong>
             <small>{role === "admin" ? "لوحة الإدارة" : companyName || "منصة التشغيل"}</small>

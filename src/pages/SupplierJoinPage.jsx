@@ -77,6 +77,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           العودة للرئيسية
         </button>
         <div>
+          <img className="supplier-join-logo" src="/brand/Falaj_Logo.png" alt="Falaj" />
           <p className="landing-eyebrow">فلج للموردين</p>
           <h1>طلب انضمام مورد مياه</h1>
           <p>املأ بيانات شركتك، وسيفتح بريد إلكتروني جاهز لإرسال طلب الانضمام إلى فريق فلج.</p>

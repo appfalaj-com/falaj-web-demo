@@ -7,7 +7,7 @@ export default function NotFoundPage({ onNavigate }) {
     <main className="login-page" dir="rtl">
       <section className="login-panel falaj-auth-card">
         <div className="login-brand">
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <div>
             <strong>فلج</strong>
             <small>منصة توصيل المياه</small>

@@ -70,7 +70,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
     <main className="login-page" dir="rtl">
       <section className="login-panel" aria-labelledby="company-login-title">
         <div className="login-brand">
-          <span className="brand-mark">ف</span>
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
           <div>
             <strong>فلج</strong>
             <small>دخول الموردين والشركات</small>

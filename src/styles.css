@@ -143,6 +143,16 @@ button:disabled {
   width: 44px;
 }
 
+.brand-icon {
+  background: var(--cream);
+  border-radius: 8px;
+  flex: 0 0 auto;
+  height: 44px;
+  object-fit: contain;
+  padding: 6px;
+  width: 44px;
+}
+
 .brand strong,
 .brand small {
   display: block;
@@ -394,6 +404,14 @@ button:disabled {
   height: 44px;
   place-items: center;
   width: 44px;
+}
+
+.landing-logo-image {
+  display: block;
+  height: 48px;
+  max-width: 150px;
+  object-fit: contain;
+  width: auto;
 }
 
 .landing-nav {
@@ -921,6 +939,13 @@ button:disabled {
   color: var(--dark);
 }
 
+.footer-logo-image {
+  display: block;
+  height: 34px;
+  object-fit: contain;
+  width: auto;
+}
+
 .supplier-join-page {
   background:
     radial-gradient(circle at 12% 10%, rgba(144, 209, 202, 0.36), transparent 28rem),
@@ -957,6 +982,14 @@ button:disabled {
   color: var(--dark);
   font-size: 44px;
   line-height: 1.25;
+}
+
+.supplier-join-logo {
+  display: block;
+  height: 54px;
+  margin-bottom: 12px;
+  object-fit: contain;
+  width: auto;
 }
 
 .supplier-join-header p:not(.landing-eyebrow) {
@@ -1999,6 +2032,20 @@ tbody tr:hover td {
   .landing-header-cta,
   .landing-actions button {
     width: 100%;
+  }
+
+  .landing-logo-image {
+    height: 42px;
+    max-width: 132px;
+  }
+
+  .brand-icon {
+    height: 40px;
+    width: 40px;
+  }
+
+  .supplier-join-logo {
+    height: 46px;
   }
 
   .hero-illustration {
