@@ -325,7 +325,6 @@ async function ensureCompanyForJoinRequest(request) {
       phone: request.phone,
       email: request.email,
       is_active: false,
-      status: "pending",
       onboarding_status: "pending_setup",
       supplier_join_request_id: request.id,
       approved_join_request_id: request.id,
