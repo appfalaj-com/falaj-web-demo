@@ -106,29 +106,42 @@ export async function getCurrentProfile(userOrId, email) {
   return profile;
 }
 
-export async function getCompanyForUser(userId) {
-  const client = requireSupabase();
-  const withStatus = await client
-    .from("companies")
-    .select("id, name, email, phone, is_active, status, commission_rate, owner_user_id, owner_id")
-    .eq("owner_user_id", userId)
-    .maybeSingle();
+const COMPANY_SESSION_COLUMNS = "id, name, email, phone, is_active, commission_rate, owner_id, onboarding_status";
 
-  if (!withStatus.error) {
-    return withStatus.data;
+export async function getCompanyForUser(userOrId) {
+  const client = requireSupabase();
+  const userId = typeof userOrId === "string" ? userOrId : userOrId?.id;
+  const metadataCompanyId = typeof userOrId === "string" ? null : userOrId?.user_metadata?.company_id;
+
+  if (metadataCompanyId) {
+    const byMetadataCompany = await client
+      .from("companies")
+      .select(COMPANY_SESSION_COLUMNS)
+      .eq("id", metadataCompanyId)
+      .eq("owner_id", userId)
+      .maybeSingle();
+
+    if (byMetadataCompany.error) {
+      throw byMetadataCompany.error;
+    }
+
+    if (byMetadataCompany.data) {
+      return byMetadataCompany.data;
+    }
   }
 
   const byLegacyOwnerId = await client
     .from("companies")
-    .select("id, name, email, phone, is_active, owner_id")
+    .select(COMPANY_SESSION_COLUMNS)
     .eq("owner_id", userId)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
 
   if (byLegacyOwnerId.error) {
     throw byLegacyOwnerId.error;
   }
 
-  return byLegacyOwnerId.data;
+  return byLegacyOwnerId.data?.[0] ?? null;
 }
 
 export async function getAuthContext() {
@@ -148,7 +161,7 @@ export async function getAuthContext() {
 
   const profile = await getCurrentProfile(user);
   const role = getProfileRole(profile);
-  const company = role === "company" ? await getCompanyForUser(user.id) : null;
+  const company = role === "company" ? await getCompanyForUser(user) : null;
 
   logAuthDebug("auth context", {
     userId: user.id,
@@ -180,7 +193,7 @@ export async function buildCompanySession(session) {
     throw new Error(COMPANY_AUTH_ERRORS.NOT_COMPANY);
   }
 
-  const company = await getCompanyForUser(user.id);
+  const company = await getCompanyForUser(user);
   if (!company) {
     throw new Error(COMPANY_AUTH_ERRORS.NO_COMPANY);
   }

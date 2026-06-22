@@ -161,7 +161,7 @@ export default function AdminSupplierRequestsPage() {
         return;
       }
 
-      setMessage("تم إرسال دعوة الدخول إلى بريد المورد.");
+      setMessage(data?.message || "تم إرسال دعوة الدخول إلى بريد المورد.");
       await loadRequests();
     } catch (error) {
       setErrorMessage(error.message || "تعذر إرسال دعوة الدخول.");

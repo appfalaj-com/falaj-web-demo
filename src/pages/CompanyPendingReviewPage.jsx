@@ -16,10 +16,10 @@ export default function CompanyPendingReviewPage({ onSignedOut }) {
             <small>لوحة الموردين</small>
           </div>
         </div>
-        <p className="eyebrow">مراجعة الحساب</p>
-        <h1>حسابكم قيد المراجعة من إدارة فلج</h1>
+        <p className="eyebrow">إعداد الحساب</p>
+        <h1>حساب المورد قيد الإعداد</h1>
         <p className="pending-copy">
-          سيتم فتح لوحة الموردين بعد اعتماد بيانات الشركة. يمكنكم العودة لاحقًا أو التواصل مع إدارة فلج.
+          سيتم فتح لوحة الموردين بعد اكتمال إعداد الشركة وتفعيلها من إدارة فلج.
         </p>
         <button type="button" className="ghost" onClick={handleSignOut}>
           تسجيل الخروج

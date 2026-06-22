@@ -7,6 +7,8 @@ const corsHeaders = {
 
 type SupplierJoinRequest = {
   id: string;
+  company_name: string | null;
+  contact_name: string | null;
   email: string | null;
   status: string;
 };
@@ -16,6 +18,11 @@ type Company = {
   supplier_join_request_id: string | null;
   approved_join_request_id: string | null;
   onboarding_status: string | null;
+};
+
+type AuthUser = {
+  id: string;
+  email?: string;
 };
 
 Deno.serve(async (req) => {
@@ -51,7 +58,7 @@ Deno.serve(async (req) => {
 
     const { data: joinRequest, error: requestError } = await supabase
       .from("supplier_join_requests")
-      .select("id, email, status")
+      .select("id, company_name, contact_name, email, status")
       .eq("id", request_id)
       .single();
 
@@ -93,41 +100,75 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: false, error: "No company is linked to this join request" }, 404);
     }
 
-    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      supplierJoinRequest.email,
-      {
-        data: {
-          role: "company",
-          account_type: "company",
-          company_id: company.id,
+    const existingUser = await findUserByEmail(supabase, supplierJoinRequest.email);
+
+    if (!existingUser) {
+      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+        supplierJoinRequest.email,
+        {
+          data: {
+            role: "company",
+            account_type: "company",
+            company_id: company.id,
+          },
+          redirectTo: "https://appfalaj.com/company",
         },
-        redirectTo: "https://appfalaj.com/company",
-      },
+      );
+
+      if (inviteError) {
+        if (isExistingUserError(inviteError.message)) {
+          const user = await findUserByEmail(supabase, supplierJoinRequest.email);
+          if (!user) {
+            return jsonResponse({ ok: false, error: inviteError.message }, 500);
+          }
+
+          const result = await linkExistingUserAndSendMagicLink(
+            supabase,
+            user,
+            supplierJoinRequest,
+            company.id,
+            request_id,
+          );
+
+          if (result.error) return result.error;
+          return jsonResponse({
+            ok: true,
+            invitation_sent: true,
+            existing_user: true,
+            message: "البريد موجود مسبقًا، تم ربطه بالمورد وإرسال رابط دخول آمن.",
+          });
+        }
+
+        return jsonResponse({ ok: false, error: inviteError.message }, 500);
+      }
+
+      const stateError = await markInvitationSent(supabase, request_id, company.id);
+      if (stateError) return stateError;
+
+      return jsonResponse({
+        ok: true,
+        invitation_sent: true,
+        existing_user: false,
+        message: "تم إرسال دعوة الدخول إلى بريد المورد.",
+      });
+    }
+
+    const result = await linkExistingUserAndSendMagicLink(
+      supabase,
+      existingUser,
+      supplierJoinRequest,
+      company.id,
+      request_id,
     );
 
-    if (inviteError) {
-      return jsonResponse({ ok: false, error: inviteError.message }, 500);
-    }
+    if (result.error) return result.error;
 
-    const { error: requestUpdateError } = await supabase
-      .from("supplier_join_requests")
-      .update({ status: "invitation_sent" })
-      .eq("id", request_id);
-
-    if (requestUpdateError) {
-      return jsonResponse({ ok: false, error: requestUpdateError.message }, 500);
-    }
-
-    const { error: companyUpdateError } = await supabase
-      .from("companies")
-      .update({ onboarding_status: "invitation_sent" })
-      .eq("id", company.id);
-
-    if (companyUpdateError) {
-      return jsonResponse({ ok: false, error: companyUpdateError.message }, 500);
-    }
-
-    return jsonResponse({ ok: true, invitation_sent: true });
+    return jsonResponse({
+      ok: true,
+      invitation_sent: true,
+      existing_user: true,
+      message: "البريد موجود مسبقًا، تم ربطه بالمورد وإرسال رابط دخول آمن.",
+    });
   } catch (error) {
     console.error("send-supplier-invite error:", error);
     return jsonResponse(
@@ -136,6 +177,128 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function findUserByEmail(supabase: ReturnType<typeof createClient>, email: string): Promise<AuthUser | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const perPage = 100;
+
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = data?.users ?? [];
+    const user = users.find((item) => item.email?.trim().toLowerCase() === normalizedEmail);
+    if (user) return { id: user.id, email: user.email };
+    if (users.length < perPage) return null;
+  }
+
+  return null;
+}
+
+async function linkExistingUserAndSendMagicLink(
+  supabase: ReturnType<typeof createClient>,
+  user: AuthUser,
+  request: SupplierJoinRequest,
+  companyId: string,
+  requestId: string,
+): Promise<{ error: Response | null }> {
+  const email = request.email;
+  if (!email) {
+    return { error: jsonResponse({ ok: false, error: "Supplier join request does not have an email" }, 400) };
+  }
+
+  const fullName = request.contact_name || request.company_name || email || "Supplier User";
+  const metadata = {
+    role: "company",
+    account_type: "company",
+    company_id: companyId,
+  };
+
+  const { error: userError } = await supabase.auth.admin.updateUserById(user.id, {
+    user_metadata: metadata,
+  });
+
+  if (userError) {
+    return { error: jsonResponse({ ok: false, error: userError.message }, 500) };
+  }
+
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email,
+      full_name: fullName,
+      role: "company",
+      account_type: "company",
+    },
+    { onConflict: "id" },
+  );
+
+  if (profileError) {
+    return { error: jsonResponse({ ok: false, error: profileError.message }, 500) };
+  }
+
+  const { error: companyError } = await supabase
+    .from("companies")
+    .update({
+      owner_id: user.id,
+      onboarding_status: "invitation_sent",
+      is_active: false,
+    })
+    .eq("id", companyId);
+
+  if (companyError) {
+    return { error: jsonResponse({ ok: false, error: companyError.message }, 500) };
+  }
+
+  const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: "https://appfalaj.com/company",
+      shouldCreateUser: false,
+    },
+  });
+
+  if (magicLinkError) {
+    return { error: jsonResponse({ ok: false, error: magicLinkError.message }, 500) };
+  }
+
+  const stateError = await markInvitationSent(supabase, requestId, companyId);
+  if (stateError) return { error: stateError };
+
+  return { error: null };
+}
+
+async function markInvitationSent(
+  supabase: ReturnType<typeof createClient>,
+  requestId: string,
+  companyId: string,
+): Promise<Response | null> {
+  const { error: requestUpdateError } = await supabase
+    .from("supplier_join_requests")
+    .update({ status: "invitation_sent" })
+    .eq("id", requestId);
+
+  if (requestUpdateError) {
+    return jsonResponse({ ok: false, error: requestUpdateError.message }, 500);
+  }
+
+  const { error: companyUpdateError } = await supabase
+    .from("companies")
+    .update({ onboarding_status: "invitation_sent" })
+    .eq("id", companyId);
+
+  if (companyUpdateError) {
+    return jsonResponse({ ok: false, error: companyUpdateError.message }, 500);
+  }
+
+  return null;
+}
+
+function isExistingUserError(message: string) {
+  return message.toLowerCase().includes("already been registered") ||
+    message.toLowerCase().includes("already registered") ||
+    message.toLowerCase().includes("already exists");
+}
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
