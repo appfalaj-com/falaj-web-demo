@@ -1472,6 +1472,36 @@ tbody tr:hover td {
   padding: 18px 20px 0;
 }
 
+.company-alerts {
+  display: grid;
+  gap: 12px;
+}
+
+.company-alert {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.company-alert p {
+  color: var(--dark);
+  font-weight: 800;
+  margin: 0;
+}
+
+.company-alert.info {
+  background: rgba(144, 209, 202, 0.14);
+}
+
+.company-alert.warning {
+  background: rgba(245, 158, 11, 0.12);
+}
+
 .supplier-request-timeline {
   display: grid;
   gap: 6px;
@@ -2237,6 +2267,11 @@ tbody tr:hover td {
   .supplier-request-actions {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .company-alert {
+    align-items: stretch;
+    display: grid;
   }
 }
 

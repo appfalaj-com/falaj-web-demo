@@ -24,6 +24,8 @@ function normalizeSupabaseProduct(product) {
     deliveryEstimate: product.delivery_estimate,
     description: product.description,
     sortOrder: product.sort_order ?? 0,
+    createdAt: product.created_at,
+    updatedAt: product.updated_at,
   };
 }
 
@@ -65,6 +67,8 @@ export async function getProductsByCompanyFromSupabase(companyId) {
         "delivery_estimate",
         "description",
         "sort_order",
+        "created_at",
+        "updated_at",
       ].join(",")
     )
     .eq("company_id", supabaseCompanyId)
@@ -122,6 +126,8 @@ export async function createCompanyProductForReview(companyId, product) {
         "delivery_estimate",
         "description",
         "sort_order",
+        "created_at",
+        "updated_at",
       ].join(",")
     )
     .single();
@@ -178,6 +184,8 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
         "delivery_estimate",
         "description",
         "sort_order",
+        "created_at",
+        "updated_at",
         "companies!inner(is_active, onboarding_status)",
       ].join(",")
     )

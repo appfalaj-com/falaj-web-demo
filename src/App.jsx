@@ -188,7 +188,7 @@ export default function App() {
   };
 
   const routes = {
-    "/company": <CompanyDashboard {...workflow} companyId={companyId} />,
+    "/company": <CompanyDashboard companyId={companyId} company={authState.company} onNavigate={navigate} />,
     "/company/set-password": <CompanySetPasswordPage onSaved={() => replacePath("/company")} />,
     "/company/orders": <CompanyOrdersPage {...workflow} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,
