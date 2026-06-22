@@ -18,8 +18,6 @@ const COMPANY_SELECT_COLUMNS = [
   "onboarding_status",
 ].join(",");
 
-export const MOCK_SUPPLIERS = [];
-
 export function supplierStatusLabel(status) {
   return STATUS_LABELS[status] ?? status;
 }
