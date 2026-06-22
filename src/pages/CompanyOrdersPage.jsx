@@ -1,38 +1,36 @@
 import { useEffect, useState } from "react";
 import OrderTable from "../components/OrderTable.jsx";
-import { MOCK_COMPANY_ID, getCompanyOrders } from "../services/companyService.js";
 import { getOrdersByCompanyFromSupabase } from "../services/orderService.js";
 
 export default function CompanyOrdersPage({
-  orders,
   drivers,
-  companyId = MOCK_COMPANY_ID,
+  companyId,
   onSelectOrder,
   onAcceptOrder,
   onRejectOrder,
   onAssignDriver,
 }) {
-  const [companyOrders, setCompanyOrders] = useState(() => getCompanyOrders(companyId, orders));
-  const [dataMode, setDataMode] = useState("mock");
+  const [companyOrders, setCompanyOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadOrders() {
+      setIsLoading(true);
+      setErrorMessage("");
+
       try {
         const supabaseOrders = await getOrdersByCompanyFromSupabase(companyId);
-        if (!cancelled && supabaseOrders.length > 0) {
-          setCompanyOrders(supabaseOrders);
-          setDataMode("supabase");
-        } else if (!cancelled) {
-          setCompanyOrders(getCompanyOrders(companyId, orders));
-          setDataMode("mock");
-        }
+        if (!cancelled) setCompanyOrders(supabaseOrders);
       } catch {
         if (!cancelled) {
-          setCompanyOrders(getCompanyOrders(companyId, orders));
-          setDataMode("mock");
+          setCompanyOrders([]);
+          setErrorMessage("تعذر تحميل طلبات الشركة من قاعدة البيانات.");
         }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     }
 
@@ -41,7 +39,7 @@ export default function CompanyOrdersPage({
     return () => {
       cancelled = true;
     };
-  }, [companyId, orders]);
+  }, [companyId]);
 
   return (
     <div className="page">
@@ -50,21 +48,29 @@ export default function CompanyOrdersPage({
           <p className="eyebrow">الشركة</p>
           <h1>كل الطلبات</h1>
         </div>
-        <span className="checkpoint">
-          {dataMode === "supabase" ? "متصل بقاعدة البيانات" : "وضع تجريبي"}
-        </span>
       </header>
 
       <section className="panel">
-        <OrderTable
-          orders={companyOrders}
-          drivers={drivers}
-          showActions
-          onSelectOrder={onSelectOrder}
-          onAcceptOrder={onAcceptOrder}
-          onRejectOrder={onRejectOrder}
-          onAssignDriver={onAssignDriver}
-        />
+        {isLoading ? (
+          <p className="empty-state">جاري تحميل الطلبات...</p>
+        ) : errorMessage ? (
+          <p className="empty-state">{errorMessage}</p>
+        ) : companyOrders.length === 0 ? (
+          <div className="empty-state">
+            <strong>لا توجد طلبات حالية</strong>
+            <span>ستظهر هنا طلبات العملاء الجديدة عند وصولها.</span>
+          </div>
+        ) : (
+          <OrderTable
+            orders={companyOrders}
+            drivers={drivers}
+            showActions
+            onSelectOrder={onSelectOrder}
+            onAcceptOrder={onAcceptOrder}
+            onRejectOrder={onRejectOrder}
+            onAssignDriver={onAssignDriver}
+          />
+        )}
       </section>
     </div>
   );
