@@ -1,7 +1,10 @@
 import { useState } from "react";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import { signInAdminWithEmail } from "../services/companyAuthService.js";
 
 export default function AdminLoginPage({ onAuthenticated }) {
+  const { direction, t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,33 +19,34 @@ export default function AdminLoginPage({ onAuthenticated }) {
       const authState = await signInAdminWithEmail(email.trim(), password);
       onAuthenticated(authState);
     } catch (authError) {
-      setError(authError.message || "تعذر تسجيل الدخول إلى لوحة الإدارة.");
+      setError(authError.message || t("login.admin.error"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="login-page" dir="rtl">
+    <main className="login-page" dir={direction}>
       <section className="login-panel" aria-labelledby="admin-login-title">
+        <LanguageToggle className="auth-language-toggle" />
         <div className="login-brand">
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <div>
-            <strong>فلج</strong>
-            <small>دخول الإدارة</small>
+            <strong>{t("common.appName")}</strong>
+            <small>{t("login.admin.brand")}</small>
           </div>
         </div>
 
         <header className="login-header">
-          <p className="eyebrow">لوحة الإدارة</p>
-          <h1 id="admin-login-title">تسجيل دخول الأدمن</h1>
+          <p className="eyebrow">{t("login.admin.eyebrow")}</p>
+          <h1 id="admin-login-title">{t("login.admin.title")}</h1>
         </header>
 
         {error ? <p className="auth-alert error">{error}</p> : null}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>
-            البريد الإلكتروني
+            {t("common.email")}
             <input
               type="email"
               autoComplete="email"
@@ -52,7 +56,7 @@ export default function AdminLoginPage({ onAuthenticated }) {
             />
           </label>
           <label>
-            كلمة المرور
+            {t("common.password")}
             <input
               type="password"
               autoComplete="current-password"
@@ -62,7 +66,7 @@ export default function AdminLoginPage({ onAuthenticated }) {
             />
           </label>
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "جاري الدخول..." : "دخول"}
+            {isSubmitting ? t("login.signingIn") : t("common.login")}
           </button>
         </form>
       </section>

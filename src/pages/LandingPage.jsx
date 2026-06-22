@@ -1,25 +1,33 @@
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
+
 const navLinks = [
-  { label: "الرئيسية", href: "#top" },
-  { label: "كيف يعمل", href: "#how-it-works" },
-  { label: "للموردين", href: "#suppliers" },
-  { label: "تواصل معنا", href: "#contact" },
+  { labelKey: "landing.nav.home", href: "#top" },
+  { labelKey: "landing.nav.how", href: "#how-it-works" },
+  { labelKey: "landing.nav.suppliers", href: "#suppliers" },
+  { labelKey: "landing.nav.contact", href: "#contact" },
 ];
 
-const steps = [
-  { title: "اختر المورد", text: "ابحث عن مورد قريب يناسب منطقتك." },
-  { title: "اختر نوع المياه", text: "عبوات، كراتين، أو صهريج حسب احتياجك." },
-  { title: "حدد الموقع", text: "أدخل عنوان التوصيل وتفاصيل الوصول." },
-  { title: "تابع الطلب", text: "تابع حالة الطلب حتى يصل إلى بابك." },
+const stepKeys = [
+  ["landing.step1.title", "landing.step1.text"],
+  ["landing.step2.title", "landing.step2.text"],
+  ["landing.step3.title", "landing.step3.text"],
+  ["landing.step4.title", "landing.step4.text"],
 ];
 
 const services = [
-  { title: "مياه شرب", icon: "drop" },
-  { title: "كراتين مياه", icon: "box" },
-  { title: "صهاريج مياه", icon: "truck" },
-  { title: "توصيل مجدول", icon: "calendar" },
+  { titleKey: "landing.service.drinking", icon: "drop" },
+  { titleKey: "landing.service.boxes", icon: "box" },
+  { titleKey: "landing.service.tankers", icon: "truck" },
+  { titleKey: "landing.service.scheduled", icon: "calendar" },
 ];
 
-const supplierPoints = ["إدارة الطلبات", "متابعة السائقين", "حساب العمولات", "تقارير مالية"];
+const supplierPoints = [
+  "landing.supplierPoint.orders",
+  "landing.supplierPoint.drivers",
+  "landing.supplierPoint.commissions",
+  "landing.supplierPoint.reports",
+];
 
 function goToHash(event, href) {
   event.preventDefault();
@@ -66,8 +74,10 @@ function Icon({ type }) {
 }
 
 export default function LandingPage({ onNavigate }) {
+  const { direction, t } = useI18n();
+
   return (
-    <main className="landing-page" dir="rtl" id="top">
+    <main className="landing-page" dir={direction} id="top">
       <header className="landing-header">
         <a
           className="landing-logo"
@@ -77,43 +87,46 @@ export default function LandingPage({ onNavigate }) {
             onNavigate?.("/");
           }}
         >
-          <img className="landing-logo-image" src="/brand/Falaj_Logo.png" alt="Falaj" />
+          <img className="landing-logo-image" src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
         </a>
 
-        <nav className="landing-nav" aria-label="روابط الصفحة">
+        <nav className="landing-nav" aria-label={t("nav.main")}>
           {navLinks.map((link) => (
             <a href={link.href} key={link.href} onClick={(event) => goToHash(event, link.href)}>
-              {link.label}
+              {t(link.labelKey)}
             </a>
           ))}
         </nav>
 
-        <button type="button" className="landing-header-cta" onClick={() => onNavigate?.("/company/login")}>
-          دخول الموردين
-        </button>
+        <div className="landing-header-actions">
+          <LanguageToggle />
+          <button type="button" className="landing-header-cta" onClick={() => onNavigate?.("/company/login")}>
+            {t("landing.headerCta")}
+          </button>
+        </div>
       </header>
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="landing-eyebrow">منصة مياه رقمية في عُمان</p>
-          <h1>مياهك توصلك أينما كنت</h1>
+          <p className="landing-eyebrow">{t("landing.eyebrow")}</p>
+          <h1>{t("landing.title")}</h1>
           <p className="landing-description">
-            فلج منصة رقمية لطلب مياه الشرب والعبوات والصهاريج من الموردين القريبين منك بسهولة وسرعة.
+            {t("landing.description")}
           </p>
           <div className="landing-actions">
             <button type="button" onClick={() => onNavigate?.("/company/login")}>
-              دخول الموردين
+              {t("landing.companyLogin")}
             </button>
             <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-              دخول الأدمن
+              {t("landing.adminLogin")}
             </button>
             <button type="button" className="ghost" disabled>
-              تطبيق الزبون قريبًا
+              {t("landing.customerSoon")}
             </button>
           </div>
         </div>
 
-        <div className="hero-illustration" aria-label="تصور مبسط لتطبيق فلج">
+        <div className="hero-illustration" aria-label={t("landing.title")}>
           <div className="route-line" />
           <div className="hero-drop one" />
           <div className="hero-drop two" />
@@ -121,21 +134,21 @@ export default function LandingPage({ onNavigate }) {
             <div className="phone-speaker" />
             <div className="phone-screen">
               <div className="phone-top">
-                <span>واجهة طلب سهلة</span>
-                <strong>مياه قريبة منك</strong>
+                <span>{t("landing.customerAppText")}</span>
+                <strong>{t("landing.title")}</strong>
               </div>
               <div className="product-chip">
                 <Icon type="drop" />
                 <div>
-                  <strong>مياه شرب</strong>
-                  <span>خيارات متعددة</span>
+                  <strong>{t("landing.service.drinking")}</strong>
+                  <span>{t("landing.servicesTitle")}</span>
                 </div>
               </div>
               <div className="product-chip">
                 <Icon type="truck" />
                 <div>
-                  <strong>توصيل مرن</strong>
-                  <span>متابعة حالة الطلب</span>
+                  <strong>{t("landing.service.scheduled")}</strong>
+                  <span>{t("landing.step4.title")}</span>
                 </div>
               </div>
               <div className="progress-track">
@@ -145,26 +158,26 @@ export default function LandingPage({ onNavigate }) {
           </div>
           <div className="floating-product card-a">
             <Icon type="box" />
-            <strong>كراتين مياه</strong>
+            <strong>{t("landing.service.boxes")}</strong>
           </div>
           <div className="floating-product card-b">
             <Icon type="truck" />
-            <strong>صهريج قريب</strong>
+            <strong>{t("landing.service.tankers")}</strong>
           </div>
         </div>
       </section>
 
       <section className="landing-section" id="how-it-works">
         <div className="landing-section-head">
-          <p className="landing-eyebrow">كيف يعمل فلج؟</p>
-          <h2>أربع خطوات مختصرة لطلب المياه</h2>
+          <p className="landing-eyebrow">{t("landing.howEyebrow")}</p>
+          <h2>{t("landing.howTitle")}</h2>
         </div>
         <div className="steps-grid">
-          {steps.map((step, index) => (
-            <article className="step-card" key={step.title}>
+          {stepKeys.map(([titleKey, textKey], index) => (
+            <article className="step-card" key={titleKey}>
               <span>{index + 1}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
+              <h3>{t(titleKey)}</h3>
+              <p>{t(textKey)}</p>
             </article>
           ))}
         </div>
@@ -172,16 +185,16 @@ export default function LandingPage({ onNavigate }) {
 
       <section className="landing-section">
         <div className="landing-section-head">
-          <p className="landing-eyebrow">خدماتنا</p>
-          <h2>كل احتياجات المياه في مكان واحد</h2>
+          <p className="landing-eyebrow">{t("landing.servicesEyebrow")}</p>
+          <h2>{t("landing.servicesTitle")}</h2>
         </div>
         <div className="services-grid">
           {services.map((service) => (
-            <article className="service-card" key={service.title}>
+            <article className="service-card" key={service.titleKey}>
               <span className="service-icon">
                 <Icon type={service.icon} />
               </span>
-              <h3>{service.title}</h3>
+              <h3>{t(service.titleKey)}</h3>
             </article>
           ))}
         </div>
@@ -189,94 +202,94 @@ export default function LandingPage({ onNavigate }) {
 
       <section className="supplier-band" id="suppliers">
         <div>
-          <p className="landing-eyebrow">للموردين</p>
-          <h2>وسّع مبيعاتك واستقبل الطلبات من لوحة واحدة</h2>
+          <p className="landing-eyebrow">{t("landing.suppliersEyebrow")}</p>
+          <h2>{t("landing.suppliersTitle")}</h2>
           <ul>
             {supplierPoints.map((point) => (
-              <li key={point}>{point}</li>
+              <li key={point}>{t(point)}</li>
             ))}
           </ul>
         </div>
         <button type="button" onClick={() => onNavigate?.("/company/login")}>
-          دخول الموردين
+          {t("landing.companyLogin")}
         </button>
       </section>
 
       <section className="landing-section supplier-join-section">
         <div>
-          <p className="landing-eyebrow">انضم إلى شبكة فلج</p>
-          <h2>انضم كمورد مياه في فلج</h2>
+          <p className="landing-eyebrow">{t("landing.joinEyebrow")}</p>
+          <h2>{t("landing.joinTitle")}</h2>
           <p>
-            افتح قناة بيع رقمية جديدة لشركتك، واستقبل طلبات المياه من العملاء القريبين منك عبر منصة واحدة.
+            {t("landing.joinDescription")}
           </p>
         </div>
 
         <div className="supplier-benefits-grid">
           <article>
             <span>01</span>
-            <strong>استقبال طلبات أكثر</strong>
+            <strong>{t("landing.joinBenefit1")}</strong>
           </article>
           <article>
             <span>02</span>
-            <strong>إدارة التوصيل بسهولة</strong>
+            <strong>{t("landing.joinBenefit2")}</strong>
           </article>
           <article>
             <span>03</span>
-            <strong>الظهور للعملاء في منطقتك</strong>
+            <strong>{t("landing.joinBenefit3")}</strong>
           </article>
         </div>
 
         <div className="supplier-join-actions">
           <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
-            راسلنا للانضمام
+            {t("landing.joinCta")}
           </button>
         </div>
       </section>
 
       <section className="landing-section split-section">
         <article className="admin-card">
-          <p className="landing-eyebrow">للإدارة</p>
-          <h2>لوحة تحكم مركزية</h2>
-          <p>إدارة الموردين، الطلبات، السائقين، العمولات والتسويات من لوحة تحكم مركزية.</p>
+          <p className="landing-eyebrow">{t("login.admin.eyebrow")}</p>
+          <h2>{t("landing.adminCardTitle")}</h2>
+          <p>{t("landing.adminCardText")}</p>
           <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-            دخول الأدمن
+            {t("landing.adminLogin")}
           </button>
         </article>
 
         <article className="mobile-soon-card">
-          <p className="landing-eyebrow">قريبًا على الجوال</p>
+          <p className="landing-eyebrow">{t("landing.mobileSoon")}</p>
           <div className="soon-grid">
             <div>
-              <strong>تطبيق الزبون قريبًا</strong>
-              <span>طلب المياه وتتبع التوصيل.</span>
+              <strong>{t("landing.customerAppSoon")}</strong>
+              <span>{t("landing.customerAppText")}</span>
             </div>
             <div>
-              <strong>تطبيق السائق قريبًا</strong>
-              <span>استلام الطلبات وتحديث الحالات.</span>
+              <strong>{t("landing.driverAppSoon")}</strong>
+              <span>{t("landing.driverAppText")}</span>
             </div>
           </div>
           <button type="button" className="ghost" onClick={() => onNavigate?.("/driver")}>
-            دخول السائق
+            {t("landing.driverLogin")}
           </button>
         </article>
       </section>
 
       <footer className="landing-footer" id="contact">
         <div>
-          <img className="footer-logo-image" src="/brand/Falaj_Logo.png" alt="Falaj" />
+          <img className="footer-logo-image" src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
           <span>appfalaj.com</span>
           <span>info@appfalaj.com</span>
           <span>© Falaj</span>
         </div>
-        <nav aria-label="روابط دخول فلج">
+        <nav aria-label={t("nav.main")}>
           <button type="button" className="ghost" onClick={() => onNavigate?.("/company/login")}>
-            دخول الموردين
+            {t("landing.companyLogin")}
           </button>
           <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-            دخول الأدمن
+            {t("landing.adminLogin")}
           </button>
           <button type="button" className="ghost" onClick={() => onNavigate?.("/driver")}>
-            دخول السائق
+            {t("landing.driverLogin")}
           </button>
         </nav>
       </footer>

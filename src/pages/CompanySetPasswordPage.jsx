@@ -1,7 +1,10 @@
 import { useState } from "react";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 
 export default function CompanySetPasswordPage({ onSaved }) {
+  const { direction, t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -14,17 +17,17 @@ export default function CompanySetPasswordPage({ onSaved }) {
     setError("");
 
     if (password.length < 8) {
-      setError("كلمة المرور يجب ألا تقل عن 8 أحرف.");
+      setError(t("password.short"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("كلمة المرور وتأكيدها غير متطابقين.");
+      setError(t("password.mismatch"));
       return;
     }
 
     if (!supabase) {
-      setError("تعذر الاتصال بخدمة تسجيل الدخول حاليًا.");
+      setError(t("password.noConnection"));
       return;
     }
 
@@ -36,34 +39,35 @@ export default function CompanySetPasswordPage({ onSaved }) {
 
       setPassword("");
       setConfirmPassword("");
-      setMessage("تم حفظ كلمة المرور بنجاح");
+      setMessage(t("password.success"));
 
       window.setTimeout(() => {
         onSaved?.();
       }, 900);
     } catch (updateError) {
-      setError(updateError.message || "تعذر حفظ كلمة المرور. يرجى المحاولة مرة أخرى.");
+      setError(updateError.message || t("password.error"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="login-page" dir="rtl">
+    <main className="login-page" dir={direction}>
       <section className="login-panel falaj-auth-card" aria-labelledby="company-set-password-title">
+        <LanguageToggle className="auth-language-toggle" />
         <div className="login-brand">
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <div>
-            <strong>فلج</strong>
-            <small>إعداد حساب المورد</small>
+            <strong>{t("common.appName")}</strong>
+            <small>{t("password.brand")}</small>
           </div>
         </div>
 
         <header className="login-header">
-          <p className="eyebrow">لوحة الموردين</p>
-          <h1 id="company-set-password-title">إعداد كلمة المرور</h1>
+          <p className="eyebrow">{t("login.company.eyebrow")}</p>
+          <h1 id="company-set-password-title">{t("password.title")}</h1>
           <p className="auth-note">
-            احفظ كلمة مرور لحسابك حتى تتمكن من الدخول لاحقًا بالبريد الإلكتروني وكلمة المرور.
+            {t("password.note")}
           </p>
         </header>
 
@@ -72,7 +76,7 @@ export default function CompanySetPasswordPage({ onSaved }) {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>
-            كلمة المرور الجديدة
+            {t("common.newPassword")}
             <input
               type="password"
               autoComplete="new-password"
@@ -84,7 +88,7 @@ export default function CompanySetPasswordPage({ onSaved }) {
           </label>
 
           <label>
-            تأكيد كلمة المرور
+            {t("common.confirmPassword")}
             <input
               type="password"
               autoComplete="new-password"
@@ -95,10 +99,10 @@ export default function CompanySetPasswordPage({ onSaved }) {
             />
           </label>
 
-          <p className="auth-note">الشروط: لا تقل عن 8 أحرف، ويجب أن تطابق كلمة المرور التأكيد.</p>
+          <p className="auth-note">{t("password.rules")}</p>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "جاري حفظ كلمة المرور..." : "حفظ كلمة المرور"}
+            {isSubmitting ? t("password.saving") : t("password.save")}
           </button>
         </form>
       </section>

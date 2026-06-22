@@ -1,22 +1,25 @@
+import LanguageToggle from "./LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
+
 const companyLinks = [
-  { href: "/company", label: "لوحة الشركة" },
-  { href: "/company/orders", label: "طلبات الشركة" },
-  { href: "/company/products", label: "المنتجات والأسعار" },
-  { href: "/company/drivers", label: "السائقون" },
-  { href: "/company/drivers/live", label: "متابعة السائقين" },
+  { href: "/company", labelKey: "nav.company.dashboard" },
+  { href: "/company/orders", labelKey: "nav.company.orders" },
+  { href: "/company/products", labelKey: "nav.company.products" },
+  { href: "/company/drivers", labelKey: "nav.company.drivers" },
+  { href: "/company/drivers/live", labelKey: "nav.company.liveTracking" },
 ];
 
 const adminLinks = [
-  { href: "/admin", label: "الإدارة" },
-  { href: "/admin/orders", label: "الطلبات العامة" },
-  { href: "/admin/suppliers", label: "الموردون المعتمدون" },
-  { href: "/admin/product-moderation", label: "مراجعة الكتالوج" },
-  { href: "/admin/supplier-requests", label: "طلبات الانضمام" },
-  { href: "/admin/finance", label: "المالية" },
-  { href: "/admin/live-tracking", label: "التتبع العام" },
+  { href: "/admin", labelKey: "nav.admin.dashboard" },
+  { href: "/admin/orders", labelKey: "nav.admin.orders" },
+  { href: "/admin/suppliers", labelKey: "nav.admin.suppliers" },
+  { href: "/admin/product-moderation", labelKey: "nav.admin.productModeration" },
+  { href: "/admin/supplier-requests", labelKey: "nav.admin.supplierRequests" },
+  { href: "/admin/finance", labelKey: "nav.admin.finance" },
+  { href: "/admin/live-tracking", labelKey: "nav.admin.liveTracking" },
 ];
 
-const driverLinks = [{ href: "/driver", label: "دخول السائق" }];
+const driverLinks = [{ href: "/driver", labelKey: "nav.driver.login" }];
 
 export default function Layout({
   children,
@@ -26,6 +29,7 @@ export default function Layout({
   onNavigate,
   onSignOut,
 }) {
+  const { t } = useI18n();
   const links = role === "admin" ? adminLinks : role === "company" ? companyLinks : driverLinks;
   const isActiveLink = (href) => {
     if (href === "/admin") {
@@ -51,14 +55,14 @@ export default function Layout({
             onNavigate?.("/");
           }}
         >
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <span>
-            <strong>فلج</strong>
-            <small>{role === "admin" ? "لوحة الإدارة" : companyName || "منصة التشغيل"}</small>
+            <strong>{t("common.appName")}</strong>
+            <small>{role === "admin" ? t("layout.adminPanel") : companyName || t("layout.operationsPlatform")}</small>
           </span>
         </a>
 
-        <nav className="nav-list" aria-label="التنقل الرئيسي">
+        <nav className="nav-list" aria-label={t("nav.main")}>
           {links.map((link) => (
             <a
               key={link.href}
@@ -69,14 +73,16 @@ export default function Layout({
                 onNavigate?.(link.href);
               }}
             >
-              {link.label}
+              {t(link.labelKey)}
             </a>
           ))}
         </nav>
 
+        <LanguageToggle className="sidebar-language-toggle" />
+
         {onSignOut ? (
           <button type="button" className="sidebar-signout" onClick={onSignOut}>
-            تسجيل الخروج
+            {t("common.signOut")}
           </button>
         ) : null}
       </aside>

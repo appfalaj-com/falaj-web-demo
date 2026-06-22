@@ -29,7 +29,7 @@ body {
     linear-gradient(135deg, var(--cream) 0%, #f5fbfa 42%, #ffffff 100%);
   margin: 0;
   min-width: 320px;
-  direction: rtl;
+  direction: inherit;
 }
 
 html,
@@ -192,6 +192,43 @@ button:disabled {
   color: var(--white);
   margin-top: 24px;
   width: 100%;
+}
+
+.language-toggle {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  color: var(--dark);
+  min-height: 40px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+
+.language-toggle:hover {
+  background: var(--white);
+}
+
+.sidebar-language-toggle {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--white);
+  margin-top: 24px;
+  width: 100%;
+}
+
+.auth-language-toggle {
+  justify-self: end;
+  margin-bottom: 12px;
+}
+
+html[dir="ltr"] .app-shell,
+html[dir="ltr"] .falaj-shell {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+html[dir="ltr"] input[type="tel"],
+html[dir="ltr"] input[inputmode="numeric"] {
+  direction: ltr;
 }
 
 .main-content,
@@ -436,6 +473,13 @@ button:disabled {
 
 .landing-header-cta {
   white-space: nowrap;
+}
+
+.landing-header-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .landing-hero {
@@ -2136,6 +2180,12 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
     position: static;
     top: auto;
+  }
+
+  .landing-header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .landing-hero {

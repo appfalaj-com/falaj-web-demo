@@ -1,4 +1,6 @@
 import { useState } from "react";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import {
   COMPANY_AUTH_ERRORS,
   sendCompanyEmailMagicLink,
@@ -8,6 +10,7 @@ import {
 } from "../services/companyAuthService.js";
 
 export default function CompanyLoginPage({ onAuthenticated }) {
+  const { direction, t } = useI18n();
   const [activeTab, setActiveTab] = useState("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +32,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
       const authState = await signInCompanyWithEmail(email.trim(), password);
       onAuthenticated(authState);
     } catch (authError) {
-      setError(authError.message || "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.");
+      setError(authError.message || t("login.company.emailError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -44,7 +47,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
     try {
       await sendCompanyPhoneOtp(phone.trim());
       setOtpSent(true);
-      setStatus("تم إرسال رمز التحقق إلى رقم الهاتف.");
+      setStatus(t("login.company.otpSent"));
     } catch (authError) {
       setError(authError.message || COMPANY_AUTH_ERRORS.PHONE_DISABLED);
     } finally {
@@ -60,9 +63,9 @@ export default function CompanyLoginPage({ onAuthenticated }) {
 
     try {
       await sendCompanyEmailMagicLink(linkEmail.trim());
-      setStatus("تم إرسال رابط دخول آمن إلى بريد المورد. افتح الرابط لإعداد كلمة المرور أو الدخول.");
+      setStatus(t("login.company.linkSent"));
     } catch (authError) {
-      setError(authError.message || "تعذر إرسال رابط الدخول الآمن. تأكد من البريد وحاول مرة أخرى.");
+      setError(authError.message || t("login.company.linkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,29 +81,30 @@ export default function CompanyLoginPage({ onAuthenticated }) {
       const authState = await verifyCompanyPhoneOtp(phone.trim(), otp.trim());
       onAuthenticated(authState);
     } catch (authError) {
-      setError(authError.message || "رمز التحقق غير صحيح أو انتهت صلاحيته.");
+      setError(authError.message || t("login.company.otpError"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="login-page" dir="rtl">
+    <main className="login-page" dir={direction}>
       <section className="login-panel" aria-labelledby="company-login-title">
+        <LanguageToggle className="auth-language-toggle" />
         <div className="login-brand">
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt="فلج" />
+          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <div>
-            <strong>فلج</strong>
-            <small>دخول الموردين والشركات</small>
+            <strong>{t("common.appName")}</strong>
+            <small>{t("login.company.brand")}</small>
           </div>
         </div>
 
         <header className="login-header">
-          <p className="eyebrow">لوحة الموردين</p>
-          <h1 id="company-login-title">تسجيل الدخول إلى حساب الشركة</h1>
+          <p className="eyebrow">{t("login.company.eyebrow")}</p>
+          <h1 id="company-login-title">{t("login.company.title")}</h1>
         </header>
 
-        <div className="login-tabs" role="tablist" aria-label="طرق تسجيل الدخول">
+        <div className="login-tabs" role="tablist" aria-label={t("login.company.title")}>
           <button
             type="button"
             className={activeTab === "email" ? "active" : ""}
@@ -112,7 +116,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               setStatus("");
             }}
           >
-            الدخول بكلمة المرور
+            {t("login.company.passwordTab")}
           </button>
           <button
             type="button"
@@ -125,7 +129,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               setStatus("");
             }}
           >
-            الدخول برابط آمن
+            {t("login.company.linkTab")}
           </button>
           <button
             type="button"
@@ -138,7 +142,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               setStatus("");
             }}
           >
-            الدخول برقم الهاتف
+            {t("login.company.phoneTab")}
           </button>
         </div>
 
@@ -148,7 +152,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
         {activeTab === "email" ? (
           <form className="auth-form" onSubmit={handleEmailLogin}>
             <label>
-              البريد الإلكتروني
+              {t("common.email")}
               <input
                 type="email"
                 autoComplete="email"
@@ -158,7 +162,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               />
             </label>
             <label>
-              كلمة المرور
+              {t("common.password")}
               <input
                 type="password"
                 autoComplete="current-password"
@@ -168,13 +172,13 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               />
             </label>
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "جاري الدخول..." : "دخول"}
+              {isSubmitting ? t("login.signingIn") : t("common.login")}
             </button>
           </form>
         ) : activeTab === "link" ? (
           <form className="auth-form" onSubmit={handleSendEmailLink}>
             <label>
-              البريد الإلكتروني
+              {t("common.email")}
               <input
                 type="email"
                 autoComplete="email"
@@ -183,15 +187,15 @@ export default function CompanyLoginPage({ onAuthenticated }) {
                 required
               />
             </label>
-            <p className="auth-note">سنرسل رابط دخول آمن إلى بريد المورد بدون إرسال أي كلمة مرور.</p>
+            <p className="auth-note">{t("login.company.linkNote")}</p>
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "جاري إرسال الرابط..." : "إرسال رابط آمن"}
+              {isSubmitting ? t("login.company.sendingLink") : t("login.company.sendLink")}
             </button>
           </form>
         ) : (
           <form className="auth-form" onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}>
             <label>
-              رقم الهاتف
+              {t("login.company.phone")}
               <input
                 type="tel"
                 dir="ltr"
@@ -204,7 +208,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
             </label>
             {otpSent ? (
               <label>
-                رمز التحقق
+                {t("login.company.otp")}
                 <input
                   type="text"
                   inputMode="numeric"
@@ -217,7 +221,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
               </label>
             ) : null}
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "جاري المعالجة..." : otpSent ? "تحقق من الرمز" : "إرسال رمز التحقق"}
+              {isSubmitting ? t("common.processing") : otpSent ? t("login.company.verifyOtp") : t("login.company.sendOtp")}
             </button>
             {otpSent ? (
               <button
@@ -231,7 +235,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
                   setError("");
                 }}
               >
-                تغيير رقم الهاتف
+                {t("login.company.changePhone")}
               </button>
             ) : null}
           </form>
