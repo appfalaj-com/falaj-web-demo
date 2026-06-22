@@ -1,9 +1,23 @@
 import { useEffect, useState } from "react";
-import { getDriversByCompanyFromSupabase } from "../services/driverService.js";
+import {
+  createCompanyDriverInSupabase,
+  getDriversByCompanyFromSupabase,
+  updateCompanyDriverInSupabase,
+} from "../services/driverService.js";
+
+const initialDriverForm = {
+  name: "",
+  phone: "",
+  isActive: true,
+};
 
 export default function CompanyDriversPage({ companyId }) {
   const [companyDrivers, setCompanyDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingDriverId, setEditingDriverId] = useState(null);
+  const [form, setForm] = useState(initialDriverForm);
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
 
@@ -17,10 +31,10 @@ export default function CompanyDriversPage({ companyId }) {
       try {
         const supabaseDrivers = await getDriversByCompanyFromSupabase(companyId);
         if (!cancelled) setCompanyDrivers(supabaseDrivers);
-      } catch {
+      } catch (error) {
         if (!cancelled) {
           setCompanyDrivers([]);
-          setErrorMessage("تعذر تحميل السائقين من قاعدة البيانات.");
+          setErrorMessage(error.message || "تعذر تحميل السائقين من قاعدة البيانات.");
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -34,8 +48,100 @@ export default function CompanyDriversPage({ companyId }) {
     };
   }, [companyId]);
 
-  function showDriverManagementPending() {
-    setMessage("سيتم تفعيل إدارة السائقين في المرحلة التالية.");
+  function openCreateForm() {
+    setEditingDriverId(null);
+    setForm(initialDriverForm);
+    setMessage("");
+    setErrorMessage("");
+    setIsFormOpen(true);
+  }
+
+  function openEditForm(driver) {
+    setEditingDriverId(driver.id);
+    setForm({
+      name: driver.name || "",
+      phone: driver.phone || "",
+      isActive: Boolean(driver.isActive),
+    });
+    setMessage("");
+    setErrorMessage("");
+    setIsFormOpen(true);
+  }
+
+  function closeForm() {
+    setEditingDriverId(null);
+    setForm(initialDriverForm);
+    setIsFormOpen(false);
+  }
+
+  function updateForm(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSaveDriver(event) {
+    event.preventDefault();
+    setMessage("");
+    setErrorMessage("");
+
+    if (!companyId) {
+      setErrorMessage("تعذر تحديد الشركة الحالية.");
+      return;
+    }
+
+    if (!form.name.trim()) {
+      setErrorMessage("يرجى إدخال اسم السائق.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingDriverId) {
+        const updatedDriver = await updateCompanyDriverInSupabase(companyId, editingDriverId, {
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          isActive: form.isActive,
+        });
+        setCompanyDrivers((current) =>
+          current.map((driver) => (driver.id === editingDriverId ? updatedDriver : driver))
+        );
+        setMessage("تم تحديث بيانات السائق.");
+      } else {
+        const createdDriver = await createCompanyDriverInSupabase(companyId, {
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+        });
+        setCompanyDrivers((current) => [createdDriver, ...current]);
+        setMessage("تم إضافة السائق. يمكن ربطه بحساب دخول لاحقًا.");
+      }
+
+      closeForm();
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر حفظ بيانات السائق.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function toggleDriverActive(driver) {
+    setMessage("");
+    setErrorMessage("");
+    setIsSaving(true);
+
+    try {
+      const updatedDriver = await updateCompanyDriverInSupabase(companyId, driver.id, {
+        name: driver.name,
+        phone: driver.phone || "",
+        isActive: !driver.isActive,
+      });
+      setCompanyDrivers((current) =>
+        current.map((item) => (item.id === driver.id ? updatedDriver : item))
+      );
+      setMessage(updatedDriver.isActive ? "تم تفعيل السائق." : "تم إيقاف السائق.");
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر تحديث حالة السائق.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -44,51 +150,118 @@ export default function CompanyDriversPage({ companyId }) {
         <div>
           <p className="eyebrow">الشركة</p>
           <h1>السائقون</h1>
+          <p>إدارة سائقي الشركة من Supabase وتجهيز ربط حسابات الدخول لاحقًا.</p>
         </div>
-        <button type="button" onClick={showDriverManagementPending}>
-          إضافة سائق
+        <button type="button" className="primary-action" onClick={isFormOpen ? closeForm : openCreateForm}>
+          {isFormOpen ? "إغلاق النموذج" : "إضافة سائق"}
         </button>
       </header>
 
       {message ? <p className="auth-alert success">{message}</p> : null}
+      {errorMessage ? <p className="auth-alert error">{errorMessage}</p> : null}
+
+      {isFormOpen ? (
+        <section className="panel product-form-panel">
+          <div className="panel-header">
+            <div>
+              <h2>{editingDriverId ? "تعديل السائق" : "إضافة سائق"}</h2>
+              <p>لا يتم إنشاء حساب دخول للسائق في هذه المرحلة. يبقى `profile_id` فارغًا حتى تفعيل Driver Auth.</p>
+            </div>
+          </div>
+
+          <form className="product-form driver-form" onSubmit={handleSaveDriver}>
+            <label>
+              اسم السائق
+              <input value={form.name} onChange={(event) => updateForm("name", event.target.value)} required />
+            </label>
+
+            <label>
+              رقم الهاتف
+              <input value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} />
+            </label>
+
+            <label className="product-form-check">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => updateForm("isActive", event.target.checked)}
+                disabled={!editingDriverId}
+              />
+              نشط؟
+            </label>
+
+            <div className="product-form-actions">
+              <button type="submit" className="primary-action" disabled={isSaving}>
+                {isSaving ? "جاري الحفظ..." : "حفظ"}
+              </button>
+              <button type="button" className="ghost" onClick={closeForm} disabled={isSaving}>
+                إلغاء
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       <section className="cards-grid">
         {isLoading ? (
           <p className="empty-state">جاري تحميل السائقين...</p>
-        ) : errorMessage ? (
-          <p className="empty-state">{errorMessage}</p>
         ) : companyDrivers.length === 0 ? (
           <div className="empty-state">
-            <strong>لا يوجد سائقون حتى الآن</strong>
+            <strong>لا يوجد سائقون حاليًا</strong>
             <span>ستظهر هنا بيانات السائقين بعد إضافتهم إلى حساب الشركة.</span>
+            <button type="button" className="primary-action" onClick={openCreateForm}>
+              إضافة أول سائق
+            </button>
           </div>
         ) : (
           companyDrivers.map((driver) => (
             <article className="driver-card" key={driver.id}>
-              <div>
-                <h2>{driver.name}</h2>
-                <p>{driver.phone}</p>
+              <div className="driver-card-head">
+                <div>
+                  <h2>{driver.name}</h2>
+                  <p>{driver.phone || "-"}</p>
+                </div>
+                <span className={`status ${driver.isActive ? "active" : "inactive"}`}>
+                  {driver.isActive ? "نشط" : "موقوف"}
+                </span>
               </div>
+
               <dl>
                 <div>
-                  <dt>المركبة</dt>
-                  <dd>{driver.vehicle}</dd>
-                </div>
-                <div>
-                  <dt>الحالة</dt>
+                  <dt>حالة الاتصال</dt>
                   <dd>{driver.status}</dd>
                 </div>
                 <div>
-                  <dt>كاش اليوم</dt>
-                  <dd>{driver.cashToday.toFixed(3)} ر.ع</dd>
+                  <dt>حساب الدخول</dt>
+                  <dd>
+                    <span className={`status ${driver.profileId ? "approved" : "pending"}`}>
+                      {driver.profileId ? "مربوط بحساب دخول" : "غير مربوط بحساب دخول"}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Profile ID</dt>
+                  <dd>{driver.profileId || "-"}</dd>
+                </div>
+                <div>
+                  <dt>آخر تحديث</dt>
+                  <dd>{formatDate(driver.updatedAt || driver.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>تاريخ الإضافة</dt>
+                  <dd>{formatDate(driver.createdAt)}</dd>
                 </div>
               </dl>
+
               <div className="row-actions">
-                <button type="button" onClick={showDriverManagementPending}>
+                <button type="button" onClick={() => openEditForm(driver)}>
                   تعديل
                 </button>
-                <button type="button" className="ghost" onClick={showDriverManagementPending}>
-                  حذف
+                <button type="button" className="ghost" onClick={() => toggleDriverActive(driver)} disabled={isSaving}>
+                  {driver.isActive ? "إيقاف" : "تفعيل"}
+                </button>
+                <button type="button" className="ghost" disabled title="الحذف غير متاح حاليًا">
+                  الحذف غير متاح
                 </button>
               </div>
             </article>
@@ -97,4 +270,9 @@ export default function CompanyDriversPage({ companyId }) {
       </section>
     </div>
   );
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("ar-OM");
 }

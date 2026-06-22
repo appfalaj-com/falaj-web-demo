@@ -16,10 +16,10 @@ export default function CompanyDriversLivePage({ companyId }) {
       try {
         const nextDrivers = await getDriversLiveLocationsByCompanyFromSupabase(companyId);
         if (!cancelled) setDrivers(nextDrivers);
-      } catch {
+      } catch (error) {
         if (!cancelled) {
           setDrivers([]);
-          setErrorMessage("تعذر تحميل مواقع السائقين من قاعدة البيانات.");
+          setErrorMessage(error.message || "تعذر تحميل مواقع السائقين من قاعدة البيانات.");
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -41,6 +41,7 @@ export default function CompanyDriversLivePage({ companyId }) {
         <div>
           <p className="eyebrow">متابعة السائقين</p>
           <h1>التتبع المباشر لسائقي الشركة</h1>
+          <p>تعرض هذه الصفحة آخر مواقع محفوظة في Supabase فقط عند توفرها.</p>
         </div>
       </header>
 
@@ -55,7 +56,7 @@ export default function CompanyDriversLivePage({ companyId }) {
       ) : drivers.length === 0 ? (
         <section className="panel">
           <div className="empty-state">
-            <strong>لا يوجد سائقون حتى الآن</strong>
+            <strong>لا يوجد سائقون حاليًا</strong>
             <span>ستظهر هنا مواقع السائقين بعد إضافتهم وتفعيل مشاركة الموقع.</span>
           </div>
         </section>
@@ -70,8 +71,15 @@ export default function CompanyDriversLivePage({ companyId }) {
         <section className="cards-grid">
           {drivers.map((driver) => (
             <article className="driver-card" key={driver.id}>
-              <h2>{driver.name}</h2>
-              <p>{driver.status}</p>
+              <div className="driver-card-head">
+                <div>
+                  <h2>{driver.name}</h2>
+                  <p>{driver.status}</p>
+                </div>
+                <span className={`status ${driver.isActive ? "active" : "inactive"}`}>
+                  {driver.isActive ? "نشط" : "موقوف"}
+                </span>
+              </div>
               <dl>
                 <div>
                   <dt>المركبة</dt>

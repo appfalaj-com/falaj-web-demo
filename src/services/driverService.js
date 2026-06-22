@@ -24,10 +24,17 @@ function normalizeSupabaseDriver(driver) {
   return {
     id: driver.id,
     companyId: driver.company_id,
+    profileId: driver.profile_id,
     name: driver.name,
     phone: driver.phone,
+    vehiclePlate: driver.vehicle_plate,
+    vehicleLabel: driver.vehicle_label,
     vehicle: driver.vehicle_label || driver.vehicle_plate || "غير محدد",
+    isActive: driver.is_active,
+    isOnline: driver.is_online,
     status: driver.is_online ? "متاح" : "غير متصل",
+    createdAt: driver.created_at,
+    updatedAt: driver.updated_at,
     cashToday: 0,
   };
 }
@@ -40,7 +47,7 @@ export async function getDriversByCompanyFromSupabase(companyId) {
   const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("drivers")
-    .select("id, company_id, name, phone, vehicle_plate, vehicle_label, is_active, is_online")
+    .select(driverSelectColumns())
     .eq("company_id", supabaseCompanyId)
     .order("created_at", { ascending: false });
 
@@ -51,6 +58,56 @@ export async function getDriversByCompanyFromSupabase(companyId) {
   return (data ?? []).map(normalizeSupabaseDriver);
 }
 
+export async function createCompanyDriverInSupabase(companyId, driver) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("drivers")
+    .insert({
+      company_id: supabaseCompanyId,
+      name: driver.name,
+      phone: driver.phone || null,
+      is_active: true,
+      profile_id: null,
+    })
+    .select(driverSelectColumns())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseDriver(data);
+}
+
+export async function updateCompanyDriverInSupabase(companyId, driverId, driver) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data, error } = await supabase
+    .from("drivers")
+    .update({
+      name: driver.name,
+      phone: driver.phone || null,
+      is_active: Boolean(driver.isActive),
+    })
+    .eq("id", driverId)
+    .eq("company_id", supabaseCompanyId)
+    .select(driverSelectColumns())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseDriver(data);
+}
+
 export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
@@ -59,7 +116,7 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
   const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data: drivers, error: driversError } = await supabase
     .from("drivers")
-    .select("id, company_id, name, phone, vehicle_plate, vehicle_label, is_active, is_online")
+    .select(driverSelectColumns())
     .eq("company_id", supabaseCompanyId)
     .order("created_at", { ascending: false });
 
@@ -110,4 +167,20 @@ export function getDriverWorkflow(driverId, orders, drivers = mockDrivers) {
     nextOrders: activeOrders.slice(1),
     completedOrders: driverOrders.filter((order) => DONE_DRIVER_STATUSES.includes(order.status)),
   };
+}
+
+function driverSelectColumns() {
+  return [
+    "id",
+    "company_id",
+    "profile_id",
+    "name",
+    "phone",
+    "vehicle_plate",
+    "vehicle_label",
+    "is_active",
+    "is_online",
+    "created_at",
+    "updated_at",
+  ].join(",");
 }

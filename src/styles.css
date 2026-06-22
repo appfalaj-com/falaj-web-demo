@@ -1688,6 +1688,22 @@ tbody tr:hover td {
   margin-top: 4px;
 }
 
+.driver-card-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.driver-card-head h2,
+.driver-card-head p {
+  margin: 0;
+}
+
+.driver-card-head p {
+  margin-top: 6px;
+}
+
 .driver-card dl {
   display: grid;
   gap: 12px;
