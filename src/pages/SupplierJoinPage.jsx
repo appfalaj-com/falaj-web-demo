@@ -1,5 +1,13 @@
 import { useState } from "react";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
+
+const serviceOptions = [
+  { value: "مياه شرب عبوات", labelKey: "supplierJoin.service.bottles" },
+  { value: "صهاريج مياه", labelKey: "supplierJoin.service.tankers" },
+  { value: "الاثنين", labelKey: "supplierJoin.service.both" },
+];
 
 const initialForm = {
   companyName: "",
@@ -7,11 +15,12 @@ const initialForm = {
   phone: "",
   email: "",
   area: "",
-  serviceType: "مياه شرب عبوات",
+  serviceType: serviceOptions[0].value,
   notes: "",
 };
 
 export default function SupplierJoinPage({ onNavigate }) {
+  const { direction, t } = useI18n();
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -26,7 +35,7 @@ export default function SupplierJoinPage({ onNavigate }) {
 
     if (!supabase) {
       setStatusMessage("");
-      setErrorMessage("تعذر الاتصال بقاعدة البيانات حاليًا. يرجى المحاولة لاحقًا.");
+      setErrorMessage(t("supplierJoin.noConnection"));
       return;
     }
 
@@ -62,25 +71,26 @@ export default function SupplierJoinPage({ onNavigate }) {
       }
 
       setForm(initialForm);
-      setStatusMessage("تم إرسال طلب الانضمام بنجاح. سيقوم فريق فلج بمراجعة البيانات والتواصل معكم.");
+      setStatusMessage(t("supplierJoin.success"));
     } catch (error) {
-      setErrorMessage(error.message || "تعذر إرسال طلب الانضمام حاليًا. يرجى المحاولة لاحقًا.");
+      setErrorMessage(error.message || t("supplierJoin.error"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="supplier-join-page" dir="rtl">
+    <main className="supplier-join-page" dir={direction}>
       <header className="supplier-join-header">
         <button type="button" className="ghost" onClick={() => onNavigate?.("/")}>
-          العودة للرئيسية
+          {t("common.backHome")}
         </button>
+        <LanguageToggle />
         <div>
-          <img className="supplier-join-logo" src="/brand/Falaj_Logo.png" alt="Falaj" />
-          <p className="landing-eyebrow">فلج للموردين</p>
-          <h1>طلب انضمام مورد مياه</h1>
-          <p>املأ بيانات شركتك، وسيفتح بريد إلكتروني جاهز لإرسال طلب الانضمام إلى فريق فلج.</p>
+          <img className="supplier-join-logo" src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
+          <p className="landing-eyebrow">{t("supplierJoin.brand")}</p>
+          <h1>{t("supplierJoin.title")}</h1>
+          <p>{t("supplierJoin.description")}</p>
         </div>
       </header>
 
@@ -90,7 +100,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           {errorMessage ? <p className="auth-alert error supplier-join-message">{errorMessage}</p> : null}
 
           <label>
-            اسم الشركة
+            {t("supplierJoin.companyName")}
             <input
               required
               type="text"
@@ -100,7 +110,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <label>
-            اسم المسؤول
+            {t("supplierJoin.managerName")}
             <input
               required
               type="text"
@@ -110,7 +120,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <label>
-            رقم الهاتف
+            {t("supplierJoin.phone")}
             <input
               required
               type="tel"
@@ -121,7 +131,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <label>
-            البريد الإلكتروني
+            {t("common.email")}
             <input
               required
               type="email"
@@ -131,7 +141,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <label>
-            الولاية / المنطقة
+            {t("supplierJoin.area")}
             <input
               required
               type="text"
@@ -141,19 +151,21 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <label>
-            نوع الخدمة
+            {t("supplierJoin.serviceType")}
             <select
               value={form.serviceType}
               onChange={(event) => updateField("serviceType", event.target.value)}
             >
-              <option>مياه شرب عبوات</option>
-              <option>صهاريج مياه</option>
-              <option>الاثنين</option>
+              {serviceOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="supplier-join-notes">
-            ملاحظات إضافية
+            {t("supplierJoin.notes")}
             <textarea
               rows="5"
               value={form.notes}
@@ -162,7 +174,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           </label>
 
           <button type="submit" className="supplier-join-submit" disabled={isSubmitting}>
-            {isSubmitting ? "جاري إرسال الطلب..." : "إرسال طلب الانضمام"}
+            {isSubmitting ? t("supplierJoin.sending") : t("supplierJoin.submit")}
           </button>
         </form>
       </section>

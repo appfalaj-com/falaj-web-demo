@@ -14,7 +14,7 @@
   --shadow: 0 16px 40px rgba(9, 107, 104, 0.12);
   --shadow-soft: 0 10px 28px rgba(9, 107, 104, 0.1);
   --surface: rgba(255, 255, 255, 0.86);
-  font-family: "IBM Plex Sans Arabic", "Tahoma", "Arial", sans-serif;
+  font-family: "Inter", "Segoe UI", "IBM Plex Sans Arabic", "Tahoma", "Arial", sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -30,6 +30,12 @@ body {
   margin: 0;
   min-width: 320px;
   direction: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+html[lang="ar"] body {
+  font-family: "IBM Plex Sans Arabic", "Segoe UI", "Tahoma", "Arial", sans-serif;
 }
 
 html,
