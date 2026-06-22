@@ -24,6 +24,7 @@ function normalizeSupabaseDriver(driver) {
   return {
     id: driver.id,
     companyId: driver.company_id,
+    companyName: driver.companies?.name ?? driver.company_name ?? null,
     profileId: driver.profile_id,
     name: driver.name,
     phone: driver.phone,
@@ -36,6 +37,37 @@ function normalizeSupabaseDriver(driver) {
     createdAt: driver.created_at,
     updatedAt: driver.updated_at,
     cashToday: 0,
+  };
+}
+
+export async function getCurrentDriverFromSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) {
+    throw userError;
+  }
+
+  const user = userData?.user;
+  if (!user) {
+    return { user: null, driver: null };
+  }
+
+  const { data, error } = await supabase
+    .from("drivers")
+    .select(`${driverSelectColumns()}, companies(name)`)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    user,
+    driver: data ? normalizeSupabaseDriver(data) : null,
   };
 }
 
@@ -150,6 +182,35 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
     ...driver,
     lastLocation: locationsByDriverId.get(driver.id) ?? null,
   }));
+}
+
+export async function saveDriverLocationInSupabase(driver, position) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  if (!driver?.id || !driver?.companyId || !driver?.isActive) {
+    throw new Error("لا يمكن حفظ الموقع إلا لسائق مربوط ونشط.");
+  }
+
+  const { data, error } = await supabase
+    .from("driver_locations")
+    .insert({
+      driver_id: driver.id,
+      company_id: driver.companyId,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      accuracy: position.accuracy ?? null,
+      source: "web",
+    })
+    .select("id, driver_id, company_id, latitude, longitude, accuracy, recorded_at, source")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
 
 export function getDriverById(driverId, drivers = mockDrivers) {

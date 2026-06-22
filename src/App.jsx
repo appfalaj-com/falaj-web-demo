@@ -20,7 +20,8 @@ import CompanyOrdersPage from "./pages/CompanyOrdersPage.jsx";
 import CompanyPendingReviewPage from "./pages/CompanyPendingReviewPage.jsx";
 import CompanyProductsPage from "./pages/CompanyProductsPage.jsx";
 import CompanySetPasswordPage from "./pages/CompanySetPasswordPage.jsx";
-import DriverLoginPendingPage from "./pages/DriverLoginPendingPage.jsx";
+import DriverLoginPage from "./pages/DriverLoginPage.jsx";
+import DriverPage from "./pages/DriverPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import SupplierJoinPage from "./pages/SupplierJoinPage.jsx";
@@ -227,8 +228,12 @@ export default function App() {
     return <AdminLoginPage onAuthenticated={handleAuthenticated} />;
   }
 
-  if (currentPath === "/driver" || currentPath === "/driver/login") {
-    return <DriverLoginPendingPage onNavigate={navigate} />;
+  if (currentPath === "/driver/login") {
+    return <DriverLoginPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/driver") {
+    return <DriverPage onNavigate={navigate} />;
   }
 
   if (PROTECTED_COMPANY_PATHS.has(currentPath)) {

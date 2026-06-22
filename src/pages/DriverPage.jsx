@@ -1,79 +1,271 @@
-import { MOCK_DRIVER_ID, getDriverWorkflow } from "../services/driverService.js";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabaseClient.js";
+import {
+  getCurrentDriverFromSupabase,
+  saveDriverLocationInSupabase,
+} from "../services/driverService.js";
+import {
+  getOrdersByDriverFromSupabase,
+  updateDriverOrderStatusInSupabase,
+} from "../services/orderService.js";
 
-const DRIVER_ID = MOCK_DRIVER_ID;
-const DONE_STATUSES = ["delivered", "failed"];
-const TIMELINE = ["accepted", "assigned", "en_route", "arrived", "delivered"];
+const DRIVER_NEXT_ACTIONS = {
+  assigned: [{ status: "en_route", label: "بدء التوصيل" }],
+  en_route: [
+    { status: "arrived", label: "وصلت للموقع" },
+    { status: "failed", label: "تعذر التوصيل" },
+  ],
+  arrived: [
+    { status: "delivered", label: "تم التسليم" },
+    { status: "failed", label: "تعذر التوصيل" },
+  ],
+};
 
-export default function DriverPage({ orders, drivers, onSetStatus, onMarkPaid }) {
-  const { driver, currentOrder, nextOrders, completedOrders } = getDriverWorkflow(
-    DRIVER_ID,
-    orders,
-    drivers
+export default function DriverPage({ onNavigate }) {
+  const [loading, setLoading] = useState(true);
+  const [driver, setDriver] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [locationState, setLocationState] = useState({
+    status: "idle",
+    latitude: null,
+    longitude: null,
+    accuracy: null,
+    recordedAt: null,
+  });
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+
+  useEffect(() => {
+    loadDriverContext();
+  }, []);
+
+  const activeOrders = useMemo(
+    () => orders.filter((order) => !["delivered", "failed", "cancelled", "rejected"].includes(order.status)),
+    [orders]
   );
-  const todayOrders = [...(currentOrder ? [currentOrder] : []), ...nextOrders, ...completedOrders];
+
+  async function loadDriverContext() {
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const { user, driver: linkedDriver } = await getCurrentDriverFromSupabase();
+      if (!user) {
+        onNavigate?.("/driver/login");
+        return;
+      }
+
+      if (!linkedDriver) {
+        setDriver(null);
+        setOrders([]);
+        setError("حسابك غير مربوط بسائق. تواصل مع الشركة.");
+        return;
+      }
+
+      setDriver(linkedDriver);
+
+      if (!linkedDriver.isActive) {
+        setOrders([]);
+        setError("حساب السائق موقوف حاليًا.");
+        return;
+      }
+
+      const assignedOrders = await getOrdersByDriverFromSupabase(linkedDriver.id);
+      setOrders(assignedOrders);
+    } catch (loadError) {
+      setError(loadError?.message || "تعذر تحميل بيانات السائق.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    await supabase?.auth.signOut();
+    onNavigate?.("/driver/login");
+  }
+
+  async function handleShareLocation() {
+    setError("");
+    setMessage("");
+
+    if (!driver?.id || !driver?.isActive) {
+      setError("لا يمكن حفظ الموقع إلا لسائق مربوط ونشط.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setError("المتصفح لا يدعم مشاركة الموقع.");
+      return;
+    }
+
+    setLocationState((current) => ({ ...current, status: "requesting" }));
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+
+        try {
+          const savedLocation = await saveDriverLocationInSupabase(driver, coords);
+          setLocationState({
+            status: "shared",
+            latitude: Number(savedLocation.latitude),
+            longitude: Number(savedLocation.longitude),
+            accuracy: savedLocation.accuracy,
+            recordedAt: savedLocation.recorded_at,
+          });
+          setMessage("تم حفظ موقعك الحالي بنجاح.");
+        } catch (saveError) {
+          setLocationState((current) => ({ ...current, status: "idle" }));
+          setError(saveError?.message || "تعذر حفظ موقع السائق.");
+        }
+      },
+      (geoError) => {
+        setLocationState((current) => ({ ...current, status: "denied" }));
+        setError(geoError?.message || "تم رفض صلاحية الموقع أو تعذر تحديده.");
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  }
+
+  async function handleUpdateOrderStatus(order, nextStatus) {
+    setUpdatingOrderId(order.rawId);
+    setError("");
+    setMessage("");
+
+    try {
+      const updatedOrder = await updateDriverOrderStatusInSupabase(driver.id, order.rawId, nextStatus);
+      setOrders((currentOrders) =>
+        currentOrders.map((item) => (item.rawId === updatedOrder.rawId ? updatedOrder : item))
+      );
+      setMessage("تم تحديث حالة الطلب.");
+    } catch (updateError) {
+      setError(updateError?.message || "تعذر تحديث حالة الطلب.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="page driver-page">
+        <section className="panel">
+          <p>جاري تحميل بيانات السائق...</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="page driver-page">
       <header className="page-header compact">
         <div>
           <p className="eyebrow">واجهة السائق</p>
-          <h1>طلبات {driver?.name ?? "السائق"} اليوم</h1>
+          <h1>{driver ? `مرحبًا ${driver.name}` : "دخول السائق"}</h1>
+          <p>إدارة الطلبات المسندة ومشاركة الموقع تتم فقط للحساب المرتبط بسائق نشط.</p>
         </div>
+        <button type="button" className="ghost" onClick={handleSignOut}>
+          تسجيل الخروج
+        </button>
       </header>
 
-      <section className="panel overview">
-        <h2>تتبع الموقع</h2>
-        <p>
-          لم يتم تشغيل GPS حقيقي في هذه المرحلة. يحتاج التتبع الفعلي إلى تطبيق سائق أو Web GPS مع تصريح
-          موقع واضح وحدود للخلفية.
-        </p>
-        <button type="button" className="ghost">
-          تجهيز طلب صلاحية الموقع لاحقًا
-        </button>
-      </section>
+      {error && <div className="auth-alert error">{error}</div>}
+      {message && <div className="auth-alert success">{message}</div>}
 
-      <DriverSection title="الطلب الحالي">
-        {currentOrder ? (
-          <DriverOrderCard
-            order={currentOrder}
-            isCurrent
-            onSetStatus={onSetStatus}
-            onMarkPaid={onMarkPaid}
-          />
-        ) : (
-          <EmptyDriverCard text="لا يوجد طلب نشط الآن." />
-        )}
-      </DriverSection>
+      {driver && (
+        <>
+          <section className="panel overview">
+            <div className="driver-card-head">
+              <div>
+                <h2>بيانات السائق</h2>
+                <p>{driver.companyName || "الشركة غير محددة"}</p>
+              </div>
+              <span className={`status ${driver.isActive ? "approved" : "inactive"}`}>
+                {driver.isActive ? "نشط" : "موقوف"}
+              </span>
+            </div>
+            <dl className="supplier-detail-list">
+              <div>
+                <dt>الاسم</dt>
+                <dd>{driver.name || "غير محدد"}</dd>
+              </div>
+              <div>
+                <dt>الهاتف</dt>
+                <dd>{driver.phone || "غير محدد"}</dd>
+              </div>
+              <div>
+                <dt>حالة الربط</dt>
+                <dd>{driver.profileId ? "مربوط بحساب دخول" : "غير مربوط بحساب دخول"}</dd>
+              </div>
+              <div>
+                <dt>الشركة</dt>
+                <dd>{driver.companyName || driver.companyId || "غير محددة"}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <DriverSection title="الطلبات المعينة">
-        {nextOrders.length > 0 ? (
-          nextOrders.map((order) => (
-            <DriverOrderCard
-              key={order.id}
-              order={order}
-              onSetStatus={onSetStatus}
-              onMarkPaid={onMarkPaid}
-            />
-          ))
-        ) : (
-          <EmptyDriverCard text="لا توجد طلبات معينة تالية." />
-        )}
-      </DriverSection>
+          {driver.isActive && (
+            <section className="panel overview">
+              <div className="driver-card-head">
+                <div>
+                  <h2>مشاركة الموقع</h2>
+                  <p>لن يتم حفظ الموقع إلا بعد ضغط الزر ومنح إذن GPS من المتصفح.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleShareLocation}
+                  disabled={locationState.status === "requesting"}
+                >
+                  {locationState.status === "requesting" ? "جاري تحديد الموقع..." : "بدء مشاركة الموقع"}
+                </button>
+              </div>
+              {locationState.status === "shared" ? (
+                <dl className="supplier-detail-list">
+                  <div>
+                    <dt>خط العرض</dt>
+                    <dd>{locationState.latitude?.toFixed(6)}</dd>
+                  </div>
+                  <div>
+                    <dt>خط الطول</dt>
+                    <dd>{locationState.longitude?.toFixed(6)}</dd>
+                  </div>
+                  <div>
+                    <dt>الدقة</dt>
+                    <dd>{locationState.accuracy ? `${Math.round(locationState.accuracy)} متر` : "غير محددة"}</dd>
+                  </div>
+                  <div>
+                    <dt>آخر تحديث</dt>
+                    <dd>{formatDate(locationState.recordedAt)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="empty-note">الإذن مطلوب قبل حفظ موقع السائق الحالي.</p>
+              )}
+            </section>
+          )}
 
-      <DriverSection title="كل طلبات اليوم">
-        {todayOrders.length > 0 ? (
-          todayOrders.map((order) => (
-            <DriverOrderCard
-              key={`${order.id}-today`}
-              order={order}
-              onSetStatus={onSetStatus}
-              onMarkPaid={onMarkPaid}
-            />
-          ))
-        ) : (
-          <EmptyDriverCard text="لا توجد طلبات اليوم." />
-        )}
-      </DriverSection>
+          <DriverSection title="الطلبات المسندة">
+            {orders.length > 0 ? (
+              orders.map((order) => (
+                <DriverOrderCard
+                  key={order.rawId}
+                  order={order}
+                  isActive={activeOrders.some((item) => item.rawId === order.rawId)}
+                  isUpdating={updatingOrderId === order.rawId}
+                  onUpdateStatus={handleUpdateOrderStatus}
+                />
+              ))
+            ) : (
+              <EmptyDriverCard text="لا توجد طلبات مسندة حاليًا." />
+            )}
+          </DriverSection>
+        </>
+      )}
     </div>
   );
 }
@@ -87,103 +279,56 @@ function DriverSection({ title, children }) {
   );
 }
 
-function DriverOrderCard({ order, isCurrent = false, onSetStatus, onMarkPaid }) {
-  const canAccept = order.status === "pending";
-  const canPickup = order.status === "accepted";
-  const canStart = order.status === "assigned";
-  const canArrive = order.status === "en_route";
-  const canDeliver = order.status === "arrived";
-  const canPay =
-    order.status === "delivered" &&
-    order.paymentMethod === "cash" &&
-    order.paymentStatus === "unpaid";
-  const canFail = !DONE_STATUSES.includes(order.status);
+function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus }) {
+  const actions = DRIVER_NEXT_ACTIONS[order.status] ?? [];
 
   return (
-    <article className={isCurrent ? "mobile-order-card driver-current-card" : "mobile-order-card"}>
+    <article className={isActive ? "mobile-order-card driver-current-card" : "mobile-order-card"}>
       <div className="mobile-order-head">
-        <strong>{order.id}</strong>
+        <strong>{order.publicCode || shortId(order.rawId)}</strong>
         <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
       </div>
 
-      <h3>{order.customer}</h3>
-      <p>
-        {order.area} - {order.address}
-      </p>
-
-      <DriverTimeline status={order.status} />
+      <h3>{order.customer || "عميل غير محدد"}</h3>
+      <p>{[order.area, order.address].filter(Boolean).join(" - ") || "العنوان غير محدد"}</p>
 
       <div className="order-detail-row">
-        <span>{order.waterType}</span>
-        <strong>{order.volume}</strong>
+        <span>نوع المياه</span>
+        <strong>{order.waterType || "غير محدد"}</strong>
       </div>
       <div className="order-detail-row">
-        <span>حالة الدفع</span>
-        <strong>{paymentStatusLabel(order.paymentStatus)}</strong>
+        <span>الكمية</span>
+        <strong>{order.volumeLiters ? `${order.volumeLiters} لتر` : "غير محددة"}</strong>
       </div>
       <div className="order-detail-row">
-        <span>تحصيل الكاش</span>
-        <strong>{cashCollectedLabel(order)}</strong>
+        <span>الدفع</span>
+        <strong>{order.paymentMethod || "غير محدد"} / {order.paymentStatus || "غير محدد"}</strong>
       </div>
       <div className="order-detail-row">
-        <span>المبلغ</span>
-        <strong>{order.amount.toFixed(3)} ر.ع</strong>
+        <span>الإجمالي</span>
+        <strong>{formatMoney(order.amount)}</strong>
+      </div>
+      <div className="order-detail-row">
+        <span>تاريخ الطلب</span>
+        <strong>{formatDate(order.createdAt)}</strong>
       </div>
 
-      <div className="driver-actions">
-        {canAccept && (
-          <button type="button" onClick={() => onSetStatus(order.id, "accepted")}>
-            قبول الطلب
-          </button>
-        )}
-        {canPickup && (
-          <button type="button" onClick={() => onSetStatus(order.id, "assigned")}>
-            استلام الطلب
-          </button>
-        )}
-        {canStart && (
-          <button type="button" onClick={() => onSetStatus(order.id, "en_route")}>
-            بدء التوصيل
-          </button>
-        )}
-        {canArrive && (
-          <button type="button" onClick={() => onSetStatus(order.id, "arrived")}>
-            وصلت للموقع
-          </button>
-        )}
-        {canDeliver && (
-          <button type="button" onClick={() => onSetStatus(order.id, "delivered")}>
-            تم التسليم
-          </button>
-        )}
-        {canPay && (
-          <button type="button" className="cash" onClick={() => onMarkPaid(order.id)}>
-            استلمت الكاش
-          </button>
-        )}
-        {canFail && (
-          <button type="button" className="ghost danger-action" onClick={() => onSetStatus(order.id, "failed")}>
-            تعذر التسليم
-          </button>
-        )}
-      </div>
+      {actions.length > 0 && (
+        <div className="driver-actions">
+          {actions.map((action) => (
+            <button
+              key={action.status}
+              type="button"
+              className={action.status === "failed" ? "ghost danger-action" : undefined}
+              disabled={isUpdating}
+              onClick={() => onUpdateStatus(order, action.status)}
+            >
+              {isUpdating ? "جاري التحديث..." : action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </article>
-  );
-}
-
-function DriverTimeline({ status }) {
-  return (
-    <ol className="driver-timeline" aria-label="حالة الطلب">
-      {TIMELINE.map((step) => {
-        const active = timelineIndex(status) >= timelineIndex(step);
-        return (
-          <li key={step} className={active ? "active" : undefined}>
-            <span />
-            <small>{statusLabel(step)}</small>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -195,20 +340,6 @@ function EmptyDriverCard({ text }) {
   );
 }
 
-function timelineIndex(status) {
-  const index = TIMELINE.indexOf(status);
-  return index === -1 ? -1 : index;
-}
-
-function paymentStatusLabel(paymentStatus) {
-  return paymentStatus === "paid" ? "مدفوع" : "غير مدفوع";
-}
-
-function cashCollectedLabel(order) {
-  if (order.paymentMethod !== "cash") return "لا ينطبق";
-  return order.cashCollectedByDriver ? "تم الاستلام" : "غير مستلم";
-}
-
 function statusLabel(status) {
   const labels = {
     pending: "جديد",
@@ -217,8 +348,27 @@ function statusLabel(status) {
     en_route: "في الطريق",
     arrived: "وصل",
     delivered: "تم التسليم",
-    failed: "تعذر التسليم",
+    failed: "تعذر التوصيل",
+    cancelled: "ملغي",
+    rejected: "مرفوض",
   };
 
-  return labels[status] ?? status;
+  return labels[status] ?? status ?? "غير محدد";
+}
+
+function shortId(id) {
+  return id ? `#${String(id).slice(0, 8)}` : "بدون رقم";
+}
+
+function formatMoney(value) {
+  const amount = Number(value) || 0;
+  return `${amount.toFixed(3)} ر.ع`;
+}
+
+function formatDate(value) {
+  if (!value) return "غير محدد";
+  return new Date(value).toLocaleString("ar-OM", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }

@@ -108,6 +108,24 @@ export async function getAdminOrdersFromSupabase() {
   return (data ?? []).map(normalizeSupabaseOrder);
 }
 
+export async function getOrdersByDriverFromSupabase(driverId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`${orderSelectColumns()}, companies(name)`)
+    .eq("driver_id", driverId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(normalizeSupabaseOrder);
+}
+
 export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nextStatus) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
@@ -155,6 +173,35 @@ export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
   }
 
   await addOrderStatusHistory(orderId, nextStatus, "تحديث من لوحة الأدمن");
+  return normalizeSupabaseOrder(data);
+}
+
+export async function updateDriverOrderStatusInSupabase(driverId, orderId, nextStatus) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  if (!["en_route", "arrived", "delivered", "failed"].includes(nextStatus)) {
+    throw new Error("حالة الطلب غير مسموحة للسائق.");
+  }
+
+  const patch = { status: nextStatus };
+  const timestampField = timestampFieldByStatus(nextStatus);
+  if (timestampField) patch[timestampField] = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update(patch)
+    .eq("id", orderId)
+    .eq("driver_id", driverId)
+    .select(`${orderSelectColumns()}, companies(name)`)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await addOrderStatusHistory(orderId, nextStatus, "تحديث من صفحة السائق");
   return normalizeSupabaseOrder(data);
 }
 
