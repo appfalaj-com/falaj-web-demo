@@ -51,6 +51,50 @@ export async function getDriversByCompanyFromSupabase(companyId) {
   return (data ?? []).map(normalizeSupabaseDriver);
 }
 
+export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
+  const { data: drivers, error: driversError } = await supabase
+    .from("drivers")
+    .select("id, company_id, name, phone, vehicle_plate, vehicle_label, is_active, is_online")
+    .eq("company_id", supabaseCompanyId)
+    .order("created_at", { ascending: false });
+
+  if (driversError) {
+    throw driversError;
+  }
+
+  const normalizedDrivers = (drivers ?? []).map(normalizeSupabaseDriver);
+  if (normalizedDrivers.length === 0) return [];
+
+  const driverIds = normalizedDrivers.map((driver) => driver.id);
+  const { data: locations, error: locationsError } = await supabase
+    .from("driver_locations")
+    .select("id, driver_id, company_id, latitude, longitude, accuracy, recorded_at, source")
+    .eq("company_id", supabaseCompanyId)
+    .in("driver_id", driverIds)
+    .order("recorded_at", { ascending: false });
+
+  if (locationsError) {
+    throw locationsError;
+  }
+
+  const locationsByDriverId = new Map();
+  (locations ?? []).forEach((location) => {
+    if (!locationsByDriverId.has(location.driver_id)) {
+      locationsByDriverId.set(location.driver_id, location);
+    }
+  });
+
+  return normalizedDrivers.map((driver) => ({
+    ...driver,
+    lastLocation: locationsByDriverId.get(driver.id) ?? null,
+  }));
+}
+
 export function getDriverById(driverId, drivers = mockDrivers) {
   return drivers.find((driver) => driver.id === driverId) ?? null;
 }
