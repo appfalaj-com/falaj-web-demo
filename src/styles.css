@@ -1373,6 +1373,105 @@ tbody tr:hover td {
   margin: 0;
 }
 
+.supplier-requests-search {
+  padding: 0;
+}
+
+.supplier-requests-search label {
+  max-width: 520px;
+  width: 100%;
+}
+
+.supplier-requests-review-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(360px, 1.25fr);
+}
+
+.supplier-request-list {
+  display: grid;
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+
+.supplier-request-card {
+  align-items: start;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 14px;
+  text-align: right;
+  width: 100%;
+}
+
+.supplier-request-card.active,
+.supplier-request-card:hover {
+  border-color: rgba(18, 153, 144, 0.45);
+  box-shadow: 0 12px 26px rgba(9, 107, 104, 0.1);
+}
+
+.supplier-request-card strong {
+  color: var(--dark);
+  font-size: 17px;
+}
+
+.supplier-request-card small,
+.supplier-request-card span:last-child {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.supplier-request-detail-panel {
+  min-width: 0;
+  overflow: visible;
+  padding-bottom: 20px;
+}
+
+.supplier-request-detail-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0 20px 20px;
+}
+
+.supplier-request-detail-list div {
+  background: rgba(144, 209, 202, 0.1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.supplier-request-detail-list dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.supplier-request-detail-list dd {
+  color: var(--dark);
+  font-weight: 800;
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.supplier-request-detail-panel .supplier-request-timeline {
+  padding: 0 20px 20px;
+}
+
+.supplier-request-actions {
+  border-top: 1px solid var(--border);
+  padding: 18px 20px 0;
+}
+
 .supplier-request-timeline {
   display: grid;
   gap: 6px;
@@ -2055,6 +2154,10 @@ tbody tr:hover td {
   .admin-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .supplier-requests-review-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
@@ -2122,6 +2225,18 @@ tbody tr:hover td {
   .product-actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .supplier-request-detail-list {
+    grid-template-columns: 1fr;
+    padding: 0 14px 14px;
+  }
+
+  .supplier-request-list,
+  .supplier-request-detail-panel .supplier-request-timeline,
+  .supplier-request-actions {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }
 
