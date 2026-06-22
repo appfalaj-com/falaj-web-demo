@@ -171,7 +171,7 @@ export default function AdminSuppliersPage({ onNavigate }) {
                     <td>{formatDate(supplier.createdAt)}</td>
                     <td>
                       <div className="row-actions wide-actions">
-                        <button type="button" onClick={() => onNavigate?.(`/admin/suppliers/${supplier.id}/account`)}>
+                        <button type="button" onClick={() => onNavigate?.(`/admin/suppliers/${supplier.id}`)}>
                           عرض التفاصيل
                         </button>
                         <button type="button" className="ghost" onClick={() => onNavigate?.("/admin/product-moderation")}>

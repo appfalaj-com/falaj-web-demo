@@ -41,7 +41,7 @@ function isAdminPath(path) {
 }
 
 function getSupplierAccountCompanyId(path) {
-  const match = path.match(/^\/admin\/suppliers\/([^/]+)\/account$/);
+  const match = path.match(/^\/admin\/suppliers\/([^/]+)(?:\/account)?$/);
   return match?.[1] ?? null;
 }
 
@@ -205,7 +205,7 @@ export default function App() {
 
   if (supplierAccountCompanyId) {
     routes[currentPath] = (
-      <AdminSupplierAccountPage companyId={supplierAccountCompanyId} orders={orders} />
+      <AdminSupplierAccountPage companyId={supplierAccountCompanyId} onNavigate={navigate} />
     );
   }
 

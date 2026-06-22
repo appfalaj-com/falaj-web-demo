@@ -1333,6 +1333,11 @@ tbody tr:hover td {
   color: var(--muted);
 }
 
+.status.inactive {
+  background: rgba(90, 119, 116, 0.16);
+  color: var(--muted);
+}
+
 .clickable-row {
   cursor: pointer;
 }
