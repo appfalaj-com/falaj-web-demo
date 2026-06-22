@@ -17,6 +17,7 @@ const REQUEST_FILTERS = [
   { value: "pending", label: "قيد المراجعة" },
   { value: "company_created", label: "تم إنشاء ملف المورد" },
   { value: "invitation_sent", label: "تم إرسال الدعوة" },
+  { value: "activated", label: "مفعل" },
   { value: "rejected", label: "مرفوض" },
 ];
 
@@ -25,6 +26,7 @@ export default function AdminSupplierRequestsPage() {
   const [activeStatus, setActiveStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [invitingRequestId, setInvitingRequestId] = useState(null);
+  const [activatingRequestId, setActivatingRequestId] = useState(null);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -39,6 +41,63 @@ export default function AdminSupplierRequestsPage() {
       setErrorMessage(error.message || "تعذر تحميل طلبات الانضمام.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function activateSupplier(requestId) {
+    setMessage("");
+    setErrorMessage("");
+
+    if (!supabase) {
+      setErrorMessage("Supabase غير مفعّل حاليًا.");
+      return;
+    }
+
+    const request = requests.find((item) => item.id === requestId);
+    if (!request?.company?.id) {
+      setErrorMessage("تعذر العثور على ملف المورد المرتبط بهذا الطلب.");
+      return;
+    }
+
+    setActivatingRequestId(requestId);
+
+    try {
+      const userId = await getCurrentUserId();
+      const reviewedAt = new Date().toISOString();
+
+      const { error: companyError } = await supabase
+        .from("companies")
+        .update({
+          is_active: true,
+          onboarding_status: "activated",
+        })
+        .eq("id", request.company.id);
+
+      if (companyError) throw companyError;
+
+      const { data, error: requestError } = await supabase
+        .from("supplier_join_requests")
+        .update({
+          status: "activated",
+          reviewed_at: request.reviewed_at || reviewedAt,
+          reviewed_by: request.reviewed_by || userId,
+        })
+        .eq("id", requestId)
+        .select("id, status, reviewed_at, reviewed_by")
+        .single();
+
+      if (requestError) throw requestError;
+
+      updateRequestState(data, {
+        ...request.company,
+        onboarding_status: "activated",
+      });
+      setMessage("تم تفعيل المورد بنجاح، يمكنه الآن الدخول إلى لوحة الموردين.");
+      await loadRequests();
+    } catch (error) {
+      setErrorMessage(error.message || "تعذر تفعيل المورد.");
+    } finally {
+      setActivatingRequestId(null);
     }
   }
 
@@ -232,7 +291,9 @@ export default function AdminSupplierRequestsPage() {
                     request={request}
                     onReview={reviewRequest}
                     onInvite={sendSupplierInvite}
+                    onActivate={activateSupplier}
                     isInviting={invitingRequestId === request.id}
+                    isActivating={activatingRequestId === request.id}
                   />
                 ))}
               </tbody>
@@ -244,7 +305,7 @@ export default function AdminSupplierRequestsPage() {
   );
 }
 
-function SupplierRequestRow({ request, onReview, onInvite, isInviting }) {
+function SupplierRequestRow({ request, onReview, onInvite, onActivate, isInviting, isActivating }) {
   const status = normalizeStatus(request.status);
   const hasCompany = Boolean(request.company);
 
@@ -286,6 +347,11 @@ function SupplierRequestRow({ request, onReview, onInvite, isInviting }) {
           {canShowInviteButton(status, hasCompany) ? (
             <button type="button" className="ghost" onClick={() => onInvite(request.id)} disabled={isInviting}>
               {isInviting ? "جاري إرسال الدعوة..." : "إرسال دعوة الدخول"}
+            </button>
+          ) : null}
+          {canShowActivateButton(status, request.company) ? (
+            <button type="button" className="ghost" onClick={() => onActivate(request.id)} disabled={isActivating}>
+              {isActivating ? "جاري التفعيل..." : "تفعيل المورد نهائيًا"}
             </button>
           ) : null}
         </div>
@@ -334,6 +400,10 @@ function canApprove(status) {
 
 function canShowInviteButton(status, hasCompany) {
   return (hasCompany || ["company_created", "invitation_pending"].includes(status)) && status !== "invitation_sent";
+}
+
+function canShowActivateButton(status, company) {
+  return status === "invitation_sent" || company?.onboarding_status === "invitation_sent";
 }
 
 async function getInviteFunctionErrorMessage(error, data) {
