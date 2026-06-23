@@ -13,18 +13,43 @@ import {
 const initialProductForm = {
   nameAr: "",
   nameEn: "",
-  category: "bottled_water",
-  waterType: "",
-  sizeLabel: "",
-  volumeLiters: "",
+  category: "water_bottles",
+  waterType: "مياه شرب",
+  sizeOption: "500ml",
+  sizeLabel: "500 مل",
+  volumeLiters: "0.5",
   price: "",
   imageUrl: "",
   imageFile: null,
   imagePreviewUrl: "",
   description: "",
-  deliveryEstimate: "",
+  deliveryEstimate: "خلال ساعة",
   isAvailable: true,
 };
+
+const CATEGORY_OPTIONS = [
+  { value: "water_bottles", label: "مياه شرب عبوات" },
+  { value: "water_gallons", label: "مياه شرب جالونات" },
+  { value: "sparkling_water", label: "مياه فوارة" },
+  { value: "water_tankers", label: "صهاريج مياه" },
+];
+
+const WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية", "مياه معدنية", "مياه فوارة"];
+
+const SIZE_OPTIONS = [
+  { value: "200ml", label: "200 مل", volumeLiters: "0.2" },
+  { value: "330ml", label: "330 مل", volumeLiters: "0.33" },
+  { value: "500ml", label: "500 مل", volumeLiters: "0.5" },
+  { value: "1.5l", label: "1.5 لتر", volumeLiters: "1.5" },
+  { value: "5l", label: "5 لتر", volumeLiters: "5" },
+  { value: "carton-12x500ml", label: "كرتون 12 × 500 مل", volumeLiters: "6" },
+  { value: "carton-24x200ml", label: "كرتون 24 × 200 مل", volumeLiters: "4.8" },
+  { value: "tanker-1000l", label: "صهريج 1000 لتر", volumeLiters: "1000" },
+  { value: "tanker-2000l", label: "صهريج 2000 لتر", volumeLiters: "2000" },
+  { value: "custom", label: "حجم مخصص", volumeLiters: "" },
+];
+
+const DELIVERY_OPTIONS = ["خلال 30 دقيقة", "خلال ساعة", "خلال ساعتين", "نفس اليوم", "خلال 24 ساعة"];
 
 const STATUS_LABELS = {
   pending_review: "قيد المراجعة",
@@ -52,14 +77,8 @@ function availabilityLabel(isAvailable) {
 }
 
 function categoryLabel(category) {
-  const labels = {
-    bottled_water: "مياه شرب عبوات",
-    cartons: "كراتين مياه",
-    tanker: "صهاريج مياه",
-    scheduled_delivery: "توصيل مجدول",
-  };
-
-  return labels[category] ?? category;
+  const normalizedCategory = normalizeProductCategory(category);
+  return CATEGORY_OPTIONS.find((option) => option.value === normalizedCategory)?.label ?? "تصنيف غير محدد";
 }
 
 function approvalStatusLabel(status) {
@@ -83,11 +102,14 @@ function productVisibilityMessage(product) {
 }
 
 function formFromProduct(product) {
+  const matchedSize = findSizeOption(product.sizeLabel, product.volumeLiters);
+
   return {
     nameAr: product.nameAr || "",
     nameEn: product.nameEn || "",
-    category: product.category || "bottled_water",
-    waterType: product.waterType || "",
+    category: normalizeProductCategory(product.category),
+    waterType: WATER_TYPE_OPTIONS.includes(product.waterType) ? product.waterType : "مياه شرب",
+    sizeOption: matchedSize.value,
     sizeLabel: product.sizeLabel || "",
     volumeLiters: product.volumeLiters || "",
     price: product.price || "",
@@ -98,6 +120,27 @@ function formFromProduct(product) {
     deliveryEstimate: product.deliveryEstimate || "",
     isAvailable: Boolean(product.isAvailable),
   };
+}
+
+function normalizeProductCategory(category) {
+  const legacyMap = {
+    bottled_water: "water_bottles",
+    cartons: "water_gallons",
+    tanker: "water_tankers",
+    scheduled_delivery: "water_bottles",
+  };
+  const normalizedCategory = legacyMap[category] ?? category;
+  return CATEGORY_OPTIONS.some((option) => option.value === normalizedCategory) ? normalizedCategory : "water_bottles";
+}
+
+function findSizeOption(sizeLabel, volumeLiters) {
+  const volume = volumeLiters === null || volumeLiters === undefined ? "" : String(Number(volumeLiters));
+  const matched = SIZE_OPTIONS.find((option) => {
+    if (option.value === "custom") return false;
+    return option.label === sizeLabel || String(Number(option.volumeLiters)) === volume;
+  });
+
+  return matched ?? { value: "custom" };
 }
 
 export default function CompanyProductsPage({ companyId }) {
@@ -141,6 +184,17 @@ export default function CompanyProductsPage({ companyId }) {
 
   function updateForm(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateSizeOption(value) {
+    const selectedSize = SIZE_OPTIONS.find((option) => option.value === value);
+
+    setForm((current) => ({
+      ...current,
+      sizeOption: value,
+      sizeLabel: selectedSize && selectedSize.value !== "custom" ? selectedSize.label : "",
+      volumeLiters: selectedSize && selectedSize.value !== "custom" ? selectedSize.volumeLiters : "",
+    }));
   }
 
   function updateImageFile(file) {
@@ -190,16 +244,17 @@ export default function CompanyProductsPage({ companyId }) {
   function validateForm() {
     if (!companyId) return "تعذر تحديد الشركة الحالية.";
     if (!form.nameAr.trim()) return "يرجى إدخال اسم المنتج بالعربي.";
-    if (!form.category.trim()) return "يرجى اختيار التصنيف.";
-    if (!form.waterType.trim()) return "يرجى إدخال نوع المياه.";
+    if (!CATEGORY_OPTIONS.some((option) => option.value === form.category)) return "يرجى اختيار التصنيف من القائمة.";
+    if (!WATER_TYPE_OPTIONS.includes(form.waterType)) return "يرجى اختيار نوع المياه من القائمة.";
+    if (!SIZE_OPTIONS.some((option) => option.value === form.sizeOption)) return "يرجى اختيار الحجم من القائمة.";
+    if (!form.sizeLabel.trim()) return "يرجى تحديد الحجم/الوحدة.";
 
     const price = Number(form.price);
     if (!Number.isFinite(price) || price <= 0) return "يرجى إدخال سعر صحيح أكبر من صفر.";
 
-    if (form.volumeLiters) {
-      const volume = Number(form.volumeLiters);
-      if (!Number.isFinite(volume) || volume <= 0) return "يرجى إدخال حجم صحيح باللتر.";
-    }
+    const volume = Number(form.volumeLiters);
+    if (!Number.isFinite(volume) || volume <= 0) return "يرجى إدخال حجم صحيح باللتر.";
+    if (!DELIVERY_OPTIONS.includes(form.deliveryEstimate)) return "يرجى اختيار مدة التوصيل من القائمة.";
 
     return "";
   }
@@ -325,6 +380,7 @@ export default function CompanyProductsPage({ companyId }) {
             isSaving={isSaving}
             isEditing={Boolean(editingProductId)}
             onChange={updateForm}
+            onSizeOptionChange={updateSizeOption}
             onImageChange={updateImageFile}
             onCancel={closeForm}
             onSubmit={handleSaveProduct}
@@ -372,96 +428,145 @@ export default function CompanyProductsPage({ companyId }) {
   );
 }
 
-function ProductForm({ form, isSaving, isEditing, onChange, onImageChange, onCancel, onSubmit }) {
+function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, onImageChange, onCancel, onSubmit }) {
+  const isCustomSize = form.sizeOption === "custom";
+
   return (
     <form className="product-form" onSubmit={onSubmit}>
-      <label>
-        الاسم بالعربي
-        <input value={form.nameAr} onChange={(event) => onChange("nameAr", event.target.value)} required />
-      </label>
+      <fieldset className="product-form-section product-form-wide">
+        <legend>معلومات المنتج</legend>
+        <div className="product-form-section-grid">
+          <label>
+            الاسم بالعربي
+            <input value={form.nameAr} onChange={(event) => onChange("nameAr", event.target.value)} required />
+          </label>
 
-      <label>
-        الاسم بالإنجليزي
-        <input value={form.nameEn} onChange={(event) => onChange("nameEn", event.target.value)} />
-      </label>
+          <label>
+            الاسم بالإنجليزي
+            <input value={form.nameEn} onChange={(event) => onChange("nameEn", event.target.value)} />
+          </label>
 
-      <label>
-        التصنيف
-        <select value={form.category} onChange={(event) => onChange("category", event.target.value)}>
-          <option value="bottled_water">مياه شرب عبوات</option>
-          <option value="cartons">كراتين مياه</option>
-          <option value="tanker">صهاريج مياه</option>
-          <option value="scheduled_delivery">توصيل مجدول</option>
-        </select>
-      </label>
+          <label>
+            التصنيف
+            <select value={form.category} onChange={(event) => onChange("category", event.target.value)}>
+              {CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <label>
-        نوع المياه
-        <input value={form.waterType} onChange={(event) => onChange("waterType", event.target.value)} required />
-      </label>
-
-      <label>
-        الحجم/الوحدة
-        <input value={form.sizeLabel} onChange={(event) => onChange("sizeLabel", event.target.value)} />
-      </label>
-
-      <label>
-        الحجم باللتر
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.volumeLiters}
-          onChange={(event) => onChange("volumeLiters", event.target.value)}
-        />
-      </label>
-
-      <label>
-        السعر
-        <input
-          type="number"
-          min="0"
-          step="0.001"
-          value={form.price}
-          onChange={(event) => onChange("price", event.target.value)}
-          required
-        />
-      </label>
-
-      <label>
-        صورة المنتج
-        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onImageChange(event.target.files?.[0] ?? null)} />
-        <small>JPG أو PNG أو WebP، بحد أقصى 3MB. يمكن حفظ المنتج بدون صورة.</small>
-      </label>
-
-      {form.imagePreviewUrl ? (
-        <div className="product-image-preview product-form-wide">
-          <img src={form.imagePreviewUrl} alt="معاينة صورة المنتج" />
+          <label>
+            نوع المياه
+            <select value={form.waterType} onChange={(event) => onChange("waterType", event.target.value)} required>
+              {WATER_TYPE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      ) : null}
+      </fieldset>
 
-      <label>
-        مدة التوصيل
-        <input
-          value={form.deliveryEstimate}
-          onChange={(event) => onChange("deliveryEstimate", event.target.value)}
-          placeholder="مثال: خلال ساعتين"
-        />
-      </label>
+      <fieldset className="product-form-section product-form-wide">
+        <legend>الحجم والسعر</legend>
+        <div className="product-form-section-grid">
+          <label>
+            الحجم/الوحدة
+            <select value={form.sizeOption} onChange={(event) => onSizeOptionChange(event.target.value)}>
+              {SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <label className="product-form-wide">
-        الوصف
-        <textarea value={form.description} onChange={(event) => onChange("description", event.target.value)} rows={4} />
-      </label>
+          <label>
+            الحجم المعروض
+            <input
+              value={form.sizeLabel}
+              onChange={(event) => onChange("sizeLabel", event.target.value)}
+              readOnly={!isCustomSize}
+              required
+            />
+          </label>
 
-      <label className="product-form-check">
-        <input
-          type="checkbox"
-          checked={form.isAvailable}
-          onChange={(event) => onChange("isAvailable", event.target.checked)}
-        />
-        متوفر؟
-      </label>
+          <label>
+            الحجم باللتر
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.volumeLiters}
+              onChange={(event) => onChange("volumeLiters", event.target.value)}
+              readOnly={!isCustomSize}
+              required
+            />
+          </label>
+
+          <label>
+            السعر
+            <input
+              type="number"
+              min="0.001"
+              step="0.001"
+              value={form.price}
+              onChange={(event) => onChange("price", event.target.value)}
+              required
+            />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="product-form-section product-form-wide">
+        <legend>الصورة</legend>
+        <label>
+          صورة المنتج
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onImageChange(event.target.files?.[0] ?? null)} />
+          <small>JPG أو PNG أو WebP، بحد أقصى 3MB. يمكن حفظ المنتج بدون صورة.</small>
+        </label>
+
+        {form.imagePreviewUrl ? (
+          <div className="product-image-preview">
+            <img src={form.imagePreviewUrl} alt="معاينة صورة المنتج" />
+          </div>
+        ) : null}
+      </fieldset>
+
+      <fieldset className="product-form-section product-form-wide">
+        <legend>التوفر والتوصيل</legend>
+        <div className="product-form-section-grid">
+          <label>
+            مدة التوصيل
+            <select value={form.deliveryEstimate} onChange={(event) => onChange("deliveryEstimate", event.target.value)}>
+              {DELIVERY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            التوفر
+            <select value={form.isAvailable ? "available" : "unavailable"} onChange={(event) => onChange("isAvailable", event.target.value === "available")}>
+              <option value="available">متوفر</option>
+              <option value="unavailable">غير متوفر</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="product-form-section product-form-wide">
+        <legend>الوصف</legend>
+        <label>
+          الوصف
+          <textarea value={form.description} onChange={(event) => onChange("description", event.target.value)} rows={4} />
+        </label>
+      </fieldset>
 
       <div className="product-form-actions">
         <button type="submit" className="primary-action" disabled={isSaving}>

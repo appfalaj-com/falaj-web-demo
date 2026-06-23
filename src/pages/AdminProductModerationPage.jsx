@@ -16,6 +16,16 @@ const FILTERS = [
   { value: "hidden", label: "مخفي" },
 ];
 
+const CATEGORY_LABELS = {
+  water_bottles: "مياه شرب عبوات",
+  bottled_water: "مياه شرب عبوات",
+  water_gallons: "مياه شرب جالونات",
+  cartons: "مياه شرب جالونات",
+  sparkling_water: "مياه فوارة",
+  water_tankers: "صهاريج مياه",
+  tanker: "صهاريج مياه",
+};
+
 export default function AdminProductModerationPage() {
   const [products, setProducts] = useState([]);
   const [activeStatus, setActiveStatus] = useState("all");
@@ -144,6 +154,7 @@ export default function AdminProductModerationPage() {
                 <tr>
                   <th>المورد</th>
                   <th>المنتج</th>
+                  <th>التصنيف</th>
                   <th>السعر</th>
                   <th>الصورة</th>
                   <th>الوصف</th>
@@ -159,6 +170,7 @@ export default function AdminProductModerationPage() {
                   <tr key={product.id}>
                     <td>{product.companies?.name || "مورد غير محدد"}</td>
                     <td>{product.name_ar || product.name_en || "-"}</td>
+                    <td>{categoryLabel(product.category)}</td>
                     <td>{formatPrice(product.price)}</td>
                     <td>
                       {product.image_url ? (
@@ -261,6 +273,7 @@ function productModerationSelect() {
     "company_id",
     "name_ar",
     "name_en",
+    "category",
     "price",
     "image_url",
     "description",
@@ -298,6 +311,10 @@ async function getCurrentUserId() {
 
 function normalizeStatus(status) {
   return status || "pending_review";
+}
+
+function categoryLabel(category) {
+  return CATEGORY_LABELS[category] || "تصنيف غير محدد";
 }
 
 function formatPrice(value) {

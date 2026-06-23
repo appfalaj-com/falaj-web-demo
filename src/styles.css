@@ -2078,6 +2078,28 @@ tbody tr:hover td {
   min-width: 0;
 }
 
+.product-form-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+}
+
+.product-form-section legend {
+  color: var(--falaj-deep);
+  font-size: 14px;
+  font-weight: 900;
+  padding-inline: 8px;
+}
+
+.product-form-section-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .product-form input,
 .product-form select,
 .product-form textarea {
@@ -2343,6 +2365,10 @@ tbody tr:hover td {
 
   .product-form-actions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .product-form-section-grid {
     grid-template-columns: 1fr;
   }
 
