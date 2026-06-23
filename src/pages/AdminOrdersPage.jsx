@@ -26,6 +26,7 @@ const PAYMENT_METHOD_LABELS = {
 const PAYMENT_STATUS_LABELS = {
   unpaid: "غير مدفوع",
   paid: "مدفوع",
+  collected: "محصل",
   refunded: "مسترجع",
 };
 
@@ -326,6 +327,8 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
         <DetailRow label="الكمية" value={order.volume} />
         <DetailRow label="طريقة الدفع" value={paymentMethodLabel(order.paymentMethod)} />
         <DetailRow label="حالة الدفع" value={paymentStatusLabel(order.paymentStatus)} />
+        <DetailRow label="تحصيل الكاش" value={cashCollectionLabel(order)} />
+        <DetailRow label="السائق" value={order.driverName || order.driverId || "-"} />
         <DetailRow label="الإجمالي" value={formatMoney(order.amount)} />
         <DetailRow label="تاريخ الإنشاء" value={formatDateTime(order.createdAt)} />
         <DetailRow label="آخر تحديث" value={formatDateTime(order.updatedAt)} />
@@ -334,7 +337,19 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
 
       <section className="order-products-empty">
         <h3>منتجات الطلب</h3>
-        <p>لا يوجد جدول منتجات مرتبط بهذا الطلب حاليًا.</p>
+        {order.items?.length ? (
+          <div className="order-items-list">
+            {order.items.map((item) => (
+              <div className="order-item-row" key={item.id}>
+                <span>{item.name}</span>
+                <strong>{item.quantity} × {formatMoney(item.unitPrice)}</strong>
+                <small>{formatMoney(item.lineTotal)}</small>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>لا يوجد جدول منتجات مرتبط بهذا الطلب حاليًا.</p>
+        )}
       </section>
 
       <section className="order-timeline-section">
@@ -411,6 +426,14 @@ function paymentMethodLabel(paymentMethod) {
 
 function paymentStatusLabel(paymentStatus) {
   return PAYMENT_STATUS_LABELS[paymentStatus] ?? paymentStatus ?? "-";
+}
+
+function cashCollectionLabel(order) {
+  if (order.paymentMethod !== "cash") return "-";
+  if (order.cashCollectedByDriver) {
+    return order.cashCollectedAt ? `تم التحصيل · ${formatDateTime(order.cashCollectedAt)}` : "تم التحصيل";
+  }
+  return "لم يتم التحصيل بعد";
 }
 
 function formatMoney(value) {

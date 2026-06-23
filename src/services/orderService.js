@@ -21,8 +21,12 @@ function normalizeSupabaseOrder(order) {
     paymentMethod: order.payment_method,
     paymentStatus: order.payment_status,
     cashCollectedByDriver: order.cash_collected_by_driver,
+    cashCollectedAt: order.cash_collected_at,
+    cashCollectedByDriverId: order.cash_collected_by_driver_id,
     amount: Number(order.price) || 0,
     driverId: order.driver_id ?? null,
+    driverName: order.drivers?.name ?? null,
+    items: order.items ?? [],
     time: order.created_at
       ? new Date(order.created_at).toLocaleTimeString("ar-OM", {
           hour: "2-digit",
@@ -40,6 +44,20 @@ function normalizeSupabaseOrder(order) {
     cancelledAt: order.cancelled_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
+  };
+}
+
+function normalizeOrderItem(row) {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    productId: row.product_id,
+    companyId: row.company_id,
+    name: row.product_name_snapshot,
+    unitPrice: Number(row.unit_price) || 0,
+    quantity: Number(row.quantity) || 0,
+    lineTotal: Number(row.line_total) || 0,
+    createdAt: row.created_at,
   };
 }
 
@@ -78,7 +96,7 @@ export async function getOrdersByCompanyFromSupabase(companyId) {
     throw error;
   }
 
-  return (data ?? []).map(normalizeSupabaseOrder);
+  return attachOrderItems((data ?? []).map(normalizeSupabaseOrder));
 }
 
 export async function getAdminOrdersFromSupabase() {
@@ -88,14 +106,14 @@ export async function getAdminOrdersFromSupabase() {
 
   const { data, error } = await supabase
     .from("orders")
-    .select(`${orderSelectColumns()}, companies(name)`)
+    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
     .order("created_at", { ascending: false });
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map(normalizeSupabaseOrder);
+  return attachOrderItems((data ?? []).map(normalizeSupabaseOrder));
 }
 
 export async function getOrdersByDriverFromSupabase(driverId) {
@@ -105,7 +123,7 @@ export async function getOrdersByDriverFromSupabase(driverId) {
 
   const { data, error } = await supabase
     .from("orders")
-    .select(`${orderSelectColumns()}, companies(name)`)
+    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false });
 
@@ -113,7 +131,7 @@ export async function getOrdersByDriverFromSupabase(driverId) {
     throw error;
   }
 
-  return (data ?? []).map(normalizeSupabaseOrder);
+  return attachOrderItems((data ?? []).map(normalizeSupabaseOrder));
 }
 
 export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nextStatus) {
@@ -138,7 +156,8 @@ export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nex
   }
 
   await addOrderStatusHistory(orderId, nextStatus, "تحديث من لوحة المورد");
-  return normalizeSupabaseOrder(data);
+  const [updatedOrder] = await attachOrderItems([normalizeSupabaseOrder(data)]);
+  return updatedOrder;
 }
 
 export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
@@ -154,7 +173,7 @@ export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
     .from("orders")
     .update(patch)
     .eq("id", orderId)
-    .select(`${orderSelectColumns()}, companies(name)`)
+    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
     .single();
 
   if (error) {
@@ -162,7 +181,8 @@ export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
   }
 
   await addOrderStatusHistory(orderId, nextStatus, "تحديث من لوحة الأدمن");
-  return normalizeSupabaseOrder(data);
+  const [updatedOrder] = await attachOrderItems([normalizeSupabaseOrder(data)]);
+  return updatedOrder;
 }
 
 export async function updateDriverOrderStatusInSupabase(driverId, orderId, nextStatus) {
@@ -191,7 +211,65 @@ export async function updateDriverOrderStatusInSupabase(driverId, orderId, nextS
   }
 
   await addOrderStatusHistory(orderId, nextStatus, "تحديث من صفحة السائق");
-  return normalizeSupabaseOrder(data);
+  const [updatedOrder] = await attachOrderItems([normalizeSupabaseOrder(data)]);
+  return updatedOrder;
+}
+
+export async function assignCompanyOrderDriverInSupabase(companyId, orderId, driverId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update({
+      driver_id: driverId,
+      status: "assigned",
+      assigned_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .eq("company_id", companyId)
+    .select(`${orderSelectColumns()}, drivers(name)`)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await addOrderStatusHistory(orderId, "assigned", "تم تعيين السائق من لوحة المورد");
+  const [updatedOrder] = await attachOrderItems([normalizeSupabaseOrder(data)]);
+  return updatedOrder;
+}
+
+export async function markDriverCashCollectedInSupabase(driverId, orderId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("orders")
+    .update({
+      status: "delivered",
+      delivered_at: now,
+      cash_collected_by_driver: true,
+      cash_collected_at: now,
+      cash_collected_by_driver_id: driverId,
+      payment_status: "paid",
+    })
+    .eq("id", orderId)
+    .eq("driver_id", driverId)
+    .eq("payment_method", "cash")
+    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await addOrderStatusHistory(orderId, "delivered", "تم التسليم وتحصيل مبلغ الكاش");
+  const [updatedOrder] = await attachOrderItems([normalizeSupabaseOrder(data)]);
+  return updatedOrder;
 }
 
 export async function getOrderStatusHistoryFromSupabase(orderId) {
@@ -244,6 +322,35 @@ async function addOrderStatusHistory(orderId, status, note) {
   }
 }
 
+async function attachOrderItems(orders) {
+  if (!orders.length) return orders;
+
+  const orderIds = orders.map((order) => order.rawId).filter(Boolean);
+  if (orderIds.length === 0) return orders;
+
+  const { data, error } = await supabase
+    .from("order_items")
+    .select("id, order_id, product_id, company_id, product_name_snapshot, unit_price, quantity, line_total, created_at")
+    .in("order_id", orderIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return orders;
+  }
+
+  const itemsByOrderId = new Map();
+  (data ?? []).forEach((row) => {
+    const item = normalizeOrderItem(row);
+    if (!itemsByOrderId.has(item.orderId)) itemsByOrderId.set(item.orderId, []);
+    itemsByOrderId.get(item.orderId).push(item);
+  });
+
+  return orders.map((order) => ({
+    ...order,
+    items: itemsByOrderId.get(order.rawId) ?? [],
+  }));
+}
+
 function timestampFieldByStatus(status) {
   const fields = {
     accepted: "accepted_at",
@@ -276,6 +383,8 @@ function orderSelectColumns() {
     "payment_method",
     "payment_status",
     "cash_collected_by_driver",
+    "cash_collected_at",
+    "cash_collected_by_driver_id",
     "price",
     "notes",
     "scheduled_at",

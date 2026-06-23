@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
 import {
+  assignCompanyOrderDriverInSupabase,
   getOrdersByCompanyFromSupabase,
   getOrderStatusHistoryFromSupabase,
   updateCompanyOrderStatusInSupabase,
 } from "../services/orderService.js";
+import { getDriversByCompanyFromSupabase } from "../services/driverService.js";
 
 const STATUS_LABELS = {
   pending: "جديد",
@@ -26,6 +28,7 @@ const PAYMENT_METHOD_LABELS = {
 const PAYMENT_STATUS_LABELS = {
   unpaid: "غير مدفوع",
   paid: "مدفوع",
+  collected: "محصل",
   refunded: "مسترجع",
 };
 
@@ -70,6 +73,7 @@ export default function CompanyOrdersPage({ companyId }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [timeline, setTimeline] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTimelineLoading, setIsTimelineLoading] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
@@ -84,9 +88,13 @@ export default function CompanyOrdersPage({ companyId }) {
       setErrorMessage("");
 
       try {
-        const supabaseOrders = await getOrdersByCompanyFromSupabase(companyId);
+        const [supabaseOrders, supabaseDrivers] = await Promise.all([
+          getOrdersByCompanyFromSupabase(companyId),
+          getDriversByCompanyFromSupabase(companyId),
+        ]);
         if (!cancelled) {
           setOrders(supabaseOrders);
+          setDrivers(supabaseDrivers);
           setSelectedOrderId((current) => current ?? supabaseOrders[0]?.rawId ?? null);
         }
       } catch (error) {
@@ -167,6 +175,24 @@ export default function CompanyOrdersPage({ companyId }) {
       setMessage("تم تحديث حالة الطلب بنجاح.");
     } catch (error) {
       setErrorMessage(ORDER_STATUS_UPDATE_ERROR);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  async function assignDriver(order, driverId) {
+    if (!driverId) return;
+    setMessage("");
+    setErrorMessage("");
+    setUpdatingOrderId(order.rawId);
+
+    try {
+      const updatedOrder = await assignCompanyOrderDriverInSupabase(companyId, order.rawId, driverId);
+      setOrders((current) => current.map((item) => (item.rawId === order.rawId ? updatedOrder : item)));
+      setSelectedOrderId(order.rawId);
+      setMessage("تم تعيين السائق بنجاح.");
+    } catch {
+      setErrorMessage("تعذر تعيين السائق لهذا الطلب.");
     } finally {
       setUpdatingOrderId(null);
     }
@@ -262,13 +288,15 @@ export default function CompanyOrdersPage({ companyId }) {
           isTimelineLoading={isTimelineLoading}
           isUpdating={updatingOrderId === selectedOrder?.rawId}
           onUpdateStatus={updateOrderStatus}
+          drivers={drivers}
+          onAssignDriver={assignDriver}
         />
       </section>
     </div>
   );
 }
 
-function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUpdateStatus }) {
+function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUpdateStatus, drivers, onAssignDriver }) {
   if (!order) {
     return (
       <aside className="panel supplier-request-detail-panel">
@@ -301,6 +329,8 @@ function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUp
         <DetailRow label="الكمية" value={order.volume} />
         <DetailRow label="طريقة الدفع" value={paymentMethodLabel(order.paymentMethod)} />
         <DetailRow label="حالة الدفع" value={paymentStatusLabel(order.paymentStatus)} />
+        <DetailRow label="تحصيل الكاش" value={cashCollectionLabel(order)} />
+        <DetailRow label="السائق" value={driverLabel(order, drivers)} />
         <DetailRow label="القيمة" value={formatMoney(order.amount)} />
         <DetailRow label="تاريخ الإنشاء" value={formatDateTime(order.createdAt)} />
         <DetailRow label="آخر تحديث" value={formatDateTime(order.updatedAt)} />
@@ -309,7 +339,42 @@ function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUp
 
       <section className="order-products-empty">
         <h3>منتجات الطلب</h3>
-        <p>لا يوجد جدول منتجات مرتبط بهذا الطلب حاليًا.</p>
+        {order.items?.length ? (
+          <div className="order-items-list">
+            {order.items.map((item) => (
+              <div className="order-item-row" key={item.id}>
+                <span>{item.name}</span>
+                <strong>{item.quantity} × {formatMoney(item.unitPrice)}</strong>
+                <small>{formatMoney(item.lineTotal)}</small>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>لا يوجد جدول منتجات مرتبط بهذا الطلب حاليًا.</p>
+        )}
+      </section>
+
+      <section className="order-timeline-section">
+        <h3>تعيين السائق</h3>
+        {drivers.length === 0 ? (
+          <p className="empty-state">لا يوجد سائقون نشطون حاليًا. أضف سائقًا من صفحة السائقين قبل الإسناد.</p>
+        ) : (
+          <label className="inline-select-label">
+            السائق
+            <select
+              value={order.driverId || ""}
+              onChange={(event) => onAssignDriver(order, event.target.value)}
+              disabled={isUpdating}
+            >
+              <option value="">بدون سائق</option>
+              {drivers.filter((driver) => driver.isActive).map((driver) => (
+                <option value={driver.id} key={driver.id}>
+                  {driver.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
       <section className="order-timeline-section">
@@ -393,6 +458,19 @@ function paymentMethodLabel(paymentMethod) {
 
 function paymentStatusLabel(paymentStatus) {
   return PAYMENT_STATUS_LABELS[paymentStatus] ?? paymentStatus ?? "-";
+}
+
+function cashCollectionLabel(order) {
+  if (order.paymentMethod !== "cash") return "-";
+  if (order.cashCollectedByDriver) {
+    return order.cashCollectedAt ? `تم التحصيل · ${formatDateTime(order.cashCollectedAt)}` : "تم التحصيل";
+  }
+  return "لم يتم التحصيل بعد";
+}
+
+function driverLabel(order, drivers = []) {
+  if (order.driverName) return order.driverName;
+  return drivers.find((driver) => driver.id === order.driverId)?.name || "-";
 }
 
 function formatMoney(value) {

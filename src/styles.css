@@ -1543,6 +1543,49 @@ tbody tr:hover td {
   padding: 0 20px 20px;
 }
 
+.order-items-list {
+  display: grid;
+  gap: 8px;
+}
+
+.order-items-list.compact {
+  margin-top: 12px;
+}
+
+.order-item-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 10px 12px;
+}
+
+.order-item-row span {
+  color: var(--dark);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.order-item-row small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.inline-select-label {
+  color: var(--dark);
+  display: grid;
+  font-weight: 800;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.inline-select-label select {
+  max-width: 320px;
+}
+
 .supplier-request-actions {
   border-top: 1px solid var(--border);
   padding: 18px 20px 0;

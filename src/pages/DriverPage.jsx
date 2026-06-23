@@ -6,6 +6,7 @@ import {
 } from "../services/driverService.js";
 import {
   getOrdersByDriverFromSupabase,
+  markDriverCashCollectedInSupabase,
   updateDriverOrderStatusInSupabase,
 } from "../services/orderService.js";
 
@@ -151,6 +152,24 @@ export default function DriverPage({ onNavigate }) {
     }
   }
 
+  async function handleCashCollected(order) {
+    setUpdatingOrderId(order.rawId);
+    setError("");
+    setMessage("");
+
+    try {
+      const updatedOrder = await markDriverCashCollectedInSupabase(driver.id, order.rawId);
+      setOrders((currentOrders) =>
+        currentOrders.map((item) => (item.rawId === updatedOrder.rawId ? updatedOrder : item))
+      );
+      setMessage("تم تسجيل استلام مبلغ الكاش وتسليم الطلب.");
+    } catch {
+      setError("تعذر تسجيل تحصيل مبلغ الكاش.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="page driver-page">
@@ -258,6 +277,7 @@ export default function DriverPage({ onNavigate }) {
                   isActive={activeOrders.some((item) => item.rawId === order.rawId)}
                   isUpdating={updatingOrderId === order.rawId}
                   onUpdateStatus={handleUpdateOrderStatus}
+                  onCashCollected={handleCashCollected}
                 />
               ))
             ) : (
@@ -279,8 +299,12 @@ function DriverSection({ title, children }) {
   );
 }
 
-function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus }) {
+function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus, onCashCollected }) {
   const actions = DRIVER_NEXT_ACTIONS[order.status] ?? [];
+  const canCollectCash =
+    order.paymentMethod === "cash" &&
+    !order.cashCollectedByDriver &&
+    !["failed", "cancelled", "rejected"].includes(order.status);
 
   return (
     <article className={isActive ? "mobile-order-card driver-current-card" : "mobile-order-card"}>
@@ -302,7 +326,7 @@ function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus }) {
       </div>
       <div className="order-detail-row">
         <span>الدفع</span>
-        <strong>{order.paymentMethod || "غير محدد"} / {order.paymentStatus || "غير محدد"}</strong>
+        <strong>{paymentLabel(order)}</strong>
       </div>
       <div className="order-detail-row">
         <span>الإجمالي</span>
@@ -312,6 +336,17 @@ function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus }) {
         <span>تاريخ الطلب</span>
         <strong>{formatDate(order.createdAt)}</strong>
       </div>
+
+      {order.items?.length ? (
+        <div className="order-items-list compact">
+          {order.items.map((item) => (
+            <div className="order-item-row" key={item.id}>
+              <span>{item.name}</span>
+              <strong>{item.quantity} × {formatMoney(item.unitPrice)}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {actions.length > 0 && (
         <div className="driver-actions">
@@ -328,6 +363,14 @@ function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus }) {
           ))}
         </div>
       )}
+
+      {canCollectCash ? (
+        <div className="driver-actions">
+          <button type="button" disabled={isUpdating} onClick={() => onCashCollected(order)}>
+            {isUpdating ? "جاري التحديث..." : "تم التسليم واستلام المبلغ"}
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -363,6 +406,18 @@ function shortId(id) {
 function formatMoney(value) {
   const amount = Number(value) || 0;
   return `${amount.toFixed(3)} ر.ع`;
+}
+
+function paymentLabel(order) {
+  if (order.paymentMethod !== "cash") {
+    return `${order.paymentMethod || "غير محدد"} / ${order.paymentStatus || "غير محدد"}`;
+  }
+
+  if (order.cashCollectedByDriver) {
+    return "كاش / تم التحصيل";
+  }
+
+  return "كاش / غير محصل";
 }
 
 function formatDate(value) {
