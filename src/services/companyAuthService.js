@@ -414,18 +414,16 @@ export async function updateCompanyLogo(companyId, file) {
   const { data: publicUrlData } = client.storage.from(COMPANY_LOGO_BUCKET).getPublicUrl(filePath);
   const logoUrl = publicUrlData.publicUrl;
 
-  const { data, error } = await client
-    .from("companies")
-    .update({ logo_url: logoUrl })
-    .eq("id", companyId)
-    .select(COMPANY_SESSION_COLUMNS)
-    .single();
+  const { data, error } = await client.rpc("update_own_company_logo", {
+    p_company_id: companyId,
+    p_logo_url: logoUrl,
+  });
 
   if (error) {
     throw error;
   }
 
-  return data;
+  return data?.[0] ?? null;
 }
 
 function safeFileName(name, mimeType, fallbackName) {
