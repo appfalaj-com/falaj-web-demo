@@ -1266,6 +1266,10 @@ html[dir="ltr"] input[inputmode="numeric"] {
   display: none;
 }
 
+.moderation-mobile-list {
+  display: none;
+}
+
 table,
 .falaj-table {
   border-collapse: collapse;
@@ -1944,7 +1948,7 @@ tbody tr:hover td {
 .product-image {
   display: block;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
 }
 
@@ -1975,7 +1979,7 @@ tbody tr:hover td {
 .product-image-preview img {
   aspect-ratio: 4 / 3;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
 }
 
@@ -2056,6 +2060,62 @@ tbody tr:hover td {
 
 .product-actions {
   flex-wrap: wrap;
+}
+
+.moderation-mobile-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.moderation-mobile-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.moderation-mobile-header div {
+  display: grid;
+  gap: 4px;
+}
+
+.moderation-mobile-header span:not(.status),
+.moderation-mobile-description {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.moderation-mobile-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.moderation-mobile-meta div {
+  background: rgba(144, 209, 202, 0.12);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.moderation-mobile-meta dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.moderation-mobile-meta dd {
+  color: var(--dark);
+  font-weight: 900;
+  margin: 3px 0 0;
+}
+
+.moderation-mobile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .product-form-panel {
@@ -2341,6 +2401,17 @@ tbody tr:hover td {
   }
 
   .panel:has(.orders-mobile-list) {
+    overflow: visible;
+  }
+
+  .moderation-mobile-list {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 0 14px 14px;
+  }
+
+  .panel:has(.moderation-mobile-list) {
     overflow: visible;
   }
 

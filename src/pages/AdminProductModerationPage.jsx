@@ -148,6 +148,7 @@ export default function AdminProductModerationPage() {
             <span>ستظهر هنا المنتجات التي يضيفها الموردون من لوحة الشركة.</span>
           </div>
         ) : (
+          <>
           <div className="table-wrap">
             <table className="falaj-table">
               <thead>
@@ -229,6 +230,83 @@ export default function AdminProductModerationPage() {
               </tbody>
             </table>
           </div>
+          <div className="moderation-mobile-list">
+            {visibleProducts.map((product) => (
+              <article className="moderation-mobile-card" key={`mobile-${product.id}`}>
+                <div className="moderation-mobile-header">
+                  <div>
+                    <strong>{product.name_ar || product.name_en || "-"}</strong>
+                    <span>{product.companies?.name || "مورد غير محدد"}</span>
+                  </div>
+                  <span className={`status ${normalizeStatus(product.approval_status)}`}>
+                    {STATUS_LABELS[normalizeStatus(product.approval_status)]}
+                  </span>
+                </div>
+
+                <dl className="moderation-mobile-meta">
+                  <div>
+                    <dt>التصنيف</dt>
+                    <dd>{categoryLabel(product.category)}</dd>
+                  </div>
+                  <div>
+                    <dt>السعر</dt>
+                    <dd>{formatPrice(product.price)}</dd>
+                  </div>
+                  <div>
+                    <dt>الظهور</dt>
+                    <dd>{product.is_visible ? "ظاهر للعملاء" : "غير ظاهر"}</dd>
+                  </div>
+                  <div>
+                    <dt>تاريخ الإضافة</dt>
+                    <dd>{formatDate(product.created_at)}</dd>
+                  </div>
+                </dl>
+
+                {product.description ? <p className="moderation-mobile-description">{product.description}</p> : null}
+
+                <div className="row-actions moderation-mobile-actions">
+                  {product.image_url ? (
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => {
+                        setSelectedImage(product.image_url);
+                        setSelectedImageFailed(false);
+                      }}
+                    >
+                      عرض الصورة
+                    </button>
+                  ) : (
+                    <span className="muted-text">لا توجد صورة</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => reviewProduct(product, "approved")}
+                    disabled={reviewingProductId === product.id}
+                  >
+                    {normalizeStatus(product.approval_status) === "hidden" ? "إظهار واعتماد" : "اعتماد"}
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => reviewProduct(product, "rejected")}
+                    disabled={reviewingProductId === product.id}
+                  >
+                    رفض
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => reviewProduct(product, "hidden")}
+                    disabled={reviewingProductId === product.id}
+                  >
+                    إخفاء
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+          </>
         )}
       </section>
 
