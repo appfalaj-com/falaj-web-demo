@@ -25,6 +25,10 @@ const initialProductForm = {
   description: "",
   deliveryEstimate: "خلال ساعة",
   isAvailable: true,
+  stockQuantity: "0",
+  minOrderQuantity: "1",
+  maxOrderQuantity: "",
+  trackInventory: true,
 };
 
 const CATEGORY_OPTIONS = [
@@ -119,6 +123,10 @@ function formFromProduct(product) {
     description: product.description || "",
     deliveryEstimate: product.deliveryEstimate || "",
     isAvailable: Boolean(product.isAvailable),
+    stockQuantity: product.stockQuantity ?? "0",
+    minOrderQuantity: product.minOrderQuantity ?? "1",
+    maxOrderQuantity: product.maxOrderQuantity ?? "",
+    trackInventory: product.trackInventory ?? true,
   };
 }
 
@@ -255,6 +263,15 @@ export default function CompanyProductsPage({ companyId }) {
     const volume = Number(form.volumeLiters);
     if (!Number.isFinite(volume) || volume <= 0) return "يرجى إدخال حجم صحيح باللتر.";
     if (!DELIVERY_OPTIONS.includes(form.deliveryEstimate)) return "يرجى اختيار مدة التوصيل من القائمة.";
+    const stockQuantity = Number(form.stockQuantity);
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) return "يرجى إدخال كمية مخزون صحيحة لا تقل عن صفر.";
+    const minOrderQuantity = Number(form.minOrderQuantity);
+    if (!Number.isInteger(minOrderQuantity) || minOrderQuantity <= 0) return "يرجى إدخال حد أدنى صحيح للطلب.";
+    if (form.maxOrderQuantity) {
+      const maxOrderQuantity = Number(form.maxOrderQuantity);
+      if (!Number.isInteger(maxOrderQuantity) || maxOrderQuantity <= 0) return "يرجى إدخال حد أقصى صحيح للطلب.";
+      if (maxOrderQuantity < minOrderQuantity) return "الحد الأقصى للطلب يجب أن يكون أكبر من أو يساوي الحد الأدنى.";
+    }
 
     return "";
   }
@@ -283,6 +300,10 @@ export default function CompanyProductsPage({ companyId }) {
       imageFile: form.imageFile,
       description: form.description.trim(),
       deliveryEstimate: form.deliveryEstimate.trim(),
+      stockQuantity: form.stockQuantity,
+      minOrderQuantity: form.minOrderQuantity,
+      maxOrderQuantity: form.maxOrderQuantity,
+      trackInventory: form.trackInventory,
     };
 
     setIsSaving(true);
@@ -561,6 +582,51 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
       </fieldset>
 
       <fieldset className="product-form-section product-form-wide">
+        <legend>المخزون والطلبات</legend>
+        <div className="product-form-section-grid">
+          <label>
+            كمية المخزون
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={form.stockQuantity}
+              onChange={(event) => onChange("stockQuantity", event.target.value)}
+            />
+          </label>
+          <label>
+            الحد الأدنى للطلب
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.minOrderQuantity}
+              onChange={(event) => onChange("minOrderQuantity", event.target.value)}
+            />
+          </label>
+          <label>
+            الحد الأقصى للطلب
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.maxOrderQuantity}
+              onChange={(event) => onChange("maxOrderQuantity", event.target.value)}
+              placeholder="اختياري"
+            />
+          </label>
+          <label>
+            تتبع المخزون
+            <select value={form.trackInventory ? "track" : "no-track"} onChange={(event) => onChange("trackInventory", event.target.value === "track")}>
+              <option value="track">مفعل</option>
+              <option value="no-track">غير مفعل</option>
+            </select>
+          </label>
+        </div>
+        <small className="muted-text">TODO: خصم المخزون يجب أن يكون atomic لاحقًا أثناء إنشاء الطلب الحقيقي.</small>
+      </fieldset>
+
+      <fieldset className="product-form-section product-form-wide">
         <legend>الوصف</legend>
         <label>
           الوصف
@@ -641,6 +707,17 @@ function ProductCard({ product, isUpdating, onEdit, onToggleAvailability, onTogg
           <div>
             <dt>السعر</dt>
             <dd>{formatPrice(product.price)}</dd>
+          </div>
+          <div>
+            <dt>المخزون</dt>
+            <dd>{product.trackInventory ? `${product.stockQuantity ?? 0}` : "غير متتبع"}</dd>
+          </div>
+          <div>
+            <dt>حد الطلب</dt>
+            <dd>
+              {product.minOrderQuantity || 1}
+              {product.maxOrderQuantity ? ` - ${product.maxOrderQuantity}` : "+"}
+            </dd>
           </div>
           <div>
             <dt>آخر تحديث</dt>

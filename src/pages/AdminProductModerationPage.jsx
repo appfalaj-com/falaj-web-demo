@@ -62,6 +62,10 @@ const initialEditForm = {
   delivery_estimate: "خلال ساعة",
   is_available: true,
   description: "",
+  stock_quantity: "0",
+  min_order_quantity: "1",
+  max_order_quantity: "",
+  track_inventory: true,
 };
 
 export default function AdminProductModerationPage() {
@@ -207,6 +211,10 @@ export default function AdminProductModerationPage() {
           delivery_estimate: editForm.delivery_estimate,
           is_available: Boolean(editForm.is_available),
           description: editForm.description.trim() || null,
+          stock_quantity: Number(editForm.stock_quantity ?? 0),
+          min_order_quantity: Number(editForm.min_order_quantity ?? 1),
+          max_order_quantity: editForm.max_order_quantity ? Number(editForm.max_order_quantity) : null,
+          track_inventory: Boolean(editForm.track_inventory),
         })
         .eq("id", editingProductId)
         .select(productModerationSelect())
@@ -509,6 +517,10 @@ function productModerationSelect() {
     "image_url",
     "description",
     "delivery_estimate",
+    "stock_quantity",
+    "min_order_quantity",
+    "max_order_quantity",
+    "track_inventory",
     "approval_status",
     "admin_review_notes",
     "reviewed_by",
@@ -605,6 +617,25 @@ function ProductEditForm({ form, isSaving, onChange, onSizeOptionChange, onSubmi
           <option value="unavailable">غير متوفر</option>
         </select>
       </label>
+      <label>
+        كمية المخزون
+        <input type="number" min="0" step="1" value={form.stock_quantity} onChange={(event) => onChange("stock_quantity", event.target.value)} />
+      </label>
+      <label>
+        الحد الأدنى للطلب
+        <input type="number" min="1" step="1" value={form.min_order_quantity} onChange={(event) => onChange("min_order_quantity", event.target.value)} />
+      </label>
+      <label>
+        الحد الأقصى للطلب
+        <input type="number" min="1" step="1" value={form.max_order_quantity} onChange={(event) => onChange("max_order_quantity", event.target.value)} placeholder="اختياري" />
+      </label>
+      <label>
+        تتبع المخزون
+        <select value={form.track_inventory ? "track" : "no-track"} onChange={(event) => onChange("track_inventory", event.target.value === "track")}>
+          <option value="track">مفعل</option>
+          <option value="no-track">غير مفعل</option>
+        </select>
+      </label>
       <label className="product-form-wide">
         الوصف
         <textarea value={form.description} onChange={(event) => onChange("description", event.target.value)} rows={4} />
@@ -685,6 +716,10 @@ function formFromProduct(product) {
     delivery_estimate: DELIVERY_OPTIONS.includes(product.delivery_estimate) ? product.delivery_estimate : "خلال ساعة",
     is_available: Boolean(product.is_available),
     description: product.description || "",
+    stock_quantity: product.stock_quantity ?? "0",
+    min_order_quantity: product.min_order_quantity ?? "1",
+    max_order_quantity: product.max_order_quantity ?? "",
+    track_inventory: product.track_inventory ?? true,
   };
 }
 
@@ -702,6 +737,15 @@ function validateEditForm(form) {
   if (!Number.isFinite(price) || price <= 0) return "يرجى إدخال سعر صحيح أكبر من صفر.";
 
   if (!DELIVERY_OPTIONS.includes(form.delivery_estimate)) return "يرجى اختيار مدة التوصيل من القائمة.";
+  const stockQuantity = Number(form.stock_quantity);
+  if (!Number.isInteger(stockQuantity) || stockQuantity < 0) return "يرجى إدخال كمية مخزون صحيحة لا تقل عن صفر.";
+  const minOrderQuantity = Number(form.min_order_quantity);
+  if (!Number.isInteger(minOrderQuantity) || minOrderQuantity <= 0) return "يرجى إدخال حد أدنى صحيح للطلب.";
+  if (form.max_order_quantity) {
+    const maxOrderQuantity = Number(form.max_order_quantity);
+    if (!Number.isInteger(maxOrderQuantity) || maxOrderQuantity <= 0) return "يرجى إدخال حد أقصى صحيح للطلب.";
+    if (maxOrderQuantity < minOrderQuantity) return "الحد الأقصى للطلب يجب أن يكون أكبر من أو يساوي الحد الأدنى.";
+  }
   return "";
 }
 
