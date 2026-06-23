@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
     const supplierJoinRequest = joinRequest as SupplierJoinRequest;
     const normalizedStatus = supplierJoinRequest.status === "new" ? "pending" : supplierJoinRequest.status;
-    const allowedStatuses = ["company_created", "invitation_pending"];
+    const allowedStatuses = ["company_created", "invitation_pending", "invitation_sent"];
 
     if (!allowedStatuses.includes(normalizedStatus)) {
       return jsonResponse(
@@ -406,7 +406,7 @@ async function verifySupplierAccountLink(
     return { error: jsonResponse({ ok: false, error: profileError.message }, 500) };
   }
 
-  if (!profile || profile.role !== "company" || profile.account_type !== "company") {
+  if (!profile || !isCompanyProfile(profile)) {
     return {
       error: jsonResponse(
         { ok: false, error: "Supplier profile was not linked correctly after sending the invite" },
@@ -442,6 +442,12 @@ function isExistingUserError(message: string) {
   return message.toLowerCase().includes("already been registered") ||
     message.toLowerCase().includes("already registered") ||
     message.toLowerCase().includes("already exists");
+}
+
+function isCompanyProfile(profile: Pick<Profile, "role" | "account_type">) {
+  const role = profile.role?.trim().toLowerCase();
+  const accountType = profile.account_type?.trim().toLowerCase();
+  return role === "company" || accountType === "company";
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {

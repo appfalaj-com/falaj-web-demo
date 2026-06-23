@@ -503,7 +503,7 @@ function canApprove(status) {
 }
 
 function canShowInviteButton(status, hasCompany) {
-  return (hasCompany || ["company_created", "invitation_pending"].includes(status)) && status !== "invitation_sent";
+  return hasCompany || ["company_created", "invitation_pending", "invitation_sent"].includes(status);
 }
 
 function canShowActivateButton(status, company) {
@@ -626,7 +626,10 @@ async function validateSupplierLinkBeforeActivation(companyId) {
 
   if (profileError) throw profileError;
 
-  if (!profile || profile.role !== "company" || profile.account_type !== "company") {
+  const profileRole = profile?.role?.trim().toLowerCase();
+  const profileAccountType = profile?.account_type?.trim().toLowerCase();
+
+  if (!profile || (profileRole !== "company" && profileAccountType !== "company")) {
     throw new Error("لا يمكن التفعيل: حساب المورد غير مربوط بالشركة. أعد إرسال دعوة الدخول.");
   }
 }
