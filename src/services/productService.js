@@ -4,6 +4,23 @@ const PRODUCT_IMAGE_BUCKET = "product-images";
 const PRODUCT_IMAGE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
 const PRODUCT_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+function productErrorSummary(error) {
+  if (!error) return {};
+  return {
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+    status: error.status,
+  };
+}
+
+function warnProductStage(stage, error) {
+  if (import.meta.env.DEV) {
+    console.warn(`Product save failed at ${stage}:`, productErrorSummary(error));
+  }
+}
+
 function normalizeSupabaseProduct(product) {
   return {
     id: product.id,
@@ -94,9 +111,17 @@ export async function createCompanyProductForReview(companyId, product) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const imageUrl = product.imageFile
-    ? await uploadProductImage(companyId, product.imageFile)
-    : product.imageUrl || null;
+  let imageUrl = product.imageUrl || null;
+
+  if (product.imageFile) {
+    try {
+      imageUrl = await uploadProductImage(companyId, product.imageFile);
+    } catch (error) {
+      error.productSaveStage = "image_upload";
+      warnProductStage("image_upload", error);
+      throw error;
+    }
+  }
 
   const { data, error } = await supabase
     .from("products")
@@ -149,14 +174,61 @@ export async function createCompanyProductForReview(companyId, product) {
         "created_at",
         "updated_at",
       ].join(",")
-    )
-    .single();
+    );
 
   if (error) {
+    error.productSaveStage = "products_insert_select";
+    warnProductStage("products_insert_select", error);
     throw error;
   }
 
-  return normalizeSupabaseProduct(data);
+  const createdRow = Array.isArray(data) ? data[0] : data;
+  if (!createdRow) {
+    const fallbackProduct = await findRecentlyCreatedCompanyProduct(companyId, product);
+    if (fallbackProduct) return fallbackProduct;
+
+    const emptyResultError = new Error("Product was inserted but no row was returned by PostgREST.");
+    emptyResultError.productSaveStage = "products_insert_select_empty";
+    warnProductStage("products_insert_select_empty", emptyResultError);
+    throw emptyResultError;
+  }
+
+  try {
+    return normalizeSupabaseProduct(createdRow);
+  } catch (error) {
+    error.productSaveStage = "normalize_product";
+    warnProductStage("normalize_product", error);
+    throw error;
+  }
+}
+
+async function findRecentlyCreatedCompanyProduct(companyId, product) {
+  const { data, error } = await supabase
+    .from("products")
+    .select(productSelectColumns())
+    .eq("company_id", companyId)
+    .eq("name_ar", product.nameAr)
+    .eq("approval_status", "pending_review")
+    .eq("is_visible", false)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    error.productSaveStage = "products_insert_fallback_reload";
+    warnProductStage("products_insert_fallback_reload", error);
+    return null;
+  }
+
+  const [fallbackRow] = data ?? [];
+  if (!fallbackRow) return null;
+
+  try {
+    return normalizeSupabaseProduct(fallbackRow);
+  } catch (error) {
+    error.productSaveStage = "products_insert_fallback_normalize";
+    warnProductStage("products_insert_fallback_normalize", error);
+    return null;
+  }
 }
 
 export async function updateCompanyProductForReview(companyId, productId, product) {
@@ -377,7 +449,10 @@ export function validateProductImageFile(file) {
 async function uploadProductImage(companyId, file) {
   const validationError = validateProductImageFile(file);
   if (validationError) {
-    throw new Error(validationError);
+    const error = new Error(validationError);
+    error.productSaveStage = "image_upload_validation";
+    warnProductStage("image_upload_validation", error);
+    throw error;
   }
 
   const filePath = `products/${companyId}/${Date.now()}-${safeFileName(file.name, file.type)}`;
@@ -388,6 +463,8 @@ async function uploadProductImage(companyId, file) {
   });
 
   if (error) {
+    error.productSaveStage = "image_upload";
+    warnProductStage("image_upload", error);
     throw error;
   }
 

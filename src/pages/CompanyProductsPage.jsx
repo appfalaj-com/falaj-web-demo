@@ -67,6 +67,47 @@ const PRODUCT_SAVE_ERROR = "تعذر حفظ المنتج حاليًا. حاول 
 const PRODUCT_AVAILABILITY_ERROR = "تعذر تحديث توفر المنتج حاليًا. حاول مرة أخرى.";
 const PRODUCT_VISIBILITY_ERROR = "تعذر تحديث ظهور المنتج حاليًا. حاول مرة أخرى.";
 
+function productErrorSummary(error) {
+  if (!error) return {};
+  return {
+    stage: error.productSaveStage,
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+  };
+}
+
+function warnProductStage(stage, error) {
+  if (import.meta.env.DEV) {
+    console.warn(`Product save failed at ${stage}:`, productErrorSummary(error));
+  }
+}
+
+function productSaveMessage(error) {
+  const message = `${error?.message ?? ""} ${error?.details ?? ""}`.toLowerCase();
+
+  if (error?.productSaveStage?.startsWith("image_upload")) {
+    return "تعذر رفع صورة المنتج. جرّب صورة أصغر أو نوع JPG/PNG.";
+  }
+  if (message.includes("products_volume_liters_check")) {
+    return "حجم المنتج باللتر يجب أن يكون أكبر من صفر.";
+  }
+  if (message.includes("products_order_quantity_range")) {
+    return "أقصى كمية للطلب يجب أن تكون أكبر من أو مساوية لأقل كمية.";
+  }
+  if (
+    message.includes("products_price_check") ||
+    message.includes("products_stock_quantity_non_negative") ||
+    message.includes("products_min_order_quantity_positive") ||
+    message.includes("products_max_order_quantity_positive")
+  ) {
+    return "تأكد من أن السعر والحجم والكمية أكبر من صفر.";
+  }
+
+  return PRODUCT_SAVE_ERROR;
+}
+
 function formatPrice(value) {
   return `${Number(value || 0).toFixed(3)} ر.ع`;
 }
@@ -283,6 +324,7 @@ export default function CompanyProductsPage({ companyId }) {
 
     const validationError = validateForm();
     if (validationError) {
+      warnProductStage("validation", new Error(validationError));
       setErrorMessage(validationError);
       return;
     }
@@ -310,20 +352,30 @@ export default function CompanyProductsPage({ companyId }) {
     try {
       if (editingProductId) {
         const updatedProduct = await updateCompanyProductForReview(companyId, editingProductId, payload);
-        setProducts((current) => current.map((product) => (product.id === editingProductId ? updatedProduct : product)));
+        try {
+          setProducts((current) => current.map((product) => (product.id === editingProductId ? updatedProduct : product)));
+        } catch (error) {
+          error.productSaveStage = "state_update";
+          warnProductStage("state_update", error);
+          throw error;
+        }
         setMessage("تم تحديث المنتج وإرساله للمراجعة من إدارة فلج.");
       } else {
         const createdProduct = await createCompanyProductForReview(companyId, payload);
-        setProducts((current) => [createdProduct, ...current]);
+        try {
+          setProducts((current) => [createdProduct, ...current]);
+        } catch (error) {
+          error.productSaveStage = "state_update";
+          warnProductStage("state_update", error);
+          throw error;
+        }
         setMessage("تم إرسال المنتج للمراجعة من إدارة فلج.");
       }
 
       closeForm();
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error("Save product failed:", error);
-      }
-      setErrorMessage(PRODUCT_SAVE_ERROR);
+      warnProductStage(error.productSaveStage || "save_product", error);
+      setErrorMessage(productSaveMessage(error));
     } finally {
       setIsSaving(false);
     }
