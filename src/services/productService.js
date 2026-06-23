@@ -37,6 +37,10 @@ function normalizeSupabaseProduct(product) {
     waterType: product.water_type,
     sizeLabel: product.size_label,
     volumeLiters: product.volume_liters,
+    unitVolumeLiters: product.unit_volume_liters ?? product.volume_liters,
+    sellingUnit: product.selling_unit ?? "unit",
+    unitsPerPackage: product.units_per_package ?? 1,
+    packageLabel: product.package_label ?? product.size_label,
     price: Number(product.price) || 0,
     imageUrl: product.image_url,
     imagePath: product.image_path,
@@ -84,6 +88,10 @@ export async function getProductsByCompanyFromSupabase(companyId) {
         "water_type",
         "size_label",
         "volume_liters",
+        "unit_volume_liters",
+        "selling_unit",
+        "units_per_package",
+        "package_label",
         "price",
         "image_url",
         "image_path",
@@ -129,6 +137,7 @@ export async function createCompanyProductForReview(companyId, product) {
     }
   }
 
+  const commercialFields = buildCommercialProductFields(product);
   const { data, error } = await supabase
     .from("products")
     .insert({
@@ -137,8 +146,12 @@ export async function createCompanyProductForReview(companyId, product) {
       name_en: product.nameEn || null,
       category: product.category,
       water_type: product.waterType,
-      size_label: product.sizeLabel || null,
-      volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
+      size_label: commercialFields.packageLabel,
+      unit_volume_liters: commercialFields.unitVolumeLiters,
+      selling_unit: commercialFields.sellingUnit,
+      units_per_package: commercialFields.unitsPerPackage,
+      package_label: commercialFields.packageLabel,
+      volume_liters: commercialFields.volumeLiters,
       price: Number(product.price),
       image_url: imageUrl,
       description: product.description || null,
@@ -163,6 +176,10 @@ export async function createCompanyProductForReview(companyId, product) {
         "water_type",
         "size_label",
         "volume_liters",
+        "unit_volume_liters",
+        "selling_unit",
+        "units_per_package",
+        "package_label",
         "price",
         "image_url",
         "image_path",
@@ -246,6 +263,7 @@ export async function updateCompanyProductForReview(companyId, productId, produc
     ? await uploadProductImage(companyId, product.imageFile)
     : product.imageUrl || null;
 
+  const commercialFields = buildCommercialProductFields(product);
   const { data, error } = await supabase
     .from("products")
     .update({
@@ -253,8 +271,12 @@ export async function updateCompanyProductForReview(companyId, productId, produc
       name_en: product.nameEn || null,
       category: product.category,
       water_type: product.waterType,
-      size_label: product.sizeLabel || null,
-      volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
+      size_label: commercialFields.packageLabel,
+      unit_volume_liters: commercialFields.unitVolumeLiters,
+      selling_unit: commercialFields.sellingUnit,
+      units_per_package: commercialFields.unitsPerPackage,
+      package_label: commercialFields.packageLabel,
+      volume_liters: commercialFields.volumeLiters,
       price: Number(product.price),
       image_url: imageUrl,
       description: product.description || null,
@@ -361,6 +383,10 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
         "water_type",
         "size_label",
         "volume_liters",
+        "unit_volume_liters",
+        "selling_unit",
+        "units_per_package",
+        "package_label",
         "price",
         "image_url",
         "image_path",
@@ -422,6 +448,10 @@ function productSelectColumns() {
     "water_type",
     "size_label",
     "volume_liters",
+    "unit_volume_liters",
+    "selling_unit",
+    "units_per_package",
+    "package_label",
     "price",
     "image_url",
     "image_path",
@@ -439,6 +469,28 @@ function productSelectColumns() {
     "created_at",
     "updated_at",
   ].join(",");
+}
+
+function buildCommercialProductFields(product) {
+  const unitVolumeLiters = Number(product.unitVolumeLiters ?? product.volumeLiters);
+  const unitsPerPackage = Number(product.unitsPerPackage ?? 1);
+  const sellingUnit = product.sellingUnit || "unit";
+  const packageLabel = (product.packageLabel || product.sizeLabel || "").trim() || null;
+
+  if (!Number.isFinite(unitVolumeLiters) || unitVolumeLiters <= 0) {
+    throw new Error("Unit volume must be greater than zero.");
+  }
+  if (!Number.isInteger(unitsPerPackage) || unitsPerPackage <= 0) {
+    throw new Error("Units per package must be a positive integer.");
+  }
+
+  return {
+    unitVolumeLiters,
+    sellingUnit,
+    unitsPerPackage,
+    packageLabel,
+    volumeLiters: unitVolumeLiters * unitsPerPackage,
+  };
 }
 
 export function validateProductImageFile(file) {

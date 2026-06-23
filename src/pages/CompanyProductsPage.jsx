@@ -18,6 +18,10 @@ const initialProductForm = {
   sizeOption: "500ml",
   sizeLabel: "500 مل",
   volumeLiters: "0.5",
+  unitVolumeLiters: "0.5",
+  sellingUnit: "unit",
+  unitsPerPackage: "1",
+  packageLabel: "عبوة 500 مل",
   price: "",
   imageUrl: "",
   imageFile: null,
@@ -39,6 +43,14 @@ const CATEGORY_OPTIONS = [
 ];
 
 const WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية", "مياه معدنية", "مياه فوارة"];
+
+const SELLING_UNIT_OPTIONS = [
+  { value: "unit", label: "عبوة", priceLabel: "للعبوة" },
+  { value: "pack", label: "باك", priceLabel: "للباك" },
+  { value: "carton", label: "كرتون", priceLabel: "للكرتون" },
+  { value: "gallon", label: "جالون", priceLabel: "للجالون" },
+  { value: "tanker", label: "صهريج", priceLabel: "للصهريج" },
+];
 
 const SIZE_OPTIONS = [
   { value: "200ml", label: "200 مل", volumeLiters: "0.2" },
@@ -129,6 +141,47 @@ function categoryLabel(category) {
   return CATEGORY_OPTIONS.find((option) => option.value === normalizedCategory)?.label ?? "تصنيف غير محدد";
 }
 
+function sellingUnitOption(value) {
+  return SELLING_UNIT_OPTIONS.find((option) => option.value === value) ?? SELLING_UNIT_OPTIONS[0];
+}
+
+function sellingUnitLabel(value) {
+  return sellingUnitOption(value).label;
+}
+
+function sellingUnitPriceLabel(value) {
+  return sellingUnitOption(value).priceLabel;
+}
+
+function formatUnitVolumeLabel(value) {
+  const volume = Number(value);
+  if (!Number.isFinite(volume) || volume <= 0) return "";
+  if (volume < 1) return `${Number((volume * 1000).toFixed(3))} مل`;
+  return `${Number(volume.toFixed(3))} لتر`;
+}
+
+function buildPackageLabel(unitVolumeLiters, sellingUnit, unitsPerPackage) {
+  const unitLabel = formatUnitVolumeLabel(unitVolumeLiters);
+  const unitName = sellingUnitLabel(sellingUnit);
+  const count = Number(unitsPerPackage);
+  if (!unitLabel) return "";
+  if (sellingUnit === "unit" || sellingUnit === "gallon" || sellingUnit === "tanker" || count === 1) {
+    return `${unitName} ${unitLabel}`;
+  }
+  return `${unitName} ${unitLabel} × ${count} عبوة`;
+}
+
+function totalVolumeLiters(unitVolumeLiters, unitsPerPackage) {
+  const volume = Number(unitVolumeLiters);
+  const count = Number(unitsPerPackage);
+  if (!Number.isFinite(volume) || !Number.isInteger(count) || volume <= 0 || count <= 0) return "";
+  return String(Number((volume * count).toFixed(3)));
+}
+
+function productPackageLabel(product) {
+  return product.packageLabel || product.sizeLabel || product.volumeLiters || "-";
+}
+
 function approvalStatusLabel(status) {
   return STATUS_LABELS[status || "pending_review"] ?? "قيد المراجعة";
 }
@@ -150,7 +203,9 @@ function productVisibilityMessage(product) {
 }
 
 function formFromProduct(product) {
-  const matchedSize = findSizeOption(product.sizeLabel, product.volumeLiters);
+  const unitVolume = product.unitVolumeLiters ?? product.volumeLiters;
+  const unitsPerPackage = product.unitsPerPackage ?? 1;
+  const matchedSize = findSizeOption(product.sizeLabel, unitVolume);
 
   return {
     nameAr: product.nameAr || "",
@@ -158,8 +213,12 @@ function formFromProduct(product) {
     category: normalizeProductCategory(product.category),
     waterType: WATER_TYPE_OPTIONS.includes(product.waterType) ? product.waterType : "مياه شرب",
     sizeOption: matchedSize.value,
-    sizeLabel: product.sizeLabel || "",
-    volumeLiters: product.volumeLiters || "",
+    sizeLabel: product.sizeLabel || product.packageLabel || "",
+    volumeLiters: product.volumeLiters || totalVolumeLiters(unitVolume, unitsPerPackage),
+    unitVolumeLiters: unitVolume || "",
+    sellingUnit: product.sellingUnit || "unit",
+    unitsPerPackage,
+    packageLabel: product.packageLabel || product.sizeLabel || buildPackageLabel(unitVolume, product.sellingUnit || "unit", unitsPerPackage),
     price: product.price || "",
     imageUrl: product.imageUrl || "",
     imageFile: null,
@@ -235,7 +294,15 @@ export default function CompanyProductsPage({ companyId }) {
   }, [companyId]);
 
   function updateForm(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      if (["unitVolumeLiters", "sellingUnit", "unitsPerPackage"].includes(field)) {
+        next.volumeLiters = totalVolumeLiters(next.unitVolumeLiters, next.unitsPerPackage);
+        next.packageLabel = buildPackageLabel(next.unitVolumeLiters, next.sellingUnit, next.unitsPerPackage);
+        next.sizeLabel = next.packageLabel;
+      }
+      return next;
+    });
   }
 
   function updateSizeOption(value) {
@@ -244,8 +311,19 @@ export default function CompanyProductsPage({ companyId }) {
     setForm((current) => ({
       ...current,
       sizeOption: value,
-      sizeLabel: selectedSize && selectedSize.value !== "custom" ? selectedSize.label : "",
-      volumeLiters: selectedSize && selectedSize.value !== "custom" ? selectedSize.volumeLiters : "",
+      unitVolumeLiters: selectedSize && selectedSize.value !== "custom" ? selectedSize.volumeLiters : "",
+      volumeLiters:
+        selectedSize && selectedSize.value !== "custom"
+          ? totalVolumeLiters(selectedSize.volumeLiters, current.unitsPerPackage)
+          : "",
+      packageLabel:
+        selectedSize && selectedSize.value !== "custom"
+          ? buildPackageLabel(selectedSize.volumeLiters, current.sellingUnit, current.unitsPerPackage)
+          : "",
+      sizeLabel:
+        selectedSize && selectedSize.value !== "custom"
+          ? buildPackageLabel(selectedSize.volumeLiters, current.sellingUnit, current.unitsPerPackage)
+          : "",
     }));
   }
 
@@ -299,7 +377,12 @@ export default function CompanyProductsPage({ companyId }) {
     if (!CATEGORY_OPTIONS.some((option) => option.value === form.category)) return "يرجى اختيار التصنيف من القائمة.";
     if (!WATER_TYPE_OPTIONS.includes(form.waterType)) return "يرجى اختيار نوع المياه من القائمة.";
     if (!SIZE_OPTIONS.some((option) => option.value === form.sizeOption)) return "يرجى اختيار الحجم من القائمة.";
-    if (!form.sizeLabel.trim()) return "يرجى تحديد الحجم/الوحدة.";
+    if (!SELLING_UNIT_OPTIONS.some((option) => option.value === form.sellingUnit)) return "يرجى اختيار وحدة البيع من القائمة.";
+    const unitVolume = Number(form.unitVolumeLiters);
+    if (!Number.isFinite(unitVolume) || unitVolume <= 0) return "يرجى إدخال حجم الوحدة الواحدة باللتر كرقم أكبر من صفر.";
+    const unitsPerPackage = Number(form.unitsPerPackage);
+    if (!Number.isInteger(unitsPerPackage) || unitsPerPackage <= 0) return "يرجى إدخال عدد وحدات صحيح داخل وحدة البيع.";
+    if (!form.packageLabel.trim()) return "يرجى تحديد وصف وحدة البيع.";
 
     const price = Number(form.price);
     if (!Number.isFinite(price) || price <= 0) return "يرجى إدخال سعر صحيح أكبر من صفر.";
@@ -338,8 +421,12 @@ export default function CompanyProductsPage({ companyId }) {
       nameEn: form.nameEn.trim(),
       category: form.category.trim(),
       waterType: form.waterType.trim(),
-      sizeLabel: form.sizeLabel.trim(),
+      sizeLabel: form.packageLabel.trim(),
       volumeLiters: form.volumeLiters,
+      unitVolumeLiters: form.unitVolumeLiters,
+      sellingUnit: form.sellingUnit,
+      unitsPerPackage: form.unitsPerPackage,
+      packageLabel: form.packageLabel.trim(),
       price: form.price,
       imageUrl: form.imageUrl.trim(),
       imageFile: form.imageFile,
@@ -547,10 +634,10 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
       </fieldset>
 
       <fieldset className="product-form-section product-form-wide">
-        <legend>الحجم والسعر</legend>
+        <legend>وحدة البيع والسعر</legend>
         <div className="product-form-section-grid">
           <label>
-            الحجم/الوحدة
+            حجم الوحدة الواحدة
             <select value={form.sizeOption} onChange={(event) => onSizeOptionChange(event.target.value)}>
               {SIZE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -561,30 +648,53 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
           </label>
 
           <label>
-            الحجم المعروض
-            <input
-              value={form.sizeLabel}
-              onChange={(event) => onChange("sizeLabel", event.target.value)}
-              readOnly={!isCustomSize}
-              required
-            />
-          </label>
-
-          <label>
-            الحجم باللتر
+            حجم الوحدة باللتر
             <input
               type="number"
               min="0"
               step="0.001"
-              value={form.volumeLiters}
-              onChange={(event) => onChange("volumeLiters", event.target.value)}
+              value={form.unitVolumeLiters}
+              onChange={(event) => onChange("unitVolumeLiters", event.target.value)}
               readOnly={!isCustomSize}
               required
             />
           </label>
 
           <label>
-            السعر
+            وحدة البيع
+            <select value={form.sellingUnit} onChange={(event) => onChange("sellingUnit", event.target.value)}>
+              {SELLING_UNIT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            عدد الوحدات داخل البيع
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.unitsPerPackage}
+              onChange={(event) => onChange("unitsPerPackage", event.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            وصف وحدة البيع
+            <input value={form.packageLabel} onChange={(event) => onChange("packageLabel", event.target.value)} required />
+          </label>
+
+          <label>
+            إجمالي اللترات لوحدة البيع
+            <input type="number" min="0" step="0.001" value={form.volumeLiters} readOnly required />
+          </label>
+
+          <label>
+            سعر وحدة البيع
             <input
               type="number"
               min="0.001"
@@ -593,6 +703,7 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
               onChange={(event) => onChange("price", event.target.value)}
               required
             />
+            <small>السعر هو {sellingUnitPriceLabel(form.sellingUnit)} كاملًا، وليس سعر اللتر.</small>
           </label>
         </div>
       </fieldset>
@@ -756,12 +867,16 @@ function ProductCard({ product, isUpdating, onEdit, onToggleAvailability, onTogg
             <dd>{product.waterType || "-"}</dd>
           </div>
           <div>
-            <dt>الحجم/الوحدة</dt>
-            <dd>{product.sizeLabel || product.volumeLiters || "-"}</dd>
+            <dt>وحدة البيع</dt>
+            <dd>{productPackageLabel(product)}</dd>
           </div>
           <div>
-            <dt>السعر</dt>
-            <dd>{formatPrice(product.price)}</dd>
+            <dt>سعر وحدة البيع</dt>
+            <dd>{formatPrice(product.price)} {sellingUnitPriceLabel(product.sellingUnit)}</dd>
+          </div>
+          <div>
+            <dt>إجمالي اللترات</dt>
+            <dd>{product.volumeLiters ? `${Number(product.volumeLiters).toFixed(3)} لتر` : "-"}</dd>
           </div>
           <div>
             <dt>المخزون</dt>
