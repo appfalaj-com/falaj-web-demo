@@ -90,6 +90,9 @@ function productSaveMessage(error) {
   if (error?.productSaveStage?.startsWith("image_upload")) {
     return "تعذر رفع صورة المنتج. جرّب صورة أصغر أو نوع JPG/PNG.";
   }
+  if (error?.code === "22P02" || message.includes("invalid input syntax")) {
+    return "تأكد من إدخال حجم المنتج باللتر كرقم مثل 0.02 أو 0.5 أو 1.5.";
+  }
   if (message.includes("products_volume_liters_check")) {
     return "حجم المنتج باللتر يجب أن يكون أكبر من صفر.";
   }
@@ -572,7 +575,7 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
             <input
               type="number"
               min="0"
-              step="0.01"
+              step="0.001"
               value={form.volumeLiters}
               onChange={(event) => onChange("volumeLiters", event.target.value)}
               readOnly={!isCustomSize}
