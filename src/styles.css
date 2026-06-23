@@ -1965,6 +1965,20 @@ tbody tr:hover td {
   min-height: 260px;
 }
 
+.product-image-preview {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 320px;
+  overflow: hidden;
+}
+
+.product-image-preview img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
 .product-body {
   display: grid;
   gap: 14px;

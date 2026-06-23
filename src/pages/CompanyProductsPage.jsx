@@ -7,6 +7,7 @@ import {
   updateApprovedCompanyProductVisibility,
   updateCompanyProductAvailability,
   updateCompanyProductForReview,
+  validateProductImageFile,
 } from "../services/productService.js";
 
 const initialProductForm = {
@@ -18,6 +19,8 @@ const initialProductForm = {
   volumeLiters: "",
   price: "",
   imageUrl: "",
+  imageFile: null,
+  imagePreviewUrl: "",
   description: "",
   deliveryEstimate: "",
   isAvailable: true,
@@ -89,6 +92,8 @@ function formFromProduct(product) {
     volumeLiters: product.volumeLiters || "",
     price: product.price || "",
     imageUrl: product.imageUrl || "",
+    imageFile: null,
+    imagePreviewUrl: product.imageUrl || "",
     description: product.description || "",
     deliveryEstimate: product.deliveryEstimate || "",
     isAvailable: Boolean(product.isAvailable),
@@ -136,6 +141,28 @@ export default function CompanyProductsPage({ companyId }) {
 
   function updateForm(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateImageFile(file) {
+    setErrorMessage("");
+
+    if (!file) {
+      setForm((current) => ({ ...current, imageFile: null, imagePreviewUrl: current.imageUrl || "" }));
+      return;
+    }
+
+    const validationError = validateProductImageFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      setForm((current) => ({ ...current, imageFile: null, imagePreviewUrl: current.imageUrl || "" }));
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      imageFile: file,
+      imagePreviewUrl: URL.createObjectURL(file),
+    }));
   }
 
   function openCreateForm() {
@@ -198,6 +225,7 @@ export default function CompanyProductsPage({ companyId }) {
       volumeLiters: form.volumeLiters,
       price: form.price,
       imageUrl: form.imageUrl.trim(),
+      imageFile: form.imageFile,
       description: form.description.trim(),
       deliveryEstimate: form.deliveryEstimate.trim(),
     };
@@ -297,6 +325,7 @@ export default function CompanyProductsPage({ companyId }) {
             isSaving={isSaving}
             isEditing={Boolean(editingProductId)}
             onChange={updateForm}
+            onImageChange={updateImageFile}
             onCancel={closeForm}
             onSubmit={handleSaveProduct}
           />
@@ -343,7 +372,7 @@ export default function CompanyProductsPage({ companyId }) {
   );
 }
 
-function ProductForm({ form, isSaving, isEditing, onChange, onCancel, onSubmit }) {
+function ProductForm({ form, isSaving, isEditing, onChange, onImageChange, onCancel, onSubmit }) {
   return (
     <form className="product-form" onSubmit={onSubmit}>
       <label>
@@ -400,14 +429,16 @@ function ProductForm({ form, isSaving, isEditing, onChange, onCancel, onSubmit }
       </label>
 
       <label>
-        رابط الصورة
-        <input
-          type="url"
-          value={form.imageUrl}
-          onChange={(event) => onChange("imageUrl", event.target.value)}
-          placeholder="https://example.com/image.jpg"
-        />
+        صورة المنتج
+        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onImageChange(event.target.files?.[0] ?? null)} />
+        <small>JPG أو PNG أو WebP، بحد أقصى 3MB. يمكن حفظ المنتج بدون صورة.</small>
       </label>
+
+      {form.imagePreviewUrl ? (
+        <div className="product-image-preview product-form-wide">
+          <img src={form.imagePreviewUrl} alt="معاينة صورة المنتج" />
+        </div>
+      ) : null}
 
       <label>
         مدة التوصيل

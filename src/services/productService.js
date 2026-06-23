@@ -1,5 +1,9 @@
 import { supabase } from "../lib/supabaseClient.js";
 
+const PRODUCT_IMAGE_BUCKET = "product-images";
+const PRODUCT_IMAGE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
+const PRODUCT_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 function normalizeSupabaseProduct(product) {
   return {
     id: product.id,
@@ -82,6 +86,10 @@ export async function createCompanyProductForReview(companyId, product) {
     throw new Error("Supabase client is not configured.");
   }
 
+  const imageUrl = product.imageFile
+    ? await uploadProductImage(companyId, product.imageFile)
+    : product.imageUrl || null;
+
   const { data, error } = await supabase
     .from("products")
     .insert({
@@ -93,7 +101,7 @@ export async function createCompanyProductForReview(companyId, product) {
       size_label: product.sizeLabel || null,
       volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
       price: Number(product.price),
-      image_url: product.imageUrl || null,
+      image_url: imageUrl,
       description: product.description || null,
       delivery_estimate: product.deliveryEstimate || null,
       is_available: Boolean(product.isAvailable),
@@ -140,6 +148,10 @@ export async function updateCompanyProductForReview(companyId, productId, produc
     throw new Error("Supabase client is not configured.");
   }
 
+  const imageUrl = product.imageFile
+    ? await uploadProductImage(companyId, product.imageFile)
+    : product.imageUrl || null;
+
   const { data, error } = await supabase
     .from("products")
     .update({
@@ -150,7 +162,7 @@ export async function updateCompanyProductForReview(companyId, productId, produc
       size_label: product.sizeLabel || null,
       volume_liters: product.volumeLiters ? Number(product.volumeLiters) : null,
       price: Number(product.price),
-      image_url: product.imageUrl || null,
+      image_url: imageUrl,
       description: product.description || null,
       delivery_estimate: product.deliveryEstimate || null,
       is_available: Boolean(product.isAvailable),
@@ -317,4 +329,54 @@ function productSelectColumns() {
     "created_at",
     "updated_at",
   ].join(",");
+}
+
+export function validateProductImageFile(file) {
+  if (!file) return "";
+  if (!PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+    return "يرجى اختيار صورة بصيغة JPG أو PNG أو WebP.";
+  }
+  if (file.size > PRODUCT_IMAGE_MAX_SIZE_BYTES) {
+    return "حجم الصورة يجب ألا يتجاوز 3MB.";
+  }
+  return "";
+}
+
+async function uploadProductImage(companyId, file) {
+  const validationError = validateProductImageFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const filePath = `products/${companyId}/${Date.now()}-${safeFileName(file.name, file.type)}`;
+  const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(filePath, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const { data } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+function safeFileName(name, mimeType) {
+  const extensionByType = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const extension = extensionByType[mimeType] ?? (name.includes(".") ? name.split(".").pop().toLowerCase() : "jpg");
+  const baseName = name
+    .replace(/\.[^/.]+$/, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9-_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  return `${baseName || "product-image"}.${extension}`;
 }
