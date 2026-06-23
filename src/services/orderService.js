@@ -1,6 +1,9 @@
 import { supabase } from "../lib/supabaseClient.js";
 
 function normalizeSupabaseOrder(order) {
+  const assignedDriver = order.assigned_driver ?? order.drivers ?? null;
+  const cashCollectorDriver = order.cash_collector_driver ?? null;
+
   return {
     id: order.public_code || order.id,
     rawId: order.id,
@@ -25,7 +28,8 @@ function normalizeSupabaseOrder(order) {
     cashCollectedByDriverId: order.cash_collected_by_driver_id,
     amount: Number(order.price) || 0,
     driverId: order.driver_id ?? null,
-    driverName: order.drivers?.name ?? null,
+    driverName: assignedDriver?.name ?? null,
+    cashCollectorDriverName: cashCollectorDriver?.name ?? null,
     items: order.items ?? [],
     time: order.created_at
       ? new Date(order.created_at).toLocaleTimeString("ar-OM", {
@@ -106,7 +110,7 @@ export async function getAdminOrdersFromSupabase() {
 
   const { data, error } = await supabase
     .from("orders")
-    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
+    .select(`${orderSelectColumns()}, companies(name), assigned_driver:drivers!orders_driver_id_fkey(name), cash_collector_driver:drivers!orders_cash_collected_by_driver_id_fkey(name)`)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -123,7 +127,7 @@ export async function getOrdersByDriverFromSupabase(driverId) {
 
   const { data, error } = await supabase
     .from("orders")
-    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
+    .select(`${orderSelectColumns()}, companies(name), assigned_driver:drivers!orders_driver_id_fkey(name)`)
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false });
 
@@ -173,7 +177,7 @@ export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
     .from("orders")
     .update(patch)
     .eq("id", orderId)
-    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
+    .select(`${orderSelectColumns()}, companies(name), assigned_driver:drivers!orders_driver_id_fkey(name), cash_collector_driver:drivers!orders_cash_collected_by_driver_id_fkey(name)`)
     .single();
 
   if (error) {
@@ -229,7 +233,7 @@ export async function assignCompanyOrderDriverInSupabase(companyId, orderId, dri
     })
     .eq("id", orderId)
     .eq("company_id", companyId)
-    .select(`${orderSelectColumns()}, drivers(name)`)
+    .select(`${orderSelectColumns()}, assigned_driver:drivers!orders_driver_id_fkey(name)`)
     .single();
 
   if (error) {
@@ -260,7 +264,7 @@ export async function markDriverCashCollectedInSupabase(driverId, orderId) {
     .eq("id", orderId)
     .eq("driver_id", driverId)
     .eq("payment_method", "cash")
-    .select(`${orderSelectColumns()}, companies(name), drivers(name)`)
+    .select(`${orderSelectColumns()}, companies(name), assigned_driver:drivers!orders_driver_id_fkey(name), cash_collector_driver:drivers!orders_cash_collected_by_driver_id_fkey(name)`)
     .single();
 
   if (error) {
