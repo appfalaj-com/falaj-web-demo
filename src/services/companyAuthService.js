@@ -19,7 +19,18 @@ function requireSupabase() {
 
 function logAuthDebug(label, payload) {
   if (!import.meta.env.DEV) return;
-  console.debug(`[Falaj auth] ${label}`, payload);
+  console.debug(`[Falaj auth] ${label}`, sanitizeAuthDebugPayload(payload));
+}
+
+function sanitizeAuthDebugPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  const sanitized = { ...payload };
+  delete sanitized.userEmail;
+  delete sanitized.email;
+  delete sanitized.profile;
+
+  return sanitized;
 }
 
 function isPhoneAuthError(error) {

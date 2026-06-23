@@ -188,7 +188,6 @@ export default function App() {
       if (!import.meta.env.DEV) return;
       console.info("[Falaj company guard]", {
         userId: authState.user?.id,
-        userEmail: authState.user?.email,
         metadataCompanyId: authState.user?.user_metadata?.company_id,
         profileRole: authState.profile?.role,
         profileAccountType: authState.profile?.account_type,

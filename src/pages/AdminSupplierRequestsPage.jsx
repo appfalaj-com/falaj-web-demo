@@ -520,7 +520,9 @@ async function invokeSupplierInvite(requestId) {
   });
 
   if (error) {
-    console.error("Invite function error:", error, data);
+    if (import.meta.env.DEV) {
+      console.error("Invite function failed:", error?.message || "unknown error");
+    }
     return { ok: false, message: await getInviteFunctionErrorMessage(error, data) };
   }
 
