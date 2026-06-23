@@ -27,7 +27,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
       const authState = await signInCompanyWithEmail(email.trim(), password);
       onAuthenticated(authState);
     } catch (authError) {
-      setError(authError.message || t("login.company.emailError"));
+      setError(t("login.company.emailError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -50,7 +50,7 @@ export default function CompanyLoginPage({ onAuthenticated }) {
       setResetEmail(targetEmail);
       setStatus(t("login.company.resetSent"));
     } catch (authError) {
-      setError(authError.message || t("login.company.resetError"));
+      setError(t("login.company.resetError"));
     } finally {
       setIsResetSubmitting(false);
     }

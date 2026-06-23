@@ -30,6 +30,11 @@ const STATUS_LABELS = {
   hidden: "مخفي",
 };
 
+const PRODUCT_LOAD_ERROR = "تعذر تحميل منتجات الشركة من قاعدة البيانات. حاول التحديث مرة أخرى.";
+const PRODUCT_SAVE_ERROR = "تعذر حفظ المنتج حاليًا. حاول مرة أخرى.";
+const PRODUCT_AVAILABILITY_ERROR = "تعذر تحديث توفر المنتج حاليًا. حاول مرة أخرى.";
+const PRODUCT_VISIBILITY_ERROR = "تعذر تحديث ظهور المنتج حاليًا. حاول مرة أخرى.";
+
 function formatPrice(value) {
   return `${Number(value || 0).toFixed(3)} ر.ع`;
 }
@@ -115,7 +120,7 @@ export default function CompanyProductsPage({ companyId }) {
       } catch (error) {
         if (!cancelled) {
           setProducts([]);
-          setErrorMessage(error.message || "تعذر تحميل منتجات الشركة من قاعدة البيانات.");
+          setErrorMessage(PRODUCT_LOAD_ERROR);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -162,7 +167,7 @@ export default function CompanyProductsPage({ companyId }) {
     if (!form.waterType.trim()) return "يرجى إدخال نوع المياه.";
 
     const price = Number(form.price);
-    if (!Number.isFinite(price) || price < 0) return "يرجى إدخال سعر صحيح.";
+    if (!Number.isFinite(price) || price <= 0) return "يرجى إدخال سعر صحيح أكبر من صفر.";
 
     if (form.volumeLiters) {
       const volume = Number(form.volumeLiters);
@@ -211,8 +216,10 @@ export default function CompanyProductsPage({ companyId }) {
 
       closeForm();
     } catch (error) {
-      console.error("Save product failed:", error);
-      setErrorMessage(error?.message || "تعذر حفظ المنتج في قاعدة البيانات.");
+      if (import.meta.env.DEV) {
+        console.error("Save product failed:", error);
+      }
+      setErrorMessage(PRODUCT_SAVE_ERROR);
     } finally {
       setIsSaving(false);
     }
@@ -228,7 +235,7 @@ export default function CompanyProductsPage({ companyId }) {
       setProducts((current) => current.map((item) => (item.id === product.id ? updatedProduct : item)));
       setMessage("تم تحديث توفر المنتج.");
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث توفر المنتج.");
+      setErrorMessage(PRODUCT_AVAILABILITY_ERROR);
     } finally {
       setUpdatingProductId(null);
     }
@@ -246,7 +253,7 @@ export default function CompanyProductsPage({ companyId }) {
       setProducts((current) => current.map((item) => (item.id === product.id ? updatedProduct : item)));
       setMessage(updatedProduct.isVisible ? "تم إظهار المنتج للعملاء." : "تم إخفاء المنتج عن العملاء.");
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث ظهور المنتج.");
+      setErrorMessage(PRODUCT_VISIBILITY_ERROR);
     } finally {
       setUpdatingProductId(null);
     }

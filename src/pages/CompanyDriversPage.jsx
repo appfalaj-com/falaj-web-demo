@@ -13,6 +13,11 @@ const initialDriverForm = {
   isActive: true,
 };
 
+const DRIVERS_LOAD_ERROR = "تعذر تحميل السائقين من قاعدة البيانات. حاول التحديث مرة أخرى.";
+const DRIVER_SAVE_ERROR = "تعذر حفظ بيانات السائق حاليًا. حاول مرة أخرى.";
+const DRIVER_STATUS_ERROR = "تعذر تحديث حالة السائق حاليًا. حاول مرة أخرى.";
+const DRIVER_INVITE_ERROR = "تعذر إرسال دعوة دخول السائق حاليًا. حاول مرة أخرى.";
+
 export default function CompanyDriversPage({ companyId }) {
   const [companyDrivers, setCompanyDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +42,7 @@ export default function CompanyDriversPage({ companyId }) {
       } catch (error) {
         if (!cancelled) {
           setCompanyDrivers([]);
-          setErrorMessage(error.message || "تعذر تحميل السائقين من قاعدة البيانات.");
+          setErrorMessage(DRIVERS_LOAD_ERROR);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -122,7 +127,7 @@ export default function CompanyDriversPage({ companyId }) {
 
       closeForm();
     } catch (error) {
-      setErrorMessage(error.message || "تعذر حفظ بيانات السائق.");
+      setErrorMessage(DRIVER_SAVE_ERROR);
     } finally {
       setIsSaving(false);
     }
@@ -145,7 +150,7 @@ export default function CompanyDriversPage({ companyId }) {
       );
       setMessage(updatedDriver.isActive ? "تم تفعيل السائق." : "تم إيقاف السائق.");
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث حالة السائق.");
+      setErrorMessage(DRIVER_STATUS_ERROR);
     } finally {
       setIsSaving(false);
     }
@@ -173,7 +178,7 @@ export default function CompanyDriversPage({ companyId }) {
       const refreshedDrivers = await getDriversByCompanyFromSupabase(companyId);
       setCompanyDrivers(refreshedDrivers);
     } catch (error) {
-      setErrorMessage(error.message || "تعذر إرسال دعوة دخول السائق.");
+      setErrorMessage(DRIVER_INVITE_ERROR);
     } finally {
       setInvitingDriverId(null);
     }
@@ -200,7 +205,7 @@ export default function CompanyDriversPage({ companyId }) {
           <div className="panel-header">
             <div>
               <h2>{editingDriverId ? "تعديل السائق" : "إضافة سائق"}</h2>
-              <p>لا يتم إنشاء حساب دخول للسائق في هذه المرحلة. يبقى `profile_id` فارغًا حتى تفعيل Driver Auth.</p>
+              <p>يتم حفظ السائق أولًا، ثم يمكن إرسال دعوة دخول آمنة لربط السائق بحساب Auth عبر البريد.</p>
             </div>
           </div>
 

@@ -185,6 +185,7 @@ export default function App() {
 
   if (PROTECTED_COMPANY_PATHS.has(currentPath)) {
     const logCompanyGuardDecision = (decision) => {
+      if (!import.meta.env.DEV) return;
       console.info("[Falaj company guard]", {
         userId: authState.user?.id,
         userEmail: authState.user?.email,

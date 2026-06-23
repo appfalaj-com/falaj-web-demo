@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getDriversLiveLocationsByCompanyFromSupabase } from "../services/driverService.js";
 
+const LIVE_TRACKING_LOAD_ERROR = "تعذر تحميل مواقع السائقين من قاعدة البيانات. حاول التحديث مرة أخرى.";
+
 export default function CompanyDriversLivePage({ companyId }) {
   const [drivers, setDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +21,7 @@ export default function CompanyDriversLivePage({ companyId }) {
       } catch (error) {
         if (!cancelled) {
           setDrivers([]);
-          setErrorMessage(error.message || "تعذر تحميل مواقع السائقين من قاعدة البيانات.");
+          setErrorMessage(LIVE_TRACKING_LOAD_ERROR);
         }
       } finally {
         if (!cancelled) setIsLoading(false);

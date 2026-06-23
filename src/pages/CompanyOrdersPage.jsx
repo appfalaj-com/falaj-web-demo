@@ -29,6 +29,9 @@ const PAYMENT_STATUS_LABELS = {
   refunded: "مسترجع",
 };
 
+const ORDERS_LOAD_ERROR = "تعذر تحميل طلبات الشركة من قاعدة البيانات. حاول التحديث مرة أخرى.";
+const ORDER_STATUS_UPDATE_ERROR = "تعذر تحديث حالة الطلب حاليًا. حاول مرة أخرى.";
+
 const FILTERS = [
   { value: "all", label: "الكل" },
   { value: "pending", label: "جديدة" },
@@ -89,7 +92,7 @@ export default function CompanyOrdersPage({ companyId }) {
       } catch (error) {
         if (!cancelled) {
           setOrders([]);
-          setErrorMessage(error.message || "تعذر تحميل طلبات الشركة من قاعدة البيانات.");
+          setErrorMessage(ORDERS_LOAD_ERROR);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -163,7 +166,7 @@ export default function CompanyOrdersPage({ companyId }) {
       setSelectedOrderId(order.rawId);
       setMessage("تم تحديث حالة الطلب بنجاح.");
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث حالة الطلب.");
+      setErrorMessage(ORDER_STATUS_UPDATE_ERROR);
     } finally {
       setUpdatingOrderId(null);
     }

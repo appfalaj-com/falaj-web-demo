@@ -45,7 +45,7 @@ export default function CompanySetPasswordPage({ onSaved }) {
         onSaved?.();
       }, 900);
     } catch (updateError) {
-      setError(updateError.message || t("password.error"));
+      setError(t("password.error"));
     } finally {
       setIsSubmitting(false);
     }

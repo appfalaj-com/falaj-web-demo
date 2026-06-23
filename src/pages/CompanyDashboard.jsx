@@ -22,6 +22,7 @@ const ONBOARDING_LABELS = {
 };
 
 const ACTIVE_ORDER_STATUSES = ["active", "accepted", "assigned", "en_route", "arrived"];
+const DASHBOARD_LOAD_ERROR = "تعذر تحميل ملخص لوحة المورد من قاعدة البيانات. حاول التحديث مرة أخرى.";
 
 export default function CompanyDashboard({ companyId, company, onNavigate }) {
   const [products, setProducts] = useState([]);
@@ -54,7 +55,7 @@ export default function CompanyDashboard({ companyId, company, onNavigate }) {
           setProducts([]);
           setOrders([]);
           setDrivers([]);
-          setErrorMessage(error.message || "تعذر تحميل ملخص لوحة المورد من قاعدة البيانات.");
+          setErrorMessage(DASHBOARD_LOAD_ERROR);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
