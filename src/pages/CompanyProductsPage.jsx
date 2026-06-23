@@ -598,7 +598,7 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
         <legend>الصورة</legend>
         <label>
           صورة المنتج
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onImageChange(event.target.files?.[0] ?? null)} />
+          <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={(event) => onImageChange(event.target.files?.[0] ?? null)} />
           <small>JPG أو PNG أو WebP، بحد أقصى 3MB. يمكن حفظ المنتج بدون صورة.</small>
         </label>
 

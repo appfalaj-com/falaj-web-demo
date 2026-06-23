@@ -2,7 +2,13 @@ import { supabase } from "../lib/supabaseClient.js";
 
 const PRODUCT_IMAGE_BUCKET = "product-images";
 const PRODUCT_IMAGE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
-const PRODUCT_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PRODUCT_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const PRODUCT_IMAGE_TYPE_BY_EXTENSION = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
 
 function productErrorSummary(error) {
   if (!error) return {};
@@ -437,7 +443,7 @@ function productSelectColumns() {
 
 export function validateProductImageFile(file) {
   if (!file) return "";
-  if (!PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+  if (!getProductImageContentType(file)) {
     return "يرجى اختيار صورة بصيغة JPG أو PNG أو WebP.";
   }
   if (file.size > PRODUCT_IMAGE_MAX_SIZE_BYTES) {
@@ -455,10 +461,11 @@ async function uploadProductImage(companyId, file) {
     throw error;
   }
 
+  const contentType = getProductImageContentType(file);
   const filePath = `products/${companyId}/${Date.now()}-${safeFileName(file.name, file.type)}`;
   const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(filePath, file, {
     cacheControl: "3600",
-    contentType: file.type,
+    contentType,
     upsert: false,
   });
 
@@ -472,9 +479,20 @@ async function uploadProductImage(companyId, file) {
   return data.publicUrl;
 }
 
+function getProductImageContentType(file) {
+  const normalizedType = file.type === "image/jpg" ? "image/jpeg" : file.type;
+  if (PRODUCT_IMAGE_ALLOWED_TYPES.includes(file.type) || PRODUCT_IMAGE_ALLOWED_TYPES.includes(normalizedType)) {
+    return normalizedType;
+  }
+
+  const extension = file.name?.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+  return PRODUCT_IMAGE_TYPE_BY_EXTENSION[extension] ?? "";
+}
+
 function safeFileName(name, mimeType) {
   const extensionByType = {
     "image/jpeg": "jpg",
+    "image/jpg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
   };
