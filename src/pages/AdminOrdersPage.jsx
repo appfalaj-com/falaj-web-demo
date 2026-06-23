@@ -92,10 +92,10 @@ export default function AdminOrdersPage() {
           setOrders(nextOrders);
           setSelectedOrderId((current) => current ?? nextOrders[0]?.rawId ?? null);
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setOrders([]);
-          setErrorMessage(error.message || "تعذر تحميل الطلبات من قاعدة البيانات.");
+          setErrorMessage("تعذر تحميل الطلبات من قاعدة البيانات.");
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -177,8 +177,8 @@ export default function AdminOrdersPage() {
       setOrders((current) => current.map((item) => (item.rawId === order.rawId ? updatedOrder : item)));
       setSelectedOrderId(order.rawId);
       setMessage("تم تحديث حالة الطلب بنجاح.");
-    } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث حالة الطلب.");
+    } catch {
+      setErrorMessage("تعذر تحديث حالة الطلب.");
     } finally {
       setUpdatingOrderId(null);
     }

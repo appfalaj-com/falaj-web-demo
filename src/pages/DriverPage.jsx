@@ -74,8 +74,8 @@ export default function DriverPage({ onNavigate }) {
 
       const assignedOrders = await getOrdersByDriverFromSupabase(linkedDriver.id);
       setOrders(assignedOrders);
-    } catch (loadError) {
-      setError(loadError?.message || "تعذر تحميل بيانات السائق.");
+    } catch {
+      setError("تعذر تحميل بيانات السائق.");
     } finally {
       setLoading(false);
     }
@@ -120,9 +120,9 @@ export default function DriverPage({ onNavigate }) {
             recordedAt: savedLocation.recorded_at,
           });
           setMessage("تم حفظ موقعك الحالي بنجاح.");
-        } catch (saveError) {
+        } catch {
           setLocationState((current) => ({ ...current, status: "idle" }));
-          setError(saveError?.message || "تعذر حفظ موقع السائق.");
+          setError("تعذر حفظ موقع السائق.");
         }
       },
       (geoError) => {
@@ -144,8 +144,8 @@ export default function DriverPage({ onNavigate }) {
         currentOrders.map((item) => (item.rawId === updatedOrder.rawId ? updatedOrder : item))
       );
       setMessage("تم تحديث حالة الطلب.");
-    } catch (updateError) {
-      setError(updateError?.message || "تعذر تحديث حالة الطلب.");
+    } catch {
+      setError("تعذر تحديث حالة الطلب.");
     } finally {
       setUpdatingOrderId(null);
     }
