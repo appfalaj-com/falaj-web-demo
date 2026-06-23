@@ -26,6 +26,44 @@ const CATEGORY_LABELS = {
   tanker: "صهاريج مياه",
 };
 
+const CATEGORY_OPTIONS = [
+  { value: "water_bottles", label: "مياه شرب عبوات" },
+  { value: "water_gallons", label: "مياه شرب جالونات" },
+  { value: "sparkling_water", label: "مياه فوارة" },
+  { value: "water_tankers", label: "صهاريج مياه" },
+];
+
+const WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية", "مياه معدنية", "مياه فوارة"];
+
+const SIZE_OPTIONS = [
+  { value: "200ml", label: "200 مل", volumeLiters: "0.2" },
+  { value: "330ml", label: "330 مل", volumeLiters: "0.33" },
+  { value: "500ml", label: "500 مل", volumeLiters: "0.5" },
+  { value: "1.5l", label: "1.5 لتر", volumeLiters: "1.5" },
+  { value: "5l", label: "5 لتر", volumeLiters: "5" },
+  { value: "carton-12x500ml", label: "كرتون 12 × 500 مل", volumeLiters: "6" },
+  { value: "carton-24x200ml", label: "كرتون 24 × 200 مل", volumeLiters: "4.8" },
+  { value: "tanker-1000l", label: "صهريج 1000 لتر", volumeLiters: "1000" },
+  { value: "tanker-2000l", label: "صهريج 2000 لتر", volumeLiters: "2000" },
+  { value: "custom", label: "حجم مخصص", volumeLiters: "" },
+];
+
+const DELIVERY_OPTIONS = ["خلال 30 دقيقة", "خلال ساعة", "خلال ساعتين", "نفس اليوم", "خلال 24 ساعة"];
+
+const initialEditForm = {
+  name_ar: "",
+  name_en: "",
+  category: "water_bottles",
+  water_type: "مياه شرب",
+  size_option: "500ml",
+  size_label: "500 مل",
+  volume_liters: "0.5",
+  price: "",
+  delivery_estimate: "خلال ساعة",
+  is_available: true,
+  description: "",
+};
+
 export default function AdminProductModerationPage() {
   const [products, setProducts] = useState([]);
   const [activeStatus, setActiveStatus] = useState("all");
@@ -33,6 +71,9 @@ export default function AdminProductModerationPage() {
   const [selectedImageFailed, setSelectedImageFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewingProductId, setReviewingProductId] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [editForm, setEditForm] = useState(initialEditForm);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -110,6 +151,78 @@ export default function AdminProductModerationPage() {
       setErrorMessage(error.message || "تعذر تحديث حالة المنتج.");
     } finally {
       setReviewingProductId(null);
+    }
+  }
+
+  function openEditProduct(product) {
+    setEditingProductId(product.id);
+    setEditForm(formFromProduct(product));
+    setMessage("");
+    setErrorMessage("");
+  }
+
+  function closeEditProduct() {
+    setEditingProductId(null);
+    setEditForm(initialEditForm);
+    setIsSavingEdit(false);
+  }
+
+  function updateEditForm(field, value) {
+    setEditForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateEditSizeOption(value) {
+    const selectedSize = SIZE_OPTIONS.find((option) => option.value === value);
+    setEditForm((current) => ({
+      ...current,
+      size_option: value,
+      size_label: selectedSize && selectedSize.value !== "custom" ? selectedSize.label : "",
+      volume_liters: selectedSize && selectedSize.value !== "custom" ? selectedSize.volumeLiters : "",
+    }));
+  }
+
+  async function saveProductEdits(event) {
+    event.preventDefault();
+    setMessage("");
+    setErrorMessage("");
+
+    const validationError = validateEditForm(editForm);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .update({
+          name_ar: editForm.name_ar.trim(),
+          name_en: editForm.name_en.trim() || null,
+          category: editForm.category,
+          water_type: editForm.water_type,
+          size_label: editForm.size_label.trim(),
+          volume_liters: Number(editForm.volume_liters),
+          price: Number(editForm.price),
+          delivery_estimate: editForm.delivery_estimate,
+          is_available: Boolean(editForm.is_available),
+          description: editForm.description.trim() || null,
+        })
+        .eq("id", editingProductId)
+        .select(productModerationSelect())
+        .single();
+
+      if (error) throw error;
+
+      setProducts((current) => current.map((product) => (product.id === editingProductId ? data : product)));
+      setMessage("تم تحديث بيانات المنتج بدون تغيير حالة المراجعة.");
+      closeEditProduct();
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error("Admin product edit failed:", error);
+      }
+      setErrorMessage("تعذر تحديث بيانات المنتج حاليًا.");
+      setIsSavingEdit(false);
     }
   }
 
@@ -202,6 +315,14 @@ export default function AdminProductModerationPage() {
                       <div className="row-actions wide-actions">
                         <button
                           type="button"
+                          className="ghost"
+                          onClick={() => openEditProduct(product)}
+                          disabled={reviewingProductId === product.id}
+                        >
+                          تعديل
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => reviewProduct(product, "approved")}
                           disabled={reviewingProductId === product.id}
                         >
@@ -281,6 +402,14 @@ export default function AdminProductModerationPage() {
                   )}
                   <button
                     type="button"
+                    className="ghost"
+                    onClick={() => openEditProduct(product)}
+                    disabled={reviewingProductId === product.id}
+                  >
+                    تعديل
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => reviewProduct(product, "approved")}
                     disabled={reviewingProductId === product.id}
                   >
@@ -341,6 +470,27 @@ export default function AdminProductModerationPage() {
           </aside>
         </div>
       ) : null}
+
+      {editingProductId ? (
+        <div className="details-backdrop" role="presentation" onClick={closeEditProduct}>
+          <aside className="details-panel details-panel-wide" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="details-header">
+              <h2>تعديل بيانات المنتج</h2>
+              <button type="button" className="ghost close-button" onClick={closeEditProduct}>
+                إغلاق
+              </button>
+            </div>
+            <ProductEditForm
+              form={editForm}
+              isSaving={isSavingEdit}
+              onChange={updateEditForm}
+              onSizeOptionChange={updateEditSizeOption}
+              onSubmit={saveProductEdits}
+              onCancel={closeEditProduct}
+            />
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -352,9 +502,13 @@ function productModerationSelect() {
     "name_ar",
     "name_en",
     "category",
+    "water_type",
+    "size_label",
+    "volume_liters",
     "price",
     "image_url",
     "description",
+    "delivery_estimate",
     "approval_status",
     "admin_review_notes",
     "reviewed_by",
@@ -364,6 +518,107 @@ function productModerationSelect() {
     "created_at",
     "companies(name, is_active, onboarding_status)",
   ].join(",");
+}
+
+function ProductEditForm({ form, isSaving, onChange, onSizeOptionChange, onSubmit, onCancel }) {
+  const isCustomSize = form.size_option === "custom";
+
+  return (
+    <form className="product-form admin-product-edit-form" onSubmit={onSubmit}>
+      <label>
+        الاسم بالعربي
+        <input value={form.name_ar} onChange={(event) => onChange("name_ar", event.target.value)} required />
+      </label>
+      <label>
+        الاسم بالإنجليزي
+        <input value={form.name_en} onChange={(event) => onChange("name_en", event.target.value)} />
+      </label>
+      <label>
+        التصنيف
+        <select value={form.category} onChange={(event) => onChange("category", event.target.value)}>
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        نوع المياه
+        <select value={form.water_type} onChange={(event) => onChange("water_type", event.target.value)}>
+          {WATER_TYPE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        الحجم/الوحدة
+        <select value={form.size_option} onChange={(event) => onSizeOptionChange(event.target.value)}>
+          {SIZE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        الحجم المعروض
+        <input
+          value={form.size_label}
+          onChange={(event) => onChange("size_label", event.target.value)}
+          readOnly={!isCustomSize}
+          required
+        />
+      </label>
+      <label>
+        الحجم باللتر
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.volume_liters}
+          onChange={(event) => onChange("volume_liters", event.target.value)}
+          readOnly={!isCustomSize}
+          required
+        />
+      </label>
+      <label>
+        السعر
+        <input type="number" min="0.001" step="0.001" value={form.price} onChange={(event) => onChange("price", event.target.value)} required />
+      </label>
+      <label>
+        مدة التوصيل
+        <select value={form.delivery_estimate} onChange={(event) => onChange("delivery_estimate", event.target.value)}>
+          {DELIVERY_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        التوفر
+        <select value={form.is_available ? "available" : "unavailable"} onChange={(event) => onChange("is_available", event.target.value === "available")}>
+          <option value="available">متوفر</option>
+          <option value="unavailable">غير متوفر</option>
+        </select>
+      </label>
+      <label className="product-form-wide">
+        الوصف
+        <textarea value={form.description} onChange={(event) => onChange("description", event.target.value)} rows={4} />
+      </label>
+      <div className="product-form-actions">
+        <button type="submit" className="primary-action" disabled={isSaving}>
+          {isSaving ? "جاري الحفظ..." : "حفظ التعديل"}
+        </button>
+        <button type="button" className="ghost" onClick={onCancel} disabled={isSaving}>
+          إلغاء
+        </button>
+      </div>
+    </form>
+  );
 }
 
 async function fetchProductsForModeration() {
@@ -393,6 +648,61 @@ function normalizeStatus(status) {
 
 function categoryLabel(category) {
   return CATEGORY_LABELS[category] || "تصنيف غير محدد";
+}
+
+function normalizeCategory(category) {
+  const legacyMap = {
+    bottled_water: "water_bottles",
+    cartons: "water_gallons",
+    tanker: "water_tankers",
+    scheduled_delivery: "water_bottles",
+  };
+  const normalized = legacyMap[category] ?? category;
+  return CATEGORY_OPTIONS.some((option) => option.value === normalized) ? normalized : "water_bottles";
+}
+
+function findSizeOption(sizeLabel, volumeLiters) {
+  const volume = volumeLiters === null || volumeLiters === undefined ? "" : String(Number(volumeLiters));
+  const matched = SIZE_OPTIONS.find((option) => {
+    if (option.value === "custom") return false;
+    return option.label === sizeLabel || String(Number(option.volumeLiters)) === volume;
+  });
+  return matched ?? { value: "custom" };
+}
+
+function formFromProduct(product) {
+  const matchedSize = findSizeOption(product.size_label, product.volume_liters);
+
+  return {
+    name_ar: product.name_ar || "",
+    name_en: product.name_en || "",
+    category: normalizeCategory(product.category),
+    water_type: WATER_TYPE_OPTIONS.includes(product.water_type) ? product.water_type : "مياه شرب",
+    size_option: matchedSize.value,
+    size_label: product.size_label || "",
+    volume_liters: product.volume_liters ?? "",
+    price: product.price ?? "",
+    delivery_estimate: DELIVERY_OPTIONS.includes(product.delivery_estimate) ? product.delivery_estimate : "خلال ساعة",
+    is_available: Boolean(product.is_available),
+    description: product.description || "",
+  };
+}
+
+function validateEditForm(form) {
+  if (!form.name_ar.trim()) return "يرجى إدخال اسم المنتج بالعربي.";
+  if (!CATEGORY_OPTIONS.some((option) => option.value === form.category)) return "يرجى اختيار التصنيف من القائمة.";
+  if (!WATER_TYPE_OPTIONS.includes(form.water_type)) return "يرجى اختيار نوع المياه من القائمة.";
+  if (!SIZE_OPTIONS.some((option) => option.value === form.size_option)) return "يرجى اختيار الحجم من القائمة.";
+  if (!form.size_label.trim()) return "يرجى تحديد الحجم/الوحدة.";
+
+  const volume = Number(form.volume_liters);
+  if (!Number.isFinite(volume) || volume <= 0) return "يرجى إدخال حجم صحيح باللتر.";
+
+  const price = Number(form.price);
+  if (!Number.isFinite(price) || price <= 0) return "يرجى إدخال سعر صحيح أكبر من صفر.";
+
+  if (!DELIVERY_OPTIONS.includes(form.delivery_estimate)) return "يرجى اختيار مدة التوصيل من القائمة.";
+  return "";
 }
 
 function formatPrice(value) {

@@ -2253,6 +2253,16 @@ tbody tr:hover td {
   width: 460px;
 }
 
+.details-panel-wide {
+  max-width: min(760px, 100vw);
+  width: 760px;
+}
+
+.admin-product-edit-form {
+  overflow: auto;
+  padding-top: 20px;
+}
+
 .details-header {
   align-items: flex-start;
   border-bottom: 1px solid var(--border);
