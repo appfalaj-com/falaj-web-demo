@@ -1553,6 +1553,47 @@ tbody tr:hover td {
   gap: 12px;
 }
 
+.company-logo-card {
+  gap: 12px;
+}
+
+.company-logo-preview {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 251, 222, 0.72), rgba(144, 209, 202, 0.18));
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  display: flex;
+  height: 112px;
+  justify-content: center;
+  overflow: hidden;
+  width: 112px;
+}
+
+.company-logo-preview img {
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+  width: 100%;
+}
+
+.company-logo-preview span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.company-logo-form {
+  display: grid;
+  gap: 10px;
+}
+
+.company-logo-form input[type="file"] {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
 .company-alert {
   align-items: center;
   background: var(--white);

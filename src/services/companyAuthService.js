@@ -119,13 +119,16 @@ export async function getCurrentProfile(userOrId, email) {
 }
 
 const COMPANY_SESSION_COLUMNS =
-  "id, name, email, phone, is_active, commission_rate, owner_id, onboarding_status, updated_at";
+  "id, name, email, phone, logo_url, is_active, commission_rate, owner_id, onboarding_status, updated_at, created_at";
 const ACTIVE_ONBOARDING_STATUSES = new Set([
   "invitation_sent",
   "pending_setup",
   "company_created",
   "activated",
 ]);
+const COMPANY_LOGO_BUCKET = "company-logos";
+const COMPANY_LOGO_MAX_SIZE_BYTES = 2 * 1024 * 1024;
+const COMPANY_LOGO_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function getCompanyForUser(userOrId) {
   const client = requireSupabase();
@@ -375,4 +378,70 @@ export async function verifyCompanyPhoneOtp(phone, token) {
 export async function signOutCompany() {
   if (!supabase) return;
   await supabase.auth.signOut();
+}
+
+export function validateCompanyLogoFile(file) {
+  if (!file) return "";
+  if (!COMPANY_LOGO_ALLOWED_TYPES.includes(file.type)) {
+    return "يرجى اختيار شعار بصيغة JPG أو PNG أو WebP.";
+  }
+  if (file.size > COMPANY_LOGO_MAX_SIZE_BYTES) {
+    return "حجم الشعار يجب ألا يتجاوز 2MB.";
+  }
+  return "";
+}
+
+export async function updateCompanyLogo(companyId, file) {
+  const client = requireSupabase();
+  const validationError = validateCompanyLogoFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const filePath = `logos/${companyId}/${Date.now()}-${safeFileName(file.name, file.type, "company-logo")}`;
+  const { error: uploadError } = await client.storage
+    .from(COMPANY_LOGO_BUCKET)
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data: publicUrlData } = client.storage.from(COMPANY_LOGO_BUCKET).getPublicUrl(filePath);
+  const logoUrl = publicUrlData.publicUrl;
+
+  const { data, error } = await client
+    .from("companies")
+    .update({ logo_url: logoUrl })
+    .eq("id", companyId)
+    .select(COMPANY_SESSION_COLUMNS)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+function safeFileName(name, mimeType, fallbackName) {
+  const extensionByType = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const extension = extensionByType[mimeType] ?? (name.includes(".") ? name.split(".").pop().toLowerCase() : "jpg");
+  const baseName = name
+    .replace(/\.[^/.]+$/, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9-_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  return `${baseName || fallbackName}.${extension}`;
 }

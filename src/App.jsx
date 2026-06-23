@@ -88,6 +88,13 @@ export default function App() {
     replacePath("/");
   }
 
+  function handleCompanyUpdated(company) {
+    setAuthState((current) => ({
+      ...current,
+      company: company ? { ...current.company, ...company } : current.company,
+    }));
+  }
+
   useEffect(() => {
     function handlePopState() {
       setCurrentPath(window.location.pathname.replace(/\/$/, "") || "/");
@@ -137,7 +144,14 @@ export default function App() {
 
 
   const routes = {
-    "/company": <CompanyDashboard companyId={companyId} company={authState.company} onNavigate={navigate} />,
+    "/company": (
+      <CompanyDashboard
+        companyId={companyId}
+        company={authState.company}
+        onCompanyUpdated={handleCompanyUpdated}
+        onNavigate={navigate}
+      />
+    ),
     "/company/set-password": <CompanySetPasswordPage onSaved={() => replacePath("/company")} />,
     "/company/orders": <CompanyOrdersPage companyId={companyId} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,

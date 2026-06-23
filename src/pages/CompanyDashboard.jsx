@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
+import { updateCompanyLogo, validateCompanyLogoFile } from "../services/companyAuthService.js";
 import { getDriversByCompanyFromSupabase } from "../services/driverService.js";
 import { getOrdersByCompanyFromSupabase } from "../services/orderService.js";
 import { getProductsByCompanyFromSupabase } from "../services/productService.js";
@@ -24,12 +25,17 @@ const ONBOARDING_LABELS = {
 const ACTIVE_ORDER_STATUSES = ["active", "accepted", "assigned", "en_route", "arrived"];
 const DASHBOARD_LOAD_ERROR = "تعذر تحميل ملخص لوحة المورد من قاعدة البيانات. حاول التحديث مرة أخرى.";
 
-export default function CompanyDashboard({ companyId, company, onNavigate }) {
+export default function CompanyDashboard({ companyId, company, onCompanyUpdated, onNavigate }) {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const [logoMessage, setLogoMessage] = useState("");
+  const [logoError, setLogoError] = useState("");
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +80,12 @@ export default function CompanyDashboard({ companyId, company, onNavigate }) {
     };
   }, [companyId]);
 
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    };
+  }, [logoPreviewUrl]);
+
   const productSummary = useMemo(() => summarizeProducts(products), [products]);
   const orderSummary = useMemo(() => summarizeOrders(orders), [orders]);
   const latestProducts = [...products]
@@ -82,6 +94,55 @@ export default function CompanyDashboard({ companyId, company, onNavigate }) {
   const latestOrders = orders.slice(0, 5);
   const isCompanyActive = Boolean(company?.is_active);
   const onboardingStatus = company?.onboarding_status || "pending_setup";
+
+  function handleLogoFileChange(file) {
+    setLogoMessage("");
+    setLogoError("");
+
+    if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+
+    if (!file) {
+      setLogoFile(null);
+      setLogoPreviewUrl("");
+      return;
+    }
+
+    const validationError = validateCompanyLogoFile(file);
+    if (validationError) {
+      setLogoFile(null);
+      setLogoPreviewUrl("");
+      setLogoError(validationError);
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreviewUrl(URL.createObjectURL(file));
+  }
+
+  async function handleLogoUpload(event) {
+    event.preventDefault();
+    setLogoMessage("");
+    setLogoError("");
+
+    if (!logoFile) {
+      setLogoError("اختر شعار الشركة أولًا.");
+      return;
+    }
+
+    try {
+      setIsUploadingLogo(true);
+      const updatedCompany = await updateCompanyLogo(companyId, logoFile);
+      onCompanyUpdated?.(updatedCompany);
+      setLogoFile(null);
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+      setLogoPreviewUrl("");
+      setLogoMessage("تم تحديث شعار الشركة بنجاح.");
+    } catch (error) {
+      setLogoError("تعذر رفع شعار الشركة. تأكد من نوع الصورة وحاول مرة أخرى.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -120,6 +181,30 @@ export default function CompanyDashboard({ companyId, company, onNavigate }) {
               <dd>{formatDate(company?.created_at)}</dd>
             </div>
           </dl>
+        </article>
+
+        <article className="driver-card company-logo-card">
+          <h2>شعار الشركة</h2>
+          <p>يظهر هذا الشعار للعملاء في تطبيق فلج عند عرض المورد ومنتجاته.</p>
+          <div className="company-logo-preview">
+            {logoPreviewUrl || company?.logo_url ? (
+              <img src={logoPreviewUrl || company.logo_url} alt="شعار الشركة" />
+            ) : (
+              <span>لا يوجد شعار</span>
+            )}
+          </div>
+          <form className="company-logo-form" onSubmit={handleLogoUpload}>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => handleLogoFileChange(event.target.files?.[0] ?? null)}
+            />
+            <button type="submit" disabled={!logoFile || isUploadingLogo}>
+              {isUploadingLogo ? "جاري الرفع..." : "حفظ الشعار"}
+            </button>
+          </form>
+          {logoMessage ? <p className="auth-alert success">{logoMessage}</p> : null}
+          {logoError ? <p className="auth-alert error">{logoError}</p> : null}
         </article>
 
         <article className="driver-card company-quick-links">
