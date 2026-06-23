@@ -1957,6 +1957,14 @@ tbody tr:hover td {
   place-items: center;
 }
 
+.product-image-placeholder-large {
+  background: rgba(144, 209, 202, 0.14);
+  border: 1px dashed rgba(9, 107, 104, 0.28);
+  border-radius: 8px;
+  color: var(--falaj-deep);
+  min-height: 260px;
+}
+
 .product-body {
   display: grid;
   gap: 14px;

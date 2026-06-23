@@ -447,14 +447,20 @@ function ProductForm({ form, isSaving, isEditing, onChange, onCancel, onSubmit }
 function ProductCard({ product, isUpdating, onEdit, onToggleAvailability, onToggleVisibility }) {
   const canToggleVisibility = product.approvalStatus === "approved";
   const rejectionNotes = product.adminReviewNotes || product.admin_review_notes;
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <article className="product-card" key={product.id}>
       <div className="product-image-wrap">
-        {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.nameAr || "منتج فلج"} className="product-image" />
+        {product.imageUrl && !imageFailed ? (
+          <img
+            src={product.imageUrl}
+            alt={product.nameAr || "منتج فلج"}
+            className="product-image"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
-          <div className="product-image-placeholder">فلج</div>
+          <div className="product-image-placeholder">لا توجد صورة</div>
         )}
       </div>
 

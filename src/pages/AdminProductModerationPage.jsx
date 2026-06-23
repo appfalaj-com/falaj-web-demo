@@ -20,6 +20,7 @@ export default function AdminProductModerationPage() {
   const [products, setProducts] = useState([]);
   const [activeStatus, setActiveStatus] = useState("all");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageFailed, setSelectedImageFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewingProductId, setReviewingProductId] = useState(null);
   const [message, setMessage] = useState("");
@@ -161,11 +162,18 @@ export default function AdminProductModerationPage() {
                     <td>{formatPrice(product.price)}</td>
                     <td>
                       {product.image_url ? (
-                        <button type="button" className="ghost" onClick={() => setSelectedImage(product.image_url)}>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => {
+                            setSelectedImage(product.image_url);
+                            setSelectedImageFailed(false);
+                          }}
+                        >
                           عرض الصورة
                         </button>
                       ) : (
-                        "-"
+                        <span className="muted-text">لا توجد صورة</span>
                       )}
                     </td>
                     <td>{product.description || "-"}</td>
@@ -217,11 +225,29 @@ export default function AdminProductModerationPage() {
           <aside className="details-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="details-header">
               <h2>صورة المنتج</h2>
-              <button type="button" className="ghost close-button" onClick={() => setSelectedImage(null)}>
+              <button
+                type="button"
+                className="ghost close-button"
+                onClick={() => {
+                  setSelectedImage(null);
+                  setSelectedImageFailed(false);
+                }}
+              >
                 إغلاق
               </button>
             </div>
-            <img src={selectedImage} alt="صورة المنتج" className="product-image" />
+            {selectedImageFailed ? (
+              <div className="product-image-placeholder product-image-placeholder-large">
+                لا توجد صورة لهذا المنتج
+              </div>
+            ) : (
+              <img
+                src={selectedImage}
+                alt="صورة المنتج"
+                className="product-image"
+                onError={() => setSelectedImageFailed(true)}
+              />
+            )}
           </aside>
         </div>
       ) : null}
