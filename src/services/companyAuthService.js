@@ -279,6 +279,17 @@ export async function sendCompanyEmailMagicLink(email) {
   }
 }
 
+export async function sendCompanyPasswordReset(email) {
+  const client = requireSupabase();
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/company/set-password`,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function signInAdminWithEmail(email, password) {
   const client = requireSupabase();
   const { data, error } = await client.auth.signInWithPassword({ email, password });

@@ -365,6 +365,28 @@ html[dir="ltr"] input[inputmode="numeric"] {
   opacity: 0.7;
 }
 
+.auth-text-button {
+  background: transparent;
+  border: 0;
+  color: var(--primary);
+  justify-self: center;
+  min-height: auto;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.auth-text-button:hover {
+  background: rgba(18, 153, 144, 0.08);
+  color: var(--dark);
+}
+
+.password-reset-form {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
 .auth-alert {
   border-radius: 8px;
   font-weight: 800;
