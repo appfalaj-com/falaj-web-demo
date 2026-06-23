@@ -1,7 +1,4 @@
-import { isCashUncollected } from "../data/mockData.js";
 import { getActiveOrders, getCompletedOrders, getNewOrders, getOrdersByCompany } from "./orderService.js";
-
-export const MOCK_COMPANY_ID = "company-1";
 
 export function getDashboardMetrics(orders) {
   const newOrders = getNewOrders(orders);
@@ -23,4 +20,8 @@ export function getDashboardMetrics(orders) {
 
 export function getCompanyOrders(companyId, orders) {
   return getOrdersByCompany(companyId, orders);
+}
+
+function isCashUncollected(order) {
+  return order.paymentMethod === "cash" && order.paymentStatus !== "paid";
 }

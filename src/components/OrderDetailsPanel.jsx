@@ -1,5 +1,3 @@
-import { getDriverName } from "../data/mockData.js";
-
 export default function OrderDetailsPanel({
   order,
   drivers,
@@ -95,4 +93,9 @@ function paymentLabel(paymentStatus) {
 function cashCollectedLabel(order) {
   if (order.paymentMethod !== "cash") return "لا ينطبق";
   return order.cashCollectedByDriver ? "نعم" : "لا";
+}
+
+function getDriverName(driverId, drivers = []) {
+  if (!driverId) return "لم يعين";
+  return drivers.find((driver) => driver.id === driverId)?.name ?? "غير معروف";
 }

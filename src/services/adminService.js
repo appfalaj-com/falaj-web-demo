@@ -1,4 +1,3 @@
-import { isCashUncollected } from "../data/mockData.js";
 import { formatMoney } from "./adminFinanceService.js";
 
 export function getAdminMetrics(orders) {
@@ -8,6 +7,10 @@ export function getAdminMetrics(orders) {
     unpaidOrders: orders.filter((order) => order.paymentStatus === "unpaid").length,
     uncollectedCash: orders.filter(isCashUncollected).reduce((sum, order) => sum + order.amount, 0),
   };
+}
+
+function isCashUncollected(order) {
+  return order.paymentMethod === "cash" && order.paymentStatus !== "paid";
 }
 
 export function getAdminDashboardMetrics(orders, suppliers, finance) {

@@ -1,9 +1,4 @@
-import { mockProducts } from "../data/mockData.js";
 import { supabase } from "../lib/supabaseClient.js";
-
-const SUPABASE_COMPANY_ID_BY_MOCK_ID = {
-  "company-1": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-};
 
 function normalizeSupabaseProduct(product) {
   return {
@@ -30,14 +25,14 @@ function normalizeSupabaseProduct(product) {
   };
 }
 
-export function getProductsByCompany(companyId, products = mockProducts) {
+export function getProductsByCompany(companyId, products = []) {
   if (!companyId) return products;
   return products
     .filter((product) => product.companyId === companyId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
-export function getAvailableProductsByCompany(companyId, products = mockProducts) {
+export function getAvailableProductsByCompany(companyId, products = []) {
   return getProductsByCompany(companyId, products).filter((product) => product.isAvailable);
 }
 
@@ -46,7 +41,6 @@ export async function getProductsByCompanyFromSupabase(companyId) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .select(
@@ -73,7 +67,7 @@ export async function getProductsByCompanyFromSupabase(companyId) {
         "updated_at",
       ].join(",")
     )
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -88,11 +82,10 @@ export async function createCompanyProductForReview(companyId, product) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .insert({
-      company_id: supabaseCompanyId,
+      company_id: companyId,
       name_ar: product.nameAr,
       name_en: product.nameEn || null,
       category: product.category,
@@ -147,7 +140,6 @@ export async function updateCompanyProductForReview(companyId, productId, produc
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .update({
@@ -168,7 +160,7 @@ export async function updateCompanyProductForReview(companyId, productId, produc
       reviewed_at: null,
     })
     .eq("id", productId)
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .select(productSelectColumns())
     .single();
 
@@ -184,12 +176,11 @@ export async function updateCompanyProductAvailability(companyId, productId, isA
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .update({ is_available: Boolean(isAvailable) })
     .eq("id", productId)
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .select(productSelectColumns())
     .single();
 
@@ -205,12 +196,11 @@ export async function updateApprovedCompanyProductVisibility(companyId, productI
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .update({ is_visible: Boolean(isVisible) })
     .eq("id", productId)
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .eq("approval_status", "approved")
     .select(productSelectColumns())
     .single();
@@ -222,7 +212,7 @@ export async function updateApprovedCompanyProductVisibility(companyId, productI
   return normalizeSupabaseProduct(data);
 }
 
-export function getProductCatalogForCustomer(companyId, products = mockProducts) {
+export function getProductCatalogForCustomer(companyId, products = []) {
   return getAvailableProductsByCompany(companyId, products).map((product) => ({
     id: product.id,
     companyId: product.companyId,
@@ -245,7 +235,6 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("products")
     .select(
@@ -273,7 +262,7 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
         "companies!inner(is_active, onboarding_status)",
       ].join(",")
     )
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .eq("approval_status", "approved")
     .eq("is_visible", true)
     .eq("is_available", true)
@@ -288,7 +277,7 @@ export async function getApprovedVisibleProductsForCustomer(companyId) {
   return (data ?? []).map(normalizeSupabaseProduct);
 }
 
-export function getProductMetrics(companyId, products = mockProducts) {
+export function getProductMetrics(companyId, products = []) {
   const companyProducts = getProductsByCompany(companyId, products);
   const availableProducts = companyProducts.filter((product) => product.isAvailable);
   const unavailableProducts = companyProducts.filter((product) => !product.isAvailable);

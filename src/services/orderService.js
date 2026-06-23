@@ -1,13 +1,4 @@
-import { mockOrders } from "../data/mockData.js";
 import { supabase } from "../lib/supabaseClient.js";
-
-const SUPABASE_COMPANY_ID_BY_MOCK_ID = {
-  "company-1": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-};
-
-const SUPABASE_DRIVER_ID_BY_MOCK_ID = {
-  "cccccccc-cccc-4ccc-8ccc-cccccccccccc": "driver-1",
-};
 
 function normalizeSupabaseOrder(order) {
   return {
@@ -31,7 +22,7 @@ function normalizeSupabaseOrder(order) {
     paymentStatus: order.payment_status,
     cashCollectedByDriver: order.cash_collected_by_driver,
     amount: Number(order.price) || 0,
-    driverId: SUPABASE_DRIVER_ID_BY_MOCK_ID[order.driver_id] ?? order.driver_id ?? null,
+    driverId: order.driver_id ?? null,
     time: order.created_at
       ? new Date(order.created_at).toLocaleTimeString("ar-OM", {
           hour: "2-digit",
@@ -63,11 +54,11 @@ function normalizeOrderStatusHistory(row) {
   };
 }
 
-export function getOrders(orders = mockOrders) {
+export function getOrders(orders = []) {
   return orders;
 }
 
-export function getOrdersByCompany(companyId, orders = mockOrders) {
+export function getOrdersByCompany(companyId, orders = []) {
   if (!companyId) return orders;
   return orders.filter((order) => order.companyId === companyId || !order.companyId);
 }
@@ -77,11 +68,10 @@ export async function getOrdersByCompanyFromSupabase(companyId) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("orders")
     .select(orderSelectColumns())
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -131,7 +121,6 @@ export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nex
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const patch = { status: nextStatus };
   const timestampField = timestampFieldByStatus(nextStatus);
   if (timestampField) patch[timestampField] = new Date().toISOString();
@@ -140,7 +129,7 @@ export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nex
     .from("orders")
     .update(patch)
     .eq("id", orderId)
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .select(orderSelectColumns())
     .single();
 
@@ -223,21 +212,21 @@ export async function getOrderStatusHistoryFromSupabase(orderId) {
   return (data ?? []).map(normalizeOrderStatusHistory);
 }
 
-export function getOrdersByDriver(driverId, orders = mockOrders) {
+export function getOrdersByDriver(driverId, orders = []) {
   return orders.filter((order) => order.driverId === driverId && order.status !== "rejected");
 }
 
-export function getNewOrders(orders = mockOrders) {
+export function getNewOrders(orders = []) {
   return orders.filter((order) => order.status === "pending");
 }
 
-export function getActiveOrders(orders = mockOrders) {
+export function getActiveOrders(orders = []) {
   return orders.filter((order) =>
     ["active", "accepted", "assigned", "en_route", "arrived"].includes(order.status)
   );
 }
 
-export function getCompletedOrders(orders = mockOrders) {
+export function getCompletedOrders(orders = []) {
   return orders.filter((order) => ["completed", "delivered"].includes(order.status));
 }
 

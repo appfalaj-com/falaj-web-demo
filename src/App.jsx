@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "./components/Layout.jsx";
-import OrderDetailsPanel from "./components/OrderDetailsPanel.jsx";
-import { mockDrivers, mockOrders } from "./data/mockData.js";
 import AccessDeniedPage from "./pages/AccessDeniedPage.jsx";
 import AdminFinancePage from "./pages/AdminFinancePage.jsx";
 import AdminLiveTrackingPage from "./pages/AdminLiveTrackingPage.jsx";
@@ -26,8 +24,6 @@ import LandingPage from "./pages/LandingPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import SupplierJoinPage from "./pages/SupplierJoinPage.jsx";
 import { getAuthContext, signOutCompany } from "./services/companyAuthService.js";
-import { getDrivers } from "./services/driverService.js";
-import { getOrders } from "./services/orderService.js";
 
 const PROTECTED_COMPANY_PATHS = new Set([
   "/company",
@@ -56,9 +52,6 @@ function isPendingCompany(company) {
 }
 
 export default function App() {
-  const [orders, setOrders] = useState(() => getOrders(mockOrders));
-  const drivers = getDrivers(mockDrivers);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [authState, setAuthState] = useState({
     status: "loading",
     user: null,
@@ -72,52 +65,16 @@ export default function App() {
   );
   const companyId = authState.company?.id ?? null;
 
-  const selectedOrder = useMemo(
-    () => orders.find((order) => order.id === selectedOrderId) ?? null,
-    [orders, selectedOrderId]
-  );
 
-  function updateOrder(orderId, patch) {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) => (order.id === orderId ? { ...order, ...patch } : order))
-    );
-  }
-
-  function acceptOrder(orderId) {
-    updateOrder(orderId, { status: "accepted" });
-  }
-
-  function rejectOrder(orderId) {
-    updateOrder(orderId, { status: "rejected", driverId: null });
-  }
-
-  function assignDriver(orderId) {
-    const driver = drivers.find((item) => item.status !== "غير متصل") ?? drivers[0];
-    updateOrder(orderId, { status: "assigned", driverId: driver.id });
-  }
-
-  function setDriverOrderStatus(orderId, nextStatus) {
-    updateOrder(orderId, { status: nextStatus });
-  }
-
-  function markOrderPaid(orderId) {
-    updateOrder(orderId, {
-      paymentStatus: "paid",
-      payment: "تم استلام الكاش",
-      cashCollectedByDriver: true,
-    });
-  }
 
   function navigate(path) {
     window.history.pushState({}, "", path);
     setCurrentPath(path);
-    setSelectedOrderId(null);
   }
 
   function replacePath(path) {
     window.history.replaceState({}, "", path);
     setCurrentPath(path);
-    setSelectedOrderId(null);
   }
 
   function handleAuthenticated(nextAuthState) {
@@ -134,7 +91,6 @@ export default function App() {
   useEffect(() => {
     function handlePopState() {
       setCurrentPath(window.location.pathname.replace(/\/$/, "") || "/");
-      setSelectedOrderId(null);
     }
 
     window.addEventListener("popstate", handlePopState);
@@ -179,22 +135,13 @@ export default function App() {
     };
   }, []);
 
-  const workflow = {
-    orders,
-    drivers,
-    companyId,
-    onSelectOrder: setSelectedOrderId,
-    onAcceptOrder: acceptOrder,
-    onRejectOrder: rejectOrder,
-    onAssignDriver: assignDriver,
-  };
 
   const routes = {
     "/company": <CompanyDashboard companyId={companyId} company={authState.company} onNavigate={navigate} />,
     "/company/set-password": <CompanySetPasswordPage onSaved={() => replacePath("/company")} />,
-    "/company/orders": <CompanyOrdersPage {...workflow} />,
+    "/company/orders": <CompanyOrdersPage companyId={companyId} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,
-    "/company/drivers": <CompanyDriversPage companyId={companyId} drivers={drivers} />,
+    "/company/drivers": <CompanyDriversPage companyId={companyId} />,
     "/company/drivers/live": <CompanyDriversLivePage companyId={companyId} />,
     "/admin": <AdminPage onNavigate={navigate} />,
     "/admin/orders": <AdminOrdersPage />,
@@ -367,14 +314,6 @@ export default function App() {
       onSignOut={authState.status === "authenticated" ? handleSignOut : null}
     >
       {routes[currentPath]}
-      <OrderDetailsPanel
-        order={selectedOrder}
-        drivers={drivers}
-        onClose={() => setSelectedOrderId(null)}
-        onAccept={acceptOrder}
-        onReject={rejectOrder}
-        onAssign={assignDriver}
-      />
     </Layout>
   );
 }

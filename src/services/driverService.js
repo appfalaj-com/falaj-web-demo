@@ -1,21 +1,14 @@
-import { mockDrivers } from "../data/mockData.js";
 import { supabase } from "../lib/supabaseClient.js";
 import { getOrdersByDriver } from "./orderService.js";
-
-export const MOCK_DRIVER_ID = "driver-1";
-
-const SUPABASE_COMPANY_ID_BY_MOCK_ID = {
-  "company-1": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-};
 
 const ACTIVE_DRIVER_STATUSES = ["assigned", "en_route", "arrived"];
 const DONE_DRIVER_STATUSES = ["delivered", "failed"];
 
-export function getDrivers(drivers = mockDrivers) {
+export function getDrivers(drivers = []) {
   return drivers;
 }
 
-export function getDriversByCompany(companyId, drivers = mockDrivers) {
+export function getDriversByCompany(companyId, drivers = []) {
   if (!companyId) return getDrivers(drivers);
   return getDrivers(drivers).filter((driver) => driver.companyId === companyId || !driver.companyId);
 }
@@ -77,11 +70,10 @@ export async function getDriversByCompanyFromSupabase(companyId) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("drivers")
     .select(driverSelectColumns())
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -96,11 +88,10 @@ export async function createCompanyDriverInSupabase(companyId, driver) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("drivers")
     .insert({
-      company_id: supabaseCompanyId,
+      company_id: companyId,
       name: driver.name,
       phone: driver.phone || null,
       email: driver.email || null,
@@ -122,7 +113,6 @@ export async function updateCompanyDriverInSupabase(companyId, driverId, driver)
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data, error } = await supabase
     .from("drivers")
     .update({
@@ -132,7 +122,7 @@ export async function updateCompanyDriverInSupabase(companyId, driverId, driver)
       is_active: Boolean(driver.isActive),
     })
     .eq("id", driverId)
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .select(driverSelectColumns())
     .single();
 
@@ -148,11 +138,10 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
     throw new Error("Supabase client is not configured.");
   }
 
-  const supabaseCompanyId = SUPABASE_COMPANY_ID_BY_MOCK_ID[companyId] ?? companyId;
   const { data: drivers, error: driversError } = await supabase
     .from("drivers")
     .select(driverSelectColumns())
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   if (driversError) {
@@ -166,7 +155,7 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
   const { data: locations, error: locationsError } = await supabase
     .from("driver_locations")
     .select("id, driver_id, company_id, latitude, longitude, accuracy, recorded_at, source")
-    .eq("company_id", supabaseCompanyId)
+    .eq("company_id", companyId)
     .in("driver_id", driverIds)
     .order("recorded_at", { ascending: false });
 
@@ -240,11 +229,11 @@ export async function sendDriverInviteFromSupabase(driverId) {
   return data;
 }
 
-export function getDriverById(driverId, drivers = mockDrivers) {
+export function getDriverById(driverId, drivers = []) {
   return drivers.find((driver) => driver.id === driverId) ?? null;
 }
 
-export function getDriverWorkflow(driverId, orders, drivers = mockDrivers) {
+export function getDriverWorkflow(driverId, orders, drivers = []) {
   const driver = getDriverById(driverId, drivers);
   const driverOrders = getOrdersByDriver(driverId, orders);
   const activeOrders = driverOrders.filter((order) => ACTIVE_DRIVER_STATUSES.includes(order.status));

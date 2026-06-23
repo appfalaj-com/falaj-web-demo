@@ -1,5 +1,3 @@
-import { getDriverName } from "../data/mockData.js";
-
 export default function OrderTable({
   orders,
   drivers,
@@ -163,4 +161,9 @@ function paymentMethodLabel(paymentMethod) {
 
 function paymentStatusLabel(paymentStatus) {
   return paymentStatus === "paid" ? "paid" : "unpaid";
+}
+
+function getDriverName(driverId, drivers = []) {
+  if (!driverId) return "لم يعين";
+  return drivers.find((driver) => driver.id === driverId)?.name ?? "غير معروف";
 }
