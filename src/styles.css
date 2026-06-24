@@ -1887,7 +1887,221 @@ tbody tr:hover td {
 }
 
 .driver-page {
-  max-width: 560px;
+  max-width: 980px;
+}
+
+.driver-hero {
+  align-items: flex-start;
+}
+
+.driver-ops-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.driver-summary-tile,
+.driver-tracking-panel,
+.driver-active-order,
+.driver-active-empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.driver-summary-tile {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.driver-summary-tile span,
+.driver-card-metrics span,
+.driver-payment-panel span,
+.driver-address-block span,
+.driver-customer-actions span,
+.driver-issue-actions span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.driver-summary-tile strong {
+  color: var(--text);
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.driver-summary-tile small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.driver-tracking-panel,
+.driver-active-order,
+.driver-active-empty {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.driver-tracking-panel {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.driver-tracking-panel h2,
+.driver-active-empty h2,
+.driver-active-order h2 {
+  margin: 0;
+}
+
+.driver-tracking-panel p,
+.driver-active-empty p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.driver-tracking-panel dl {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.driver-tracking-panel dt,
+.driver-tracking-panel dd {
+  margin: 0;
+}
+
+.driver-active-head,
+.driver-customer-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.driver-customer-actions {
+  background: rgba(18, 153, 144, 0.08);
+  border: 1px solid rgba(18, 153, 144, 0.18);
+  border-radius: 8px;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+
+.driver-customer-actions div {
+  display: grid;
+  gap: 4px;
+  margin-inline-end: auto;
+}
+
+.driver-customer-actions small {
+  color: var(--muted);
+}
+
+.driver-action-link,
+.driver-map-link {
+  align-items: center;
+  background: var(--dark);
+  border-radius: 8px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 900;
+  min-height: 40px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.driver-map-link {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dark);
+  justify-content: center;
+  margin-top: 10px;
+  width: fit-content;
+}
+
+.driver-address-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.driver-address-block p {
+  color: var(--text);
+  margin: 0;
+}
+
+.driver-card-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.driver-card-metrics div {
+  background: rgba(90, 119, 116, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.driver-card-metrics strong {
+  overflow-wrap: anywhere;
+}
+
+.driver-payment-panel {
+  background: rgba(90, 119, 116, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.driver-payment-panel.cash-due {
+  background: rgba(18, 153, 144, 0.12);
+  border-color: rgba(18, 153, 144, 0.3);
+}
+
+.driver-payment-panel strong {
+  font-size: 20px;
+}
+
+.driver-payment-panel p,
+.driver-payment-panel small {
+  color: var(--muted);
+  margin: 0;
+}
+
+.driver-workflow-actions,
+.driver-issue-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.driver-workflow-actions .cash {
+  background: var(--dark);
+}
+
+.driver-issue-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.driver-issue-actions span {
+  align-self: center;
 }
 
 .driver-section {
@@ -1895,8 +2109,18 @@ tbody tr:hover td {
   gap: 12px;
 }
 
+.driver-section header {
+  display: grid;
+  gap: 4px;
+}
+
 .driver-section h2 {
   font-size: 18px;
+  margin: 0;
+}
+
+.driver-section p {
+  color: var(--muted);
   margin: 0;
 }
 
@@ -1940,6 +2164,10 @@ tbody tr:hover td {
   gap: 8px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 12px;
+}
+
+.driver-actions.single {
+  grid-template-columns: 1fr;
 }
 
 .driver-actions .cash {
@@ -2704,8 +2932,25 @@ tbody tr:hover td {
   .cards-grid,
   .admin-metrics-grid,
   .supplier-detail-grid,
+  .driver-ops-summary,
+  .driver-card-metrics,
+  .driver-tracking-panel,
+  .driver-workflow-actions,
+  .driver-issue-actions,
   .driver-actions {
     grid-template-columns: 1fr;
+  }
+
+  .driver-customer-actions,
+  .driver-active-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .driver-action-link,
+  .driver-map-link {
+    justify-content: center;
+    width: 100%;
   }
 
   .admin-supplier-requests-card {

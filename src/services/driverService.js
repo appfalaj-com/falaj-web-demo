@@ -41,6 +41,9 @@ export async function getCurrentDriverFromSupabase() {
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) {
+    if (userError.name === "AuthSessionMissingError" || userError.message?.toLowerCase().includes("auth session missing")) {
+      return { user: null, driver: null };
+    }
     throw userError;
   }
 
