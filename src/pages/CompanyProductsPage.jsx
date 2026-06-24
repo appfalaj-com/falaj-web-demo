@@ -58,7 +58,7 @@ const LEGACY_WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية"];
 
 const SELLING_UNIT_OPTIONS = [
   { value: "unit", label: "عبوة", priceLabel: "للعبوة" },
-  { value: "pack", label: "باك", priceLabel: "للباك" },
+  { value: "pack", label: "حزمة", priceLabel: "للحزمة" },
   { value: "carton", label: "كرتون", priceLabel: "للكرتون" },
   { value: "gallon", label: "عبوة كبيرة", priceLabel: "للعبوة الكبيرة" },
   { value: "tanker", label: "صهريج", priceLabel: "للصهريج" },
