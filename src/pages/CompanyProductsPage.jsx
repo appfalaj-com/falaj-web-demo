@@ -48,7 +48,7 @@ const SELLING_UNIT_OPTIONS = [
   { value: "unit", label: "عبوة", priceLabel: "للعبوة" },
   { value: "pack", label: "باك", priceLabel: "للباك" },
   { value: "carton", label: "كرتون", priceLabel: "للكرتون" },
-  { value: "gallon", label: "جالون", priceLabel: "للجالون" },
+  { value: "gallon", label: "عبوة كبيرة", priceLabel: "للعبوة الكبيرة" },
   { value: "tanker", label: "صهريج", priceLabel: "للصهريج" },
 ];
 
