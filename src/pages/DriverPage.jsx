@@ -5,6 +5,8 @@ import {
   saveDriverLocationInSupabase,
 } from "../services/driverService.js";
 import {
+  claimDriverOrderInSupabase,
+  getAvailableOrdersForDriverFromSupabase,
   getOrdersByDriverFromSupabase,
   markDriverCashCollectedInSupabase,
   updateDriverOrderStatusInSupabase,
@@ -25,6 +27,7 @@ const DRIVER_NEXT_ACTIONS = {
 export default function DriverPage({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [driver, setDriver] = useState(null);
+  const [availableOrders, setAvailableOrders] = useState([]);
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -60,6 +63,7 @@ export default function DriverPage({ onNavigate }) {
 
       if (!linkedDriver) {
         setDriver(null);
+        setAvailableOrders([]);
         setOrders([]);
         setError("حسابك غير مربوط بسائق. تواصل مع الشركة.");
         return;
@@ -68,12 +72,17 @@ export default function DriverPage({ onNavigate }) {
       setDriver(linkedDriver);
 
       if (!linkedDriver.isActive) {
+        setAvailableOrders([]);
         setOrders([]);
         setError("حساب السائق موقوف حاليًا.");
         return;
       }
 
-      const assignedOrders = await getOrdersByDriverFromSupabase(linkedDriver.id);
+      const [driverAvailableOrders, assignedOrders] = await Promise.all([
+        getAvailableOrdersForDriverFromSupabase(),
+        getOrdersByDriverFromSupabase(linkedDriver.id),
+      ]);
+      setAvailableOrders(driverAvailableOrders);
       setOrders(assignedOrders);
     } catch {
       setError("تعذر تحميل بيانات السائق.");
@@ -147,6 +156,31 @@ export default function DriverPage({ onNavigate }) {
       setMessage("تم تحديث حالة الطلب.");
     } catch {
       setError("تعذر تحديث حالة الطلب.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  async function handleClaimOrder(order) {
+    setUpdatingOrderId(order.rawId);
+    setError("");
+    setMessage("");
+
+    try {
+      const claimedOrder = await claimDriverOrderInSupabase(driver.id, order.rawId);
+      setAvailableOrders((currentOrders) => currentOrders.filter((item) => item.rawId !== order.rawId));
+      if (claimedOrder) {
+        setOrders((currentOrders) => [
+          claimedOrder,
+          ...currentOrders.filter((item) => item.rawId !== claimedOrder.rawId),
+        ]);
+      } else {
+        const assignedOrders = await getOrdersByDriverFromSupabase(driver.id);
+        setOrders(assignedOrders);
+      }
+      setMessage("تم قبول الطلب وإسناده لك.");
+    } catch {
+      setError("تعذر قبول الطلب. قد يكون تم إسناده لسائق آخر.");
     } finally {
       setUpdatingOrderId(null);
     }
@@ -268,6 +302,23 @@ export default function DriverPage({ onNavigate }) {
             </section>
           )}
 
+          <DriverSection title="طلبات متاحة للاستلام">
+            {availableOrders.length > 0 ? (
+              availableOrders.map((order) => (
+                <DriverOrderCard
+                  key={order.rawId}
+                  order={order}
+                  isActive={false}
+                  isUpdating={updatingOrderId === order.rawId}
+                  isClaimable
+                  onClaim={handleClaimOrder}
+                />
+              ))
+            ) : (
+              <EmptyDriverCard text="لا توجد طلبات متاحة للاستلام حاليًا." />
+            )}
+          </DriverSection>
+
           <DriverSection title="الطلبات المسندة">
             {orders.length > 0 ? (
               orders.map((order) => (
@@ -299,9 +350,10 @@ function DriverSection({ title, children }) {
   );
 }
 
-function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus, onCashCollected }) {
+function DriverOrderCard({ order, isActive, isUpdating, isClaimable = false, onClaim, onUpdateStatus, onCashCollected }) {
   const actions = DRIVER_NEXT_ACTIONS[order.status] ?? [];
   const canCollectCash =
+    !isClaimable &&
     order.paymentMethod === "cash" &&
     !order.cashCollectedByDriver &&
     !["failed", "cancelled", "rejected"].includes(order.status);
@@ -348,7 +400,15 @@ function DriverOrderCard({ order, isActive, isUpdating, onUpdateStatus, onCashCo
         </div>
       ) : null}
 
-      {actions.length > 0 && (
+      {isClaimable ? (
+        <div className="driver-actions">
+          <button type="button" disabled={isUpdating} onClick={() => onClaim?.(order)}>
+            {isUpdating ? "جاري قبول الطلب..." : "قبول الطلب"}
+          </button>
+        </div>
+      ) : null}
+
+      {!isClaimable && actions.length > 0 && (
         <div className="driver-actions">
           {actions.map((action) => (
             <button

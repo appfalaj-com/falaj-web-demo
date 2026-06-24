@@ -3,13 +3,16 @@ import { supabase } from "../lib/supabaseClient.js";
 function normalizeSupabaseOrder(order) {
   const assignedDriver = order.assigned_driver ?? order.drivers ?? null;
   const cashCollectorDriver = order.cash_collector_driver ?? null;
+  const orderItems = Array.isArray(order.items)
+    ? order.items.map((item) => (item?.product_name_snapshot ? normalizeOrderItem(item) : item))
+    : [];
 
   return {
     id: order.public_code || order.id,
     rawId: order.id,
     publicCode: order.public_code,
     companyId: order.company_id,
-    companyName: order.companies?.name,
+    companyName: order.companies?.name ?? order.company_name,
     customer: order.customer_name_snapshot,
     phone: order.customer_phone_snapshot,
     area: order.delivery_area,
@@ -30,7 +33,7 @@ function normalizeSupabaseOrder(order) {
     driverId: order.driver_id ?? null,
     driverName: assignedDriver?.name ?? null,
     cashCollectorDriverName: cashCollectorDriver?.name ?? null,
-    items: order.items ?? [],
+    items: orderItems,
     time: order.created_at
       ? new Date(order.created_at).toLocaleTimeString("ar-OM", {
           hour: "2-digit",
@@ -136,6 +139,37 @@ export async function getOrdersByDriverFromSupabase(driverId) {
   }
 
   return attachOrderItems((data ?? []).map(normalizeSupabaseOrder));
+}
+
+export async function getAvailableOrdersForDriverFromSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data, error } = await supabase.rpc("get_driver_available_orders");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(normalizeSupabaseOrder);
+}
+
+export async function claimDriverOrderInSupabase(driverId, orderId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { error } = await supabase.rpc("driver_claim_order", {
+    p_order_id: orderId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const assignedOrders = await getOrdersByDriverFromSupabase(driverId);
+  return assignedOrders.find((order) => order.rawId === orderId) ?? null;
 }
 
 export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nextStatus) {
