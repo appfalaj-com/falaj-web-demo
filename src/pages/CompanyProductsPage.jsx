@@ -14,7 +14,7 @@ const initialProductForm = {
   nameAr: "",
   nameEn: "",
   category: "water_bottles",
-  waterType: "مياه شرب",
+  waterType: "مياه شرب / مياه معبأة",
   sizeOption: "500ml",
   sizeLabel: "500 مل",
   volumeLiters: "0.5",
@@ -42,7 +42,19 @@ const CATEGORY_OPTIONS = [
   { value: "water_tankers", label: "صهاريج مياه" },
 ];
 
-const WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية", "مياه معدنية", "مياه فوارة"];
+const WATER_TYPE_OPTIONS = [
+  "مياه شرب / مياه معبأة",
+  "مياه منقاة",
+  "مياه محلاة",
+  "مياه جوفية",
+  "مياه نبع / عين",
+  "مياه معدنية",
+  "مياه فوارة",
+  "مياه قلوية",
+  "مياه منكهة",
+];
+
+const LEGACY_WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية"];
 
 const SELLING_UNIT_OPTIONS = [
   { value: "unit", label: "عبوة", priceLabel: "للعبوة" },
@@ -141,6 +153,15 @@ function categoryLabel(category) {
   return CATEGORY_OPTIONS.find((option) => option.value === normalizedCategory)?.label ?? "تصنيف غير محدد";
 }
 
+function waterTypeOptionsForValue(value) {
+  const options = [...WATER_TYPE_OPTIONS, ...LEGACY_WATER_TYPE_OPTIONS];
+  return value && !options.includes(value) ? [...options, value] : options;
+}
+
+function isValidWaterType(value) {
+  return Boolean(value?.trim()) && waterTypeOptionsForValue(value).includes(value);
+}
+
 function sellingUnitOption(value) {
   return SELLING_UNIT_OPTIONS.find((option) => option.value === value) ?? SELLING_UNIT_OPTIONS[0];
 }
@@ -211,7 +232,7 @@ function formFromProduct(product) {
     nameAr: product.nameAr || "",
     nameEn: product.nameEn || "",
     category: normalizeProductCategory(product.category),
-    waterType: WATER_TYPE_OPTIONS.includes(product.waterType) ? product.waterType : "مياه شرب",
+    waterType: product.waterType || "مياه شرب / مياه معبأة",
     sizeOption: matchedSize.value,
     sizeLabel: product.sizeLabel || product.packageLabel || "",
     volumeLiters: product.volumeLiters || totalVolumeLiters(unitVolume, unitsPerPackage),
@@ -375,7 +396,7 @@ export default function CompanyProductsPage({ companyId }) {
     if (!companyId) return "تعذر تحديد الشركة الحالية.";
     if (!form.nameAr.trim()) return "يرجى إدخال اسم المنتج بالعربي.";
     if (!CATEGORY_OPTIONS.some((option) => option.value === form.category)) return "يرجى اختيار التصنيف من القائمة.";
-    if (!WATER_TYPE_OPTIONS.includes(form.waterType)) return "يرجى اختيار نوع المياه من القائمة.";
+    if (!isValidWaterType(form.waterType)) return "يرجى اختيار نوع المياه من القائمة.";
     if (!SIZE_OPTIONS.some((option) => option.value === form.sizeOption)) return "يرجى اختيار الحجم من القائمة.";
     if (!SELLING_UNIT_OPTIONS.some((option) => option.value === form.sellingUnit)) return "يرجى اختيار وحدة البيع من القائمة.";
     const unitVolume = Number(form.unitVolumeLiters);
@@ -623,7 +644,7 @@ function ProductForm({ form, isSaving, isEditing, onChange, onSizeOptionChange, 
           <label>
             نوع المياه
             <select value={form.waterType} onChange={(event) => onChange("waterType", event.target.value)} required>
-              {WATER_TYPE_OPTIONS.map((option) => (
+              {waterTypeOptionsForValue(form.waterType).map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

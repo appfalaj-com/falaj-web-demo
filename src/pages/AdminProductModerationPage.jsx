@@ -33,7 +33,19 @@ const CATEGORY_OPTIONS = [
   { value: "water_tankers", label: "صهاريج مياه" },
 ];
 
-const WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية", "مياه معدنية", "مياه فوارة"];
+const WATER_TYPE_OPTIONS = [
+  "مياه شرب / مياه معبأة",
+  "مياه منقاة",
+  "مياه محلاة",
+  "مياه جوفية",
+  "مياه نبع / عين",
+  "مياه معدنية",
+  "مياه فوارة",
+  "مياه قلوية",
+  "مياه منكهة",
+];
+
+const LEGACY_WATER_TYPE_OPTIONS = ["مياه شرب", "مياه نقية"];
 
 const SELLING_UNIT_OPTIONS = [
   { value: "unit", label: "عبوة", priceLabel: "للعبوة" },
@@ -62,7 +74,7 @@ const initialEditForm = {
   name_ar: "",
   name_en: "",
   category: "water_bottles",
-  water_type: "مياه شرب",
+  water_type: "مياه شرب / مياه معبأة",
   size_option: "500ml",
   size_label: "500 مل",
   volume_liters: "0.5",
@@ -312,6 +324,7 @@ export default function AdminProductModerationPage() {
                   <th>المورد</th>
                   <th>المنتج</th>
                   <th>التصنيف</th>
+                  <th>نوع المياه</th>
                   <th>وحدة البيع</th>
                   <th>السعر</th>
                   <th>الصورة</th>
@@ -329,6 +342,7 @@ export default function AdminProductModerationPage() {
                     <td>{product.companies?.name || "مورد غير محدد"}</td>
                     <td>{product.name_ar || product.name_en || "-"}</td>
                     <td>{categoryLabel(product.category)}</td>
+                    <td>{product.water_type || "-"}</td>
                     <td>
                       {productPackageLabel(product)}
                       <br />
@@ -417,6 +431,10 @@ export default function AdminProductModerationPage() {
                   <div>
                     <dt>التصنيف</dt>
                     <dd>{categoryLabel(product.category)}</dd>
+                  </div>
+                  <div>
+                    <dt>نوع المياه</dt>
+                    <dd>{product.water_type || "-"}</dd>
                   </div>
                   <div>
                     <dt>وحدة البيع</dt>
@@ -611,7 +629,7 @@ function ProductEditForm({ form, isSaving, onChange, onSizeOptionChange, onSubmi
       <label>
         نوع المياه
         <select value={form.water_type} onChange={(event) => onChange("water_type", event.target.value)}>
-          {WATER_TYPE_OPTIONS.map((option) => (
+          {waterTypeOptionsForValue(form.water_type).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -748,6 +766,15 @@ function categoryLabel(category) {
   return CATEGORY_LABELS[category] || "تصنيف غير محدد";
 }
 
+function waterTypeOptionsForValue(value) {
+  const options = [...WATER_TYPE_OPTIONS, ...LEGACY_WATER_TYPE_OPTIONS];
+  return value && !options.includes(value) ? [...options, value] : options;
+}
+
+function isValidWaterType(value) {
+  return Boolean(value?.trim()) && waterTypeOptionsForValue(value).includes(value);
+}
+
 function sellingUnitOption(value) {
   return SELLING_UNIT_OPTIONS.find((option) => option.value === value) ?? SELLING_UNIT_OPTIONS[0];
 }
@@ -818,7 +845,7 @@ function formFromProduct(product) {
     name_ar: product.name_ar || "",
     name_en: product.name_en || "",
     category: normalizeCategory(product.category),
-    water_type: WATER_TYPE_OPTIONS.includes(product.water_type) ? product.water_type : "مياه شرب",
+    water_type: product.water_type || "مياه شرب / مياه معبأة",
     size_option: matchedSize.value,
     size_label: product.size_label || product.package_label || "",
     volume_liters: product.volume_liters ?? totalVolumeLiters(unitVolume, unitsPerPackage),
@@ -840,7 +867,7 @@ function formFromProduct(product) {
 function validateEditForm(form) {
   if (!form.name_ar.trim()) return "يرجى إدخال اسم المنتج بالعربي.";
   if (!CATEGORY_OPTIONS.some((option) => option.value === form.category)) return "يرجى اختيار التصنيف من القائمة.";
-  if (!WATER_TYPE_OPTIONS.includes(form.water_type)) return "يرجى اختيار نوع المياه من القائمة.";
+  if (!isValidWaterType(form.water_type)) return "يرجى اختيار نوع المياه من القائمة.";
   if (!SIZE_OPTIONS.some((option) => option.value === form.size_option)) return "يرجى اختيار الحجم من القائمة.";
   if (!SELLING_UNIT_OPTIONS.some((option) => option.value === form.selling_unit)) return "يرجى اختيار وحدة البيع من القائمة.";
   const unitVolume = Number(form.unit_volume_liters);
