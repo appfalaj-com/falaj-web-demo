@@ -20,6 +20,16 @@ type AuthUser = {
   email?: string;
 };
 
+type ProfileRow = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  account_type: string | null;
+};
+
+const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
+  "هذا البريد مستخدم كحساب شركة. أدخل بريدًا مختلفًا للسائق.";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -77,7 +87,7 @@ Deno.serve(async (req) => {
 
     const { data: company, error: companyError } = await supabase
       .from("companies")
-      .select("id, owner_id")
+      .select("id, owner_id, email, phone")
       .eq("id", driver.company_id)
       .maybeSingle();
 
@@ -94,7 +104,25 @@ Deno.serve(async (req) => {
     }
 
     const email = driver.email.trim().toLowerCase();
+    const callerEmail = caller.email?.trim().toLowerCase();
+    const companyEmail = company.email?.trim().toLowerCase();
+
+    if ((callerEmail && email === callerEmail) || (companyEmail && email === companyEmail)) {
+      return jsonResponse({ ok: false, error: DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR }, 400);
+    }
+
     const existingUser = await findUserByEmail(supabase, email);
+    const existingProfile = existingUser
+      ? await findProfileByUserOrEmail(supabase, existingUser.id, email)
+      : await findProfileByUserOrEmail(supabase, null, email);
+
+    if (
+      existingUser?.id === company.owner_id ||
+      existingProfile?.id === company.owner_id ||
+      isCompanyOrAdminProfile(existingProfile)
+    ) {
+      return jsonResponse({ ok: false, error: DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR }, 400);
+    }
 
     if (!existingUser) {
       const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
@@ -177,6 +205,11 @@ async function linkDriverUser(
   const email = driver.email?.trim().toLowerCase();
   if (!email) {
     return { error: jsonResponse({ ok: false, error: "Driver email is required" }, 400) };
+  }
+
+  const existingProfile = await findProfileByUserOrEmail(supabase, user.id, email);
+  if (isCompanyOrAdminProfile(existingProfile)) {
+    return { error: jsonResponse({ ok: false, error: DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR }, 400) };
   }
 
   const metadata = {
@@ -300,6 +333,36 @@ async function findUserByEmail(supabase: ReturnType<typeof createClient>, email:
   }
 
   return null;
+}
+
+async function findProfileByUserOrEmail(
+  supabase: ReturnType<typeof createClient>,
+  userId: string | null,
+  email: string,
+): Promise<ProfileRow | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  let query = supabase
+    .from("profiles")
+    .select("id, email, role, account_type")
+    .limit(1);
+
+  if (userId) {
+    query = query.or(`id.eq.${userId},email.eq.${normalizedEmail}`);
+  } else {
+    query = query.eq("email", normalizedEmail);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data?.[0] as ProfileRow | undefined) ?? null;
+}
+
+function isCompanyOrAdminProfile(profile: ProfileRow | null) {
+  if (!profile) return false;
+  const role = `${profile.role ?? ""}`.trim().toLowerCase();
+  const accountType = `${profile.account_type ?? ""}`.trim().toLowerCase();
+  return role === "company" || role === "admin" || accountType === "company" || accountType === "admin";
 }
 
 function isExistingUserError(message: string) {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   createCompanyDriverInSupabase,
+  DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR,
+  DRIVER_COMPANY_PHONE_CONFLICT_ERROR,
   getDriversByCompanyFromSupabase,
   sendDriverInviteFromSupabase,
   updateCompanyDriverInSupabase,
@@ -127,7 +129,7 @@ export default function CompanyDriversPage({ companyId }) {
 
       closeForm();
     } catch (error) {
-      setErrorMessage(DRIVER_SAVE_ERROR);
+      setErrorMessage(driverSafeErrorMessage(error, DRIVER_SAVE_ERROR));
     } finally {
       setIsSaving(false);
     }
@@ -178,7 +180,7 @@ export default function CompanyDriversPage({ companyId }) {
       const refreshedDrivers = await getDriversByCompanyFromSupabase(companyId);
       setCompanyDrivers(refreshedDrivers);
     } catch (error) {
-      setErrorMessage(DRIVER_INVITE_ERROR);
+      setErrorMessage(driverSafeErrorMessage(error, DRIVER_INVITE_ERROR));
     } finally {
       setInvitingDriverId(null);
     }
@@ -228,6 +230,7 @@ export default function CompanyDriversPage({ companyId }) {
                 onChange={(event) => updateForm("email", event.target.value)}
                 placeholder="driver@example.com"
               />
+              <small className="form-hint">استخدم بريدًا مختلفًا عن بريد حساب الشركة. دخول الهاتف مؤجل حاليًا.</small>
             </label>
 
             <label className="product-form-check">
@@ -347,4 +350,17 @@ function formatDate(value) {
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function driverSafeErrorMessage(error, fallback) {
+  const message = error?.message || "";
+  if (
+    message === DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR ||
+    message === DRIVER_COMPANY_PHONE_CONFLICT_ERROR ||
+    message.includes("هذا البريد مستخدم كحساب شركة")
+  ) {
+    return message;
+  }
+
+  return fallback;
 }

@@ -3,6 +3,10 @@ import { getOrdersByDriver } from "./orderService.js";
 
 const ACTIVE_DRIVER_STATUSES = ["assigned", "en_route", "arrived"];
 const DONE_DRIVER_STATUSES = ["delivered", "failed"];
+export const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
+  "لا يمكن استخدام بريد حساب الشركة كسائق. استخدم بريدًا مختلفًا للسائق.";
+export const DRIVER_COMPANY_PHONE_CONFLICT_ERROR =
+  "رقم هاتف السائق يطابق رقم حساب الشركة. استخدم رقمًا مختلفًا للسائق.";
 
 export function getDrivers(drivers = []) {
   return drivers;
@@ -91,6 +95,8 @@ export async function createCompanyDriverInSupabase(companyId, driver) {
     throw new Error("Supabase client is not configured.");
   }
 
+  await assertDriverContactAllowed(companyId, driver);
+
   const { data, error } = await supabase
     .from("drivers")
     .insert({
@@ -115,6 +121,8 @@ export async function updateCompanyDriverInSupabase(companyId, driverId, driver)
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
   }
+
+  await assertDriverContactAllowed(companyId, driver);
 
   const { data, error } = await supabase
     .from("drivers")
@@ -217,6 +225,25 @@ export async function sendDriverInviteFromSupabase(driverId) {
     throw new Error("تعذر تحديد السائق لإرسال الدعوة.");
   }
 
+  const { data: driver, error: driverError } = await supabase
+    .from("drivers")
+    .select("id, company_id, email, phone")
+    .eq("id", driverId)
+    .maybeSingle();
+
+  if (driverError) {
+    throw driverError;
+  }
+
+  if (!driver) {
+    throw new Error("تعذر تحديد السائق لإرسال الدعوة.");
+  }
+
+  await assertDriverContactAllowed(driver.company_id, {
+    email: driver.email,
+    phone: driver.phone,
+  });
+
   const { data, error } = await supabase.functions.invoke("send-driver-invite", {
     body: { driver_id: driverId },
   });
@@ -264,4 +291,54 @@ function driverSelectColumns() {
     "created_at",
     "updated_at",
   ].join(",");
+}
+
+async function assertDriverContactAllowed(companyId, driver) {
+  if (!companyId || !driver) return;
+
+  const email = normalizeEmail(driver.email);
+  const phone = normalizePhone(driver.phone);
+  if (!email && !phone) return;
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) {
+    throw userError;
+  }
+
+  const user = userData?.user;
+  const currentUserEmail = normalizeEmail(user?.email);
+
+  if (email && currentUserEmail && email === currentUserEmail) {
+    throw new Error(DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR);
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, owner_id, email, phone")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (companyError) {
+    throw companyError;
+  }
+
+  if (!company || (user?.id && company.owner_id !== user.id)) {
+    throw new Error("لا يمكن إدارة سائقي شركة غير مرتبطة بحسابك.");
+  }
+
+  if (email && normalizeEmail(company.email) === email) {
+    throw new Error(DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR);
+  }
+
+  if (phone && normalizePhone(company.phone) === phone) {
+    throw new Error(DRIVER_COMPANY_PHONE_CONFLICT_ERROR);
+  }
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/[^\d+]/g, "");
 }
