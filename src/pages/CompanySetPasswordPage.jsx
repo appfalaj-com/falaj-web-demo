@@ -271,9 +271,9 @@ async function ensureRecoverySession() {
   const hashType = hashParams.get("type");
 
   if (accessToken && refreshToken) {
-    if (hashType !== "recovery") {
+    if (!["invite", "recovery"].includes(hashType)) {
       await supabase.auth.signOut();
-      return { session: null };
+      throw Object.assign(new Error("Unsupported recovery link type"), { stage: "invalid_recovery_link" });
     }
 
     await supabase.auth.signOut();
