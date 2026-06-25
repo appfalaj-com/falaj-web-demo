@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient.js";
 
 export default function CompanySetPasswordPage({ onSaved, accountKind = "company", verifyLoginAfterSave = false }) {
   const { direction, t } = useI18n();
+  const copy = getSetPasswordCopy(accountKind, t);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -152,15 +153,15 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
           <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <div>
             <strong>{t("common.appName")}</strong>
-            <small>{t("password.brand")}</small>
+            <small>{copy.brand}</small>
           </div>
         </div>
 
         <header className="login-header">
-          <p className="eyebrow">{t("login.company.eyebrow")}</p>
-          <h1 id="company-set-password-title">{t("password.title")}</h1>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h1 id="company-set-password-title">{copy.title}</h1>
           <p className="auth-note">
-            {t("password.note")}
+            {copy.note}
           </p>
         </header>
 
@@ -201,6 +202,24 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
       </section>
     </main>
   );
+}
+
+function getSetPasswordCopy(accountKind, t) {
+  if (accountKind === "driver") {
+    return {
+      brand: "إعداد حساب السائق",
+      eyebrow: "بوابة السائق",
+      title: "إعداد كلمة مرور السائق",
+      note: "احفظ كلمة مرور لحساب السائق حتى تتمكن من الدخول لاحقًا بالبريد أو رقم الهاتف وكلمة المرور.",
+    };
+  }
+
+  return {
+    brand: t("password.brand"),
+    eyebrow: t("login.company.eyebrow"),
+    title: t("password.title"),
+    note: t("password.note"),
+  };
 }
 
 async function ensureRecoverySession() {
