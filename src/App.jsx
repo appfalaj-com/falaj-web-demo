@@ -152,7 +152,6 @@ export default function App() {
         onNavigate={navigate}
       />
     ),
-    "/company/set-password": <CompanySetPasswordPage onSaved={() => replacePath("/company")} />,
     "/company/orders": <CompanyOrdersPage companyId={companyId} />,
     "/company/products": <CompanyProductsPage companyId={companyId} />,
     "/company/drivers": <CompanyDriversPage companyId={companyId} />,
@@ -177,6 +176,10 @@ export default function App() {
     return <CompanyLoginPage onAuthenticated={handleAuthenticated} />;
   }
 
+  if (currentPath === "/company/set-password") {
+    return <CompanySetPasswordPage accountKind="company" onSaved={() => replacePath("/company/login")} />;
+  }
+
   if (currentPath === "/") {
     return <LandingPage onNavigate={navigate} />;
   }
@@ -196,6 +199,7 @@ export default function App() {
   if (currentPath === "/driver/set-password") {
     return (
       <CompanySetPasswordPage
+        accountKind="driver"
         verifyLoginAfterSave
         onSaved={() => replacePath("/driver/login")}
       />

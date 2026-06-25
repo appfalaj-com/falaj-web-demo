@@ -3,7 +3,7 @@ import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 
-export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave = false }) {
+export default function CompanySetPasswordPage({ onSaved, accountKind = "company", verifyLoginAfterSave = false }) {
   const { direction, t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -12,6 +12,7 @@ export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreparingSession, setIsPreparingSession] = useState(true);
   const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryUserId, setRecoveryUserId] = useState("");
   const [hasRecoverySession, setHasRecoverySession] = useState(false);
 
   useEffect(() => {
@@ -35,11 +36,15 @@ export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave =
 
         if (!sessionResult.session) {
           setHasRecoverySession(false);
-          setError("رابط تعيين كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا وحاول مرة أخرى.");
+          setError("افتح رابط تعيين كلمة المرور من البريد. لا يمكن تغيير كلمة المرور من جلسة مفتوحة مسبقًا.");
           return;
         }
 
+        await validateRecoveryAccount(sessionResult.session, accountKind);
+        if (cancelled) return;
+
         setHasRecoverySession(true);
+        setRecoveryUserId(sessionResult.session.user?.id || "");
         setRecoveryEmail(sessionResult.session.user?.email || "");
       } catch (sessionError) {
         if (cancelled) return;
@@ -64,7 +69,7 @@ export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave =
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [accountKind, t]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -96,21 +101,19 @@ export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave =
       }
 
       const emailForLoginTest = sessionData.session.user?.email || recoveryEmail;
+      if (!emailForLoginTest || sessionData.session.user?.id !== recoveryUserId) {
+        throw Object.assign(new Error("Recovery session user changed"), { stage: "session_mismatch" });
+      }
+
+      await validateRecoveryAccount(sessionData.session, accountKind);
+
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw Object.assign(updateError, { stage: "update_password" });
 
-      if (verifyLoginAfterSave) {
-        if (!emailForLoginTest) {
-          throw Object.assign(new Error("Driver email is missing after password update"), { stage: "login_verify" });
-        }
-
-        await supabase.auth.signOut();
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: emailForLoginTest,
-          password,
-        });
-
-        if (loginError) throw Object.assign(loginError, { stage: "login_verify" });
+      if (verifyLoginAfterSave || accountKind === "company") {
+        const verifyResult = await verifyPasswordLogin(emailForLoginTest, password, accountKind);
+        if (!verifyResult.ok) throw Object.assign(verifyResult.error, { stage: "login_verify" });
+      } else {
         await supabase.auth.signOut();
       }
 
@@ -205,6 +208,7 @@ async function ensureRecoverySession() {
   const code = currentUrl.searchParams.get("code");
 
   if (code) {
+    await supabase.auth.signOut();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
     stripAuthParamsFromUrl(currentUrl);
@@ -214,8 +218,15 @@ async function ensureRecoverySession() {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
+  const hashType = hashParams.get("type");
 
   if (accessToken && refreshToken) {
+    if (hashType !== "recovery") {
+      await supabase.auth.signOut();
+      return { session: null };
+    }
+
+    await supabase.auth.signOut();
     const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -225,9 +236,109 @@ async function ensureRecoverySession() {
     return { session: data?.session ?? null };
   }
 
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  return { session: data?.session ?? null };
+  await supabase.auth.signOut();
+  return { session: null };
+}
+
+async function validateRecoveryAccount(session, accountKind) {
+  const user = session?.user;
+  const email = user?.email || "";
+  if (!user?.id || !email) {
+    throw Object.assign(new Error("Recovery user is missing"), { stage: "session_missing" });
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, email, role, account_type")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) throw Object.assign(profileError, { stage: "account_check" });
+
+  const role = String(profile?.role || user.user_metadata?.role || "").toLowerCase();
+  const accountType = String(profile?.account_type || user.user_metadata?.account_type || "").toLowerCase();
+
+  if (accountKind === "driver") {
+    if (role === "company" || accountType === "company" || role === "admin" || accountType === "admin") {
+      await supabase.auth.signOut();
+      throw Object.assign(new Error("Company/admin account cannot use driver password reset"), {
+        stage: "wrong_account_type",
+      });
+    }
+
+    if (role !== "driver" || accountType !== "driver") {
+      await supabase.auth.signOut();
+      throw Object.assign(new Error("Recovery account is not a driver"), { stage: "wrong_account_type" });
+    }
+
+    await supabase.rpc("accept_driver_invite_for_current_user");
+
+    const { data: driver, error: driverError } = await supabase
+      .from("drivers")
+      .select("id, profile_id, email, is_active")
+      .eq("profile_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (driverError) throw Object.assign(driverError, { stage: "account_check" });
+    if (!driver || String(driver.email || "").toLowerCase() !== email.toLowerCase()) {
+      await supabase.auth.signOut();
+      throw Object.assign(new Error("Recovery account is not linked to an active driver"), {
+        stage: "wrong_account_type",
+      });
+    }
+
+    return;
+  }
+
+  if (role === "driver" || accountType === "driver" || role === "admin" || accountType === "admin") {
+    await supabase.auth.signOut();
+    throw Object.assign(new Error("Driver/admin account cannot use company password reset"), {
+      stage: "wrong_account_type",
+    });
+  }
+
+  if (role !== "company" || accountType !== "company") {
+    await supabase.auth.signOut();
+    throw Object.assign(new Error("Recovery account is not a company"), { stage: "wrong_account_type" });
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, owner_id")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (companyError) throw Object.assign(companyError, { stage: "account_check" });
+  if (!company) {
+    await supabase.auth.signOut();
+    throw Object.assign(new Error("Recovery account is not linked to a company"), { stage: "wrong_account_type" });
+  }
+}
+
+async function verifyPasswordLogin(email, password, accountKind) {
+  await supabase.auth.signOut();
+
+  const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+  if (loginError) {
+    return { ok: false, error: loginError };
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session) {
+    await supabase.auth.signOut();
+    return { ok: false, error: sessionError || new Error("Login verification session missing") };
+  }
+
+  try {
+    await validateRecoveryAccount(sessionData.session, accountKind);
+  } catch (accountError) {
+    return { ok: false, error: accountError };
+  } finally {
+    await supabase.auth.signOut();
+  }
+
+  return { ok: true, error: null };
 }
 
 function stripAuthParamsFromUrl(currentUrl) {
@@ -243,6 +354,18 @@ function getSetPasswordErrorMessage(error, fallback) {
 
   if (stage === "session_missing" || message.includes("auth session missing")) {
     return "رابط تعيين كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا وحاول مرة أخرى.";
+  }
+
+  if (stage === "session_mismatch") {
+    return "تغيّرت جلسة المستخدم أثناء تعيين كلمة المرور. افتح رابطًا جديدًا من البريد.";
+  }
+
+  if (stage === "wrong_account_type") {
+    return "رابط تعيين كلمة المرور لا يطابق نوع هذا الحساب. استخدم الرابط الصحيح للحساب المطلوب.";
+  }
+
+  if (stage === "account_check") {
+    return "تعذر التحقق من نوع الحساب المرتبط بالرابط. اطلب رابطًا جديدًا وحاول مرة أخرى.";
   }
 
   if (stage === "update_password") {
