@@ -72,6 +72,49 @@ export async function getCurrentDriverFromSupabase() {
   };
 }
 
+export async function resolveDriverLoginIdentifier(identifier) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const value = String(identifier || "").trim();
+  if (!value) {
+    return { status: "not_found", email: "" };
+  }
+
+  if (isEmail(value)) {
+    return { status: "ok", email: value.toLowerCase() };
+  }
+
+  const { data, error } = await supabase.rpc("resolve_driver_login_identifier", {
+    p_identifier: value,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const result = Array.isArray(data) ? data[0] : data;
+  return {
+    status: result?.login_status || "not_found",
+    email: result?.email || "",
+  };
+}
+
+export async function assertAuthenticatedActiveDriver() {
+  const { user, driver } = await getCurrentDriverFromSupabase();
+
+  if (!user || !driver) {
+    throw new Error("حساب السائق غير مربوط بشكل صحيح.");
+  }
+
+  if (!driver.isActive) {
+    throw new Error("حساب السائق غير مفعل.");
+  }
+
+  return { user, driver };
+}
+
 export async function getDriversByCompanyFromSupabase(companyId) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
@@ -341,4 +384,8 @@ function normalizeEmail(value) {
 
 function normalizePhone(value) {
   return String(value || "").replace(/[^\d+]/g, "");
+}
+
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
