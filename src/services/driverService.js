@@ -107,33 +107,48 @@ export async function acceptCurrentDriverInviteFromSupabase() {
   };
 }
 
-export async function resolveDriverLoginIdentifier(identifier) {
+export async function signInDriverWithIdentifier(identifier, password) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
   }
 
   const value = String(identifier || "").trim();
-  if (!value) {
-    return { status: "not_found", email: "" };
+  if (!value || !password) {
+    throw new Error("Invalid driver login credentials.");
   }
 
   if (isEmail(value)) {
-    return { status: "ok", email: value.toLowerCase() };
+    const { error } = await supabase.auth.signInWithPassword({
+      email: value.toLowerCase(),
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return;
   }
 
-  const { data, error } = await supabase.rpc("resolve_driver_login_identifier", {
-    p_identifier: value,
+  const { data, error } = await supabase.functions.invoke("driver-phone-login", {
+    body: {
+      phone: value,
+      password,
+    },
   });
 
-  if (error) {
-    throw error;
+  if (error || !data?.ok || !data?.session?.access_token || !data?.session?.refresh_token) {
+    throw new Error(data?.error || "Invalid driver login credentials.");
   }
 
-  const result = Array.isArray(data) ? data[0] : data;
-  return {
-    status: result?.login_status || "not_found",
-    email: result?.email || "",
-  };
+  const { error: sessionError } = await supabase.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
+
+  if (sessionError) {
+    throw sessionError;
+  }
 }
 
 export async function assertAuthenticatedActiveDriver() {

@@ -4,17 +4,10 @@ import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 import {
   assertAuthenticatedActiveDriver,
-  resolveDriverLoginIdentifier,
+  signInDriverWithIdentifier,
 } from "../services/driverService.js";
 
-const DRIVER_LOGIN_ERRORS = {
-  not_found: "رقم الهاتف غير مسجل كسائق.",
-  inactive: "حساب السائق غير مفعل.",
-  not_linked: "حساب السائق غير مربوط بحساب دخول صحيح.",
-  invalid_role: "هذا الحساب غير مسجل كسائق.",
-  invalid_password: "كلمة السر غير صحيحة.",
-  generic: "تعذر تسجيل دخول السائق حاليًا. تحقق من البيانات وحاول مرة أخرى.",
-};
+const DRIVER_LOGIN_ERROR = "بيانات تسجيل الدخول غير صحيحة.";
 
 export default function DriverLoginPage({ onNavigate }) {
   const { direction, t } = useI18n();
@@ -33,27 +26,19 @@ export default function DriverLoginPage({ onNavigate }) {
         throw new Error("Supabase is not configured.");
       }
 
-      const login = await resolveDriverLoginIdentifier(identifier);
-      if (login.status !== "ok" || !login.email) {
-        setError(DRIVER_LOGIN_ERRORS[login.status] || DRIVER_LOGIN_ERRORS.generic);
-        return;
-      }
-
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: login.email,
-        password,
-      });
-
-      if (loginError) {
-        setError(driverPasswordError(loginError));
-        return;
-      }
+      await signInDriverWithIdentifier(identifier, password);
 
       try {
         await assertAuthenticatedActiveDriver();
       } catch (driverError) {
         await supabase.auth.signOut();
-        setError(driverSafeLoginError(driverError));
+        if (import.meta.env.DEV) {
+          console.warn("driver_login_role_check_failed", {
+            message: driverError?.message,
+            code: driverError?.code,
+          });
+        }
+        setError(DRIVER_LOGIN_ERROR);
         return;
       }
 
@@ -63,11 +48,10 @@ export default function DriverLoginPage({ onNavigate }) {
         console.warn("driver_login_failed", {
           message: loginError?.message,
           code: loginError?.code,
-          details: loginError?.details,
-          hint: loginError?.hint,
+          status: loginError?.status,
         });
       }
-      setError(DRIVER_LOGIN_ERRORS.generic);
+      setError(DRIVER_LOGIN_ERROR);
     } finally {
       setLoading(false);
     }
@@ -125,24 +109,4 @@ export default function DriverLoginPage({ onNavigate }) {
       </section>
     </main>
   );
-}
-
-function driverPasswordError(error) {
-  const message = `${error?.message ?? ""}`.toLowerCase();
-  if (
-    message.includes("invalid login credentials") ||
-    message.includes("invalid credentials") ||
-    message.includes("password")
-  ) {
-    return DRIVER_LOGIN_ERRORS.invalid_password;
-  }
-
-  return DRIVER_LOGIN_ERRORS.generic;
-}
-
-function driverSafeLoginError(error) {
-  const message = error?.message || "";
-  if (message.includes("غير مفعل")) return DRIVER_LOGIN_ERRORS.inactive;
-  if (message.includes("غير مربوط")) return DRIVER_LOGIN_ERRORS.not_linked;
-  return DRIVER_LOGIN_ERRORS.generic;
 }

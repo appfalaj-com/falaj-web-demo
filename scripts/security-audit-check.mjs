@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 const pagePath = resolve("src/pages/CompanySetPasswordPage.jsx");
 const source = readFileSync(pagePath, "utf8");
+const driverLoginSource = readFileSync(resolve("src/pages/DriverLoginPage.jsx"), "utf8");
+const driverServiceSource = readFileSync(resolve("src/services/driverService.js"), "utf8");
 
 const failures = [];
 
@@ -28,6 +30,10 @@ if (updatePasswordIndex === -1) {
   if (!precedingGuard.includes("validateRecoveryAccount(sessionData.session, accountKind)")) {
     failures.push("Password update must validate the recovery account kind immediately before updateUser().");
   }
+}
+
+if (/resolveDriverLoginIdentifier/.test(driverLoginSource) || /resolve_driver_login_identifier/.test(driverServiceSource)) {
+  failures.push("Driver phone login must not call a client-side phone-to-email resolver.");
 }
 
 if (failures.length) {
