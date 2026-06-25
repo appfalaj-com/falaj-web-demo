@@ -1,15 +1,70 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 
-export default function CompanySetPasswordPage({ onSaved }) {
+export default function CompanySetPasswordPage({ onSaved, verifyLoginAfterSave = false }) {
   const { direction, t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparingSession, setIsPreparingSession] = useState(true);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [hasRecoverySession, setHasRecoverySession] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function prepareRecoverySession() {
+      setError("");
+      setMessage("");
+
+      if (!supabase) {
+        if (!cancelled) {
+          setError(t("password.noConnection"));
+          setIsPreparingSession(false);
+        }
+        return;
+      }
+
+      try {
+        const sessionResult = await ensureRecoverySession();
+        if (cancelled) return;
+
+        if (!sessionResult.session) {
+          setHasRecoverySession(false);
+          setError("رابط تعيين كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا وحاول مرة أخرى.");
+          return;
+        }
+
+        setHasRecoverySession(true);
+        setRecoveryEmail(sessionResult.session.user?.email || "");
+      } catch (sessionError) {
+        if (cancelled) return;
+
+        if (import.meta.env.DEV) {
+          console.warn("set_password_recovery_session_failed", {
+            message: sessionError?.message,
+            code: sessionError?.code,
+            status: sessionError?.status,
+          });
+        }
+
+        setHasRecoverySession(false);
+        setError(getSetPasswordErrorMessage(sessionError, "تعذر فتح رابط تعيين كلمة المرور. قد يكون الرابط منتهيًا أو مستخدمًا مسبقًا."));
+      } finally {
+        if (!cancelled) setIsPreparingSession(false);
+      }
+    }
+
+    prepareRecoverySession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -34,18 +89,53 @@ export default function CompanySetPasswordPage({ onSaved }) {
     setIsSubmitting(true);
 
     try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw Object.assign(sessionError, { stage: "session" });
+      if (!sessionData?.session) {
+        throw Object.assign(new Error("Recovery session is missing"), { stage: "session_missing" });
+      }
+
+      const emailForLoginTest = sessionData.session.user?.email || recoveryEmail;
       const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
+      if (updateError) throw Object.assign(updateError, { stage: "update_password" });
+
+      if (verifyLoginAfterSave) {
+        if (!emailForLoginTest) {
+          throw Object.assign(new Error("Driver email is missing after password update"), { stage: "login_verify" });
+        }
+
+        await supabase.auth.signOut();
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: emailForLoginTest,
+          password,
+        });
+
+        if (loginError) throw Object.assign(loginError, { stage: "login_verify" });
+        await supabase.auth.signOut();
+      }
 
       setPassword("");
       setConfirmPassword("");
-      setMessage(t("password.success"));
+      setMessage(
+        verifyLoginAfterSave
+          ? "تم حفظ كلمة المرور والتحقق من تسجيل الدخول. يمكنك الدخول الآن من صفحة السائق."
+          : t("password.success")
+      );
 
       window.setTimeout(() => {
         onSaved?.();
       }, 900);
     } catch (updateError) {
-      setError(t("password.error"));
+      if (import.meta.env.DEV) {
+        console.warn("set_password_failed", {
+          stage: updateError?.stage,
+          message: updateError?.message,
+          code: updateError?.code,
+          status: updateError?.status,
+        });
+      }
+
+      setError(getSetPasswordErrorMessage(updateError, t("password.error")));
     } finally {
       setIsSubmitting(false);
     }
@@ -101,11 +191,75 @@ export default function CompanySetPasswordPage({ onSaved }) {
 
           <p className="auth-note">{t("password.rules")}</p>
 
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("password.saving") : t("password.save")}
+          <button type="submit" disabled={isSubmitting || isPreparingSession || !hasRecoverySession}>
+            {isPreparingSession ? "جاري التحقق من الرابط..." : isSubmitting ? t("password.saving") : t("password.save")}
           </button>
         </form>
       </section>
     </main>
   );
+}
+
+async function ensureRecoverySession() {
+  const currentUrl = new URL(window.location.href);
+  const code = currentUrl.searchParams.get("code");
+
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    stripAuthParamsFromUrl(currentUrl);
+    return { session: data?.session ?? null };
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const accessToken = hashParams.get("access_token");
+  const refreshToken = hashParams.get("refresh_token");
+
+  if (accessToken && refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) throw error;
+    stripAuthParamsFromUrl(currentUrl);
+    return { session: data?.session ?? null };
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return { session: data?.session ?? null };
+}
+
+function stripAuthParamsFromUrl(currentUrl) {
+  currentUrl.searchParams.delete("code");
+  currentUrl.searchParams.delete("type");
+  currentUrl.hash = "";
+  window.history.replaceState({}, "", `${currentUrl.pathname}${currentUrl.search}`);
+}
+
+function getSetPasswordErrorMessage(error, fallback) {
+  const message = String(error?.message || "").toLowerCase();
+  const stage = error?.stage;
+
+  if (stage === "session_missing" || message.includes("auth session missing")) {
+    return "رابط تعيين كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا وحاول مرة أخرى.";
+  }
+
+  if (stage === "update_password") {
+    if (message.includes("same_password") || message.includes("different from the old password")) {
+      return "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية.";
+    }
+
+    return "تعذر حفظ كلمة المرور الجديدة في حسابك. افتح رابطًا جديدًا وحاول مرة أخرى.";
+  }
+
+  if (stage === "login_verify") {
+    return "تمت محاولة حفظ كلمة المرور، لكن اختبار تسجيل الدخول فشل. اطلب رابطًا جديدًا وعيّن كلمة المرور مرة أخرى.";
+  }
+
+  if (message.includes("expired") || message.includes("invalid") || message.includes("otp")) {
+    return "رابط تعيين كلمة المرور منتهي أو غير صالح. اطلب رابطًا جديدًا.";
+  }
+
+  return fallback;
 }

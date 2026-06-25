@@ -194,7 +194,12 @@ export default function App() {
   }
 
   if (currentPath === "/driver/set-password") {
-    return <CompanySetPasswordPage onSaved={() => replacePath("/driver/login")} />;
+    return (
+      <CompanySetPasswordPage
+        verifyLoginAfterSave
+        onSaved={() => replacePath("/driver/login")}
+      />
+    );
   }
 
   if (currentPath === "/driver") {
