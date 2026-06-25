@@ -193,6 +193,10 @@ export default function App() {
     return <DriverLoginPage onNavigate={navigate} />;
   }
 
+  if (currentPath === "/driver/set-password") {
+    return <CompanySetPasswordPage onSaved={() => replacePath("/driver/login")} />;
+  }
+
   if (currentPath === "/driver") {
     return <DriverPage onNavigate={navigate} />;
   }

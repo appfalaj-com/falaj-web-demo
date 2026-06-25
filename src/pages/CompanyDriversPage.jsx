@@ -3,6 +3,7 @@ import {
   createCompanyDriverInSupabase,
   DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR,
   DRIVER_COMPANY_PHONE_CONFLICT_ERROR,
+  deactivateCompanyDriverInSupabase,
   getDriversByCompanyFromSupabase,
   sendDriverInviteFromSupabase,
   updateCompanyDriverInSupabase,
@@ -28,6 +29,7 @@ export default function CompanyDriversPage({ companyId }) {
   const [editingDriverId, setEditingDriverId] = useState(null);
   const [form, setForm] = useState(initialDriverForm);
   const [invitingDriverId, setInvitingDriverId] = useState(null);
+  const [deactivatingDriverId, setDeactivatingDriverId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
 
@@ -186,6 +188,32 @@ export default function CompanyDriversPage({ companyId }) {
     }
   }
 
+  async function softDeleteDriver(driver) {
+    setMessage("");
+    setErrorMessage("");
+
+    if (!driver.id) {
+      setErrorMessage("تعذر تحديد السائق لإيقافه.");
+      return;
+    }
+
+    const confirmed = window.confirm("سيتم إيقاف السائق وتعطيل رابط الدعوة بدون حذف الطلبات المرتبطة. هل تريد المتابعة؟");
+    if (!confirmed) return;
+
+    setDeactivatingDriverId(driver.id);
+    try {
+      const updatedDriver = await deactivateCompanyDriverInSupabase(companyId, driver.id);
+      setCompanyDrivers((current) =>
+        current.map((item) => (item.id === driver.id ? updatedDriver : item))
+      );
+      setMessage("تم إيقاف السائق وتعطيل دعوته بدون حذف بيانات الطلبات.");
+    } catch (error) {
+      setErrorMessage(driverSafeErrorMessage(error, "تعذر إيقاف السائق حاليًا. حاول مرة أخرى."));
+    } finally {
+      setDeactivatingDriverId(null);
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
@@ -331,8 +359,18 @@ export default function CompanyDriversPage({ companyId }) {
                         : "إرسال دعوة دخول"}
                   </button>
                 ) : null}
-                <button type="button" className="ghost" disabled title="الحذف غير متاح حاليًا">
-                  الحذف غير متاح
+                <button
+                  type="button"
+                  className="ghost danger"
+                  onClick={() => softDeleteDriver(driver)}
+                  disabled={deactivatingDriverId === driver.id || !driver.isActive}
+                  title="إيقاف آمن بدون حذف الطلبات المرتبطة"
+                >
+                  {deactivatingDriverId === driver.id
+                    ? "جاري الإيقاف..."
+                    : driver.isActive
+                      ? "إيقاف السائق"
+                      : "السائق موقوف"}
                 </button>
               </div>
             </article>
@@ -360,6 +398,22 @@ function driverSafeErrorMessage(error, fallback) {
     message.includes("هذا البريد مستخدم كحساب شركة")
   ) {
     return message;
+  }
+
+  if (message.includes("Driver email provider is not configured")) {
+    return "خدمة إرسال بريد السائق غير مفعلة حاليًا. تحقق من إعدادات البريد ثم أعد المحاولة.";
+  }
+
+  if (message.includes("Driver invite email could not be sent")) {
+    return "تعذر إرسال بريد السائق من مزود البريد. تحقق من إعدادات البريد أو جرّب لاحقًا.";
+  }
+
+  if (message.includes("Driver password reset link could not be generated")) {
+    return "تعذر إنشاء رابط تعيين كلمة مرور السائق. تحقق من حساب السائق ثم أعد المحاولة.";
+  }
+
+  if (message.includes("Driver invite link could not be generated")) {
+    return "تعذر إنشاء رابط دعوة السائق. تحقق من بريد السائق ثم أعد المحاولة.";
   }
 
   return fallback;

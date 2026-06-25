@@ -222,6 +222,34 @@ export async function updateCompanyDriverInSupabase(companyId, driverId, driver)
   return normalizeSupabaseDriver(data);
 }
 
+export async function deactivateCompanyDriverInSupabase(companyId, driverId) {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  if (!companyId || !driverId) {
+    throw new Error("تعذر تحديد السائق لإيقافه.");
+  }
+
+  const { data, error } = await supabase
+    .from("drivers")
+    .update({
+      is_active: false,
+      invite_status: "not_sent",
+      is_online: false,
+    })
+    .eq("id", driverId)
+    .eq("company_id", companyId)
+    .select(driverSelectColumns())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return normalizeSupabaseDriver(data);
+}
+
 export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");

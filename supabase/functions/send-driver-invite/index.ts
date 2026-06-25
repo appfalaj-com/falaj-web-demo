@@ -140,10 +140,10 @@ Deno.serve(async (req) => {
         const linkResult = await linkDriverUser(supabase, user, driver, caller.id);
         if (linkResult.error) return linkResult.error;
 
-        const magicLinkResult = await generateDriverMagicLink(supabase, email);
-        if (magicLinkResult.error) return jsonResponse({ ok: false, error: magicLinkResult.message }, 500);
+        const recoveryLinkResult = await generateDriverRecoveryLink(supabase, email);
+        if (recoveryLinkResult.error) return jsonResponse({ ok: false, error: recoveryLinkResult.message }, 500);
 
-        const magicResult = await sendDriverInviteEmail(email, driver, magicLinkResult.actionLink, true);
+        const magicResult = await sendDriverInviteEmail(email, driver, recoveryLinkResult.actionLink, true);
         if (magicResult) return magicResult;
 
         return jsonResponse({
@@ -177,10 +177,10 @@ Deno.serve(async (req) => {
     const linkResult = await linkDriverUser(supabase, existingUser, driver, caller.id);
     if (linkResult.error) return linkResult.error;
 
-    const magicLinkResult = await generateDriverMagicLink(supabase, email);
-    if (magicLinkResult.error) return jsonResponse({ ok: false, error: magicLinkResult.message }, 500);
+    const recoveryLinkResult = await generateDriverRecoveryLink(supabase, email);
+    if (recoveryLinkResult.error) return jsonResponse({ ok: false, error: recoveryLinkResult.message }, 500);
 
-    const magicResult = await sendDriverInviteEmail(email, driver, magicLinkResult.actionLink, true);
+    const magicResult = await sendDriverInviteEmail(email, driver, recoveryLinkResult.actionLink, true);
     if (magicResult) return magicResult;
 
     return jsonResponse({
@@ -315,7 +315,7 @@ async function generateDriverInviteLink(
         driver_id: driver.id,
         company_id: driver.company_id,
       },
-      redirectTo: "https://appfalaj.com/driver",
+        redirectTo: "https://appfalaj.com/driver/set-password",
     },
   });
 
@@ -332,15 +332,15 @@ async function generateDriverInviteLink(
   return { actionLink, user, error: false, message: "" };
 }
 
-async function generateDriverMagicLink(
+async function generateDriverRecoveryLink(
   supabase: ReturnType<typeof createClient>,
   email: string,
 ): Promise<{ actionLink: string; error: boolean; message: string }> {
   const { data, error } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
+    type: "recovery",
     email,
     options: {
-      redirectTo: "https://appfalaj.com/driver",
+      redirectTo: "https://appfalaj.com/driver/set-password",
     },
   });
 
@@ -350,7 +350,7 @@ async function generateDriverMagicLink(
 
   const actionLink = data?.properties?.action_link;
   if (!actionLink) {
-    return { actionLink: "", error: true, message: "Driver login link could not be generated" };
+    return { actionLink: "", error: true, message: "Driver password reset link could not be generated" };
   }
 
   return { actionLink, error: false, message: "" };
@@ -369,7 +369,7 @@ async function sendDriverInviteEmail(
 
   const from = Deno.env.get("FALAJ_EMAIL_FROM") ?? "Falaj <onboarding@resend.dev>";
   const driverName = driver.name?.trim() || "Falaj Driver";
-  const subject = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
+  const subject = existingUser ? "رابط تعيين كلمة مرور السائق في فلج" : "دعوة للانضمام كسائق في فلج";
   const text = buildDriverInviteText(driverName, actionLink, existingUser);
   const html = buildDriverInviteHtml(driverName, actionLink, existingUser);
 
@@ -398,8 +398,8 @@ async function sendDriverInviteEmail(
 }
 
 function buildDriverInviteText(driverName: string, actionLink: string, existingUser: boolean) {
-  const title = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
-  const englishTitle = existingUser ? "Falaj Driver Login Link" : "Invitation to Join Falaj as a Driver";
+  const title = existingUser ? "رابط تعيين كلمة مرور السائق في فلج" : "دعوة للانضمام كسائق في فلج";
+  const englishTitle = existingUser ? "Falaj Driver Password Setup Link" : "Invitation to Join Falaj as a Driver";
 
   return [
     title,
@@ -407,21 +407,23 @@ function buildDriverInviteText(driverName: string, actionLink: string, existingU
     `مرحبًا ${driverName},`,
     "تمت دعوتك لاستخدام بوابة السائق في فلج لإدارة طلبات التوصيل المسندة إليك.",
     existingUser
-      ? "افتح الرابط التالي للدخول إلى صفحة السائق."
+      ? "افتح الرابط التالي لتعيين كلمة مرور السائق أو تحديثها، ثم يمكنك الدخول لاحقًا من صفحة السائق بالبريد أو رقم الهاتف وكلمة المرور."
       : "افتح الرابط التالي لقبول الدعوة وتفعيل حساب السائق.",
     actionLink,
     "",
     englishTitle,
     `Hello ${driverName},`,
     "You have been invited to use the Falaj driver portal for assigned deliveries.",
-    existingUser ? "Open the link above to sign in." : "Open the link above to accept the driver invitation.",
+    existingUser
+      ? "Open the link above to set or reset the driver password, then sign in later with email or phone and password."
+      : "Open the link above to accept the driver invitation.",
   ].join("\n");
 }
 
 function buildDriverInviteHtml(driverName: string, actionLink: string, existingUser: boolean) {
-  const title = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
-  const englishTitle = existingUser ? "Falaj Driver Login Link" : "Invitation to Join Falaj as a Driver";
-  const cta = existingUser ? "دخول بوابة السائق" : "قبول دعوة السائق";
+  const title = existingUser ? "رابط تعيين كلمة مرور السائق في فلج" : "دعوة للانضمام كسائق في فلج";
+  const englishTitle = existingUser ? "Falaj Driver Password Setup Link" : "Invitation to Join Falaj as a Driver";
+  const cta = existingUser ? "تعيين كلمة مرور السائق" : "قبول دعوة السائق";
 
   return `
     <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7;color:#123;">
