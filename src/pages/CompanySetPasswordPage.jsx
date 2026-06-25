@@ -15,6 +15,7 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoveryUserId, setRecoveryUserId] = useState("");
   const [hasRecoverySession, setHasRecoverySession] = useState(false);
+  const [recoveryErrorKind, setRecoveryErrorKind] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -22,6 +23,7 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
     async function prepareRecoverySession() {
       setError("");
       setMessage("");
+      setRecoveryErrorKind("");
 
       if (!supabase) {
         if (!cancelled) {
@@ -37,6 +39,7 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
 
         if (!sessionResult.session) {
           setHasRecoverySession(false);
+          setRecoveryErrorKind("missing_link");
           setError("افتح رابط تعيين كلمة المرور من البريد. لا يمكن تغيير كلمة المرور من جلسة مفتوحة مسبقًا.");
           return;
         }
@@ -59,6 +62,7 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
         }
 
         setHasRecoverySession(false);
+        setRecoveryErrorKind(sessionError?.stage === "invalid_recovery_link" ? "invalid_link" : "");
         setError(getSetPasswordErrorMessage(sessionError, "تعذر فتح رابط تعيين كلمة المرور. قد يكون الرابط منتهيًا أو مستخدمًا مسبقًا."));
       } finally {
         if (!cancelled) setIsPreparingSession(false);
@@ -167,6 +171,11 @@ export default function CompanySetPasswordPage({ onSaved, accountKind = "company
 
         {message ? <p className="auth-alert success">{message}</p> : null}
         {error ? <p className="auth-alert error">{error}</p> : null}
+        {error && !hasRecoverySession ? (
+          <button type="button" className="auth-text-button" onClick={() => navigateAfterRecoveryError(accountKind)}>
+            {getRecoveryErrorActionLabel(accountKind, recoveryErrorKind)}
+          </button>
+        ) : null}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>
@@ -231,7 +240,7 @@ async function ensureRecoverySession() {
   if (code) {
     await supabase.auth.signOut();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
+    if (error) throw Object.assign(error, { stage: "invalid_recovery_link" });
     stripAuthParamsFromUrl(currentUrl);
     return { session: data?.session ?? null };
   }
@@ -252,7 +261,7 @@ async function ensureRecoverySession() {
       token_hash: tokenHash || hashTokenHash,
       type: otpType,
     });
-    if (error) throw error;
+    if (error) throw Object.assign(error, { stage: "invalid_recovery_link" });
     stripAuthParamsFromUrl(currentUrl);
     return { session: data?.session ?? null };
   }
@@ -272,7 +281,7 @@ async function ensureRecoverySession() {
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-    if (error) throw error;
+    if (error) throw Object.assign(error, { stage: "invalid_recovery_link" });
     stripAuthParamsFromUrl(currentUrl);
     return { session: data?.session ?? null };
   }
@@ -395,9 +404,25 @@ function stripAuthParamsFromUrl(currentUrl) {
   window.history.replaceState({}, "", `${currentUrl.pathname}${currentUrl.search}`);
 }
 
+function getRecoveryErrorActionLabel(accountKind, recoveryErrorKind) {
+  if (accountKind === "driver") {
+    return recoveryErrorKind === "invalid_link" ? "طلب رابط جديد من الشركة" : "العودة لتسجيل دخول السائق";
+  }
+
+  return "العودة لتسجيل دخول المورد";
+}
+
+function navigateAfterRecoveryError(accountKind) {
+  window.location.assign(accountKind === "driver" ? "/driver/login" : "/company/login");
+}
+
 function getSetPasswordErrorMessage(error, fallback) {
   const message = String(error?.message || "").toLowerCase();
   const stage = error?.stage;
+
+  if (stage === "invalid_recovery_link") {
+    return "رابط تعيين كلمة المرور منتهي أو تم استخدامه مسبقًا. اطلب رابطًا جديدًا.";
+  }
 
   if (stage === "session_missing" || message.includes("auth session missing")) {
     return "رابط تعيين كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا وحاول مرة أخرى.";
