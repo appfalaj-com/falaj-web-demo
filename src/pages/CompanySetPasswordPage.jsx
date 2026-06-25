@@ -225,6 +225,8 @@ function getSetPasswordCopy(accountKind, t) {
 async function ensureRecoverySession() {
   const currentUrl = new URL(window.location.href);
   const code = currentUrl.searchParams.get("code");
+  const tokenHash = currentUrl.searchParams.get("token_hash");
+  const tokenType = currentUrl.searchParams.get("type");
 
   if (code) {
     await supabase.auth.signOut();
@@ -235,6 +237,26 @@ async function ensureRecoverySession() {
   }
 
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const hashTokenHash = hashParams.get("token_hash");
+  const hashTokenType = hashParams.get("type");
+
+  if (tokenHash || hashTokenHash) {
+    const otpType = tokenType || hashTokenType;
+    if (!["invite", "recovery"].includes(otpType)) {
+      await supabase.auth.signOut();
+      return { session: null };
+    }
+
+    await supabase.auth.signOut();
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash || hashTokenHash,
+      type: otpType,
+    });
+    if (error) throw error;
+    stripAuthParamsFromUrl(currentUrl);
+    return { session: data?.session ?? null };
+  }
+
   const accessToken = hashParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token");
   const hashType = hashParams.get("type");
@@ -367,6 +389,7 @@ async function verifyPasswordLogin(email, password, accountKind) {
 
 function stripAuthParamsFromUrl(currentUrl) {
   currentUrl.searchParams.delete("code");
+  currentUrl.searchParams.delete("token_hash");
   currentUrl.searchParams.delete("type");
   currentUrl.hash = "";
   window.history.replaceState({}, "", `${currentUrl.pathname}${currentUrl.search}`);
