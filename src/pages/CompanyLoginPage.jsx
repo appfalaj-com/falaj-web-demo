@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
+import { clearExistingAuthSessionForLogin } from "../services/authSessionBoundary.js";
 import {
   signInCompanyWithEmail,
   sendCompanyPasswordReset,
@@ -16,6 +17,10 @@ export default function CompanyLoginPage({ onAuthenticated }) {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetSubmitting, setIsResetSubmitting] = useState(false);
+
+  useEffect(() => {
+    clearExistingAuthSessionForLogin();
+  }, []);
 
   async function handleEmailLogin(event) {
     event.preventDefault();

@@ -5,6 +5,9 @@ const pagePath = resolve("src/pages/CompanySetPasswordPage.jsx");
 const source = readFileSync(pagePath, "utf8");
 const driverLoginSource = readFileSync(resolve("src/pages/DriverLoginPage.jsx"), "utf8");
 const driverServiceSource = readFileSync(resolve("src/services/driverService.js"), "utf8");
+const companyLoginSource = readFileSync(resolve("src/pages/CompanyLoginPage.jsx"), "utf8");
+const adminLoginSource = readFileSync(resolve("src/pages/AdminLoginPage.jsx"), "utf8");
+const companyAuthSource = readFileSync(resolve("src/services/companyAuthService.js"), "utf8");
 
 const failures = [];
 
@@ -34,6 +37,25 @@ if (updatePasswordIndex === -1) {
 
 if (/resolveDriverLoginIdentifier/.test(driverLoginSource) || /resolve_driver_login_identifier/.test(driverServiceSource)) {
   failures.push("Driver phone login must not call a client-side phone-to-email resolver.");
+}
+
+for (const [label, loginSource] of [
+  ["DriverLoginPage", driverLoginSource],
+  ["CompanyLoginPage", companyLoginSource],
+  ["AdminLoginPage", adminLoginSource],
+]) {
+  if (!loginSource.includes("clearExistingAuthSessionForLogin")) {
+    failures.push(`${label} must clear any existing cross-role session on mount.`);
+  }
+}
+
+for (const [label, serviceSource] of [
+  ["driverService", driverServiceSource],
+  ["companyAuthService", companyAuthSource],
+]) {
+  if (!serviceSource.includes("clearExistingAuthSessionForLogin")) {
+    failures.push(`${label} must clear any existing session before role-specific sign in.`);
+  }
 }
 
 if (failures.length) {

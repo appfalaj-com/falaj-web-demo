@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
+import { clearExistingAuthSessionForLogin } from "../services/authSessionBoundary.js";
 import { signInAdminWithEmail } from "../services/companyAuthService.js";
 
 export default function AdminLoginPage({ onAuthenticated }) {
@@ -9,6 +10,10 @@ export default function AdminLoginPage({ onAuthenticated }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    clearExistingAuthSessionForLogin();
+  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();

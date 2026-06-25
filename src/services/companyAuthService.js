@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient.js";
+import { clearExistingAuthSessionForLogin } from "./authSessionBoundary.js";
 
 export const COMPANY_AUTH_ERRORS = {
   NOT_CONFIGURED: "لم يتم إعداد اتصال Supabase لهذا التطبيق.",
@@ -269,6 +270,7 @@ export async function getCompanySession() {
 
 export async function signInCompanyWithEmail(email, password) {
   const client = requireSupabase();
+  await clearExistingAuthSessionForLogin();
   const { data, error } = await client.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -306,6 +308,7 @@ export async function sendCompanyPasswordReset(email) {
 
 export async function signInAdminWithEmail(email, password) {
   const client = requireSupabase();
+  await clearExistingAuthSessionForLogin();
   const { data, error } = await client.auth.signInWithPassword({ email, password });
 
   if (error) {

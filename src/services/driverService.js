@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient.js";
+import { clearExistingAuthSessionForLogin } from "./authSessionBoundary.js";
 import { getOrdersByDriver } from "./orderService.js";
 
 const ACTIVE_DRIVER_STATUSES = ["assigned", "en_route", "arrived"];
@@ -116,6 +117,8 @@ export async function signInDriverWithIdentifier(identifier, password) {
   if (!value || !password) {
     throw new Error("Invalid driver login credentials.");
   }
+
+  await clearExistingAuthSessionForLogin();
 
   if (isEmail(value)) {
     const { error } = await supabase.auth.signInWithPassword({

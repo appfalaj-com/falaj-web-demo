@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
+import { clearExistingAuthSessionForLogin } from "../services/authSessionBoundary.js";
 import {
   assertAuthenticatedActiveDriver,
   signInDriverWithIdentifier,
@@ -15,6 +16,10 @@ export default function DriverLoginPage({ onNavigate }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    clearExistingAuthSessionForLogin();
+  }, []);
 
   async function handlePasswordLogin(event) {
     event.preventDefault();
