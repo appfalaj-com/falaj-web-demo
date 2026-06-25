@@ -26,6 +26,7 @@ function normalizeSupabaseDriver(driver) {
     name: driver.name,
     phone: driver.phone,
     email: driver.email,
+    inviteStatus: driver.invite_status,
     vehiclePlate: driver.vehicle_plate,
     vehicleLabel: driver.vehicle_label,
     vehicle: driver.vehicle_label || driver.vehicle_plate || "غير محدد",
@@ -56,7 +57,7 @@ export async function getCurrentDriverFromSupabase() {
     return { user: null, driver: null };
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("drivers")
     .select(`${driverSelectColumns()}, companies(name)`)
     .eq("profile_id", user.id)
@@ -66,9 +67,43 @@ export async function getCurrentDriverFromSupabase() {
     throw error;
   }
 
+  if (!data || data.invite_status !== "accepted") {
+    const accepted = await acceptCurrentDriverInviteFromSupabase();
+    if (accepted.status === "accepted") {
+      const acceptedResult = await supabase
+        .from("drivers")
+        .select(`${driverSelectColumns()}, companies(name)`)
+        .eq("profile_id", user.id)
+        .maybeSingle();
+
+      if (acceptedResult.error) {
+        throw acceptedResult.error;
+      }
+
+      data = acceptedResult.data;
+    }
+  }
+
   return {
     user,
     driver: data ? normalizeSupabaseDriver(data) : null,
+  };
+}
+
+export async function acceptCurrentDriverInviteFromSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase client is not configured.");
+  }
+
+  const { data, error } = await supabase.rpc("accept_driver_invite_for_current_user");
+  if (error) {
+    throw error;
+  }
+
+  const result = Array.isArray(data) ? data[0] : data;
+  return {
+    status: result?.accept_status || "not_found",
+    driverId: result?.driver_id || null,
   };
 }
 
@@ -327,6 +362,7 @@ function driverSelectColumns() {
     "name",
     "phone",
     "email",
+    "invite_status",
     "vehicle_plate",
     "vehicle_label",
     "is_active",

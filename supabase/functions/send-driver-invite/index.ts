@@ -125,30 +125,25 @@ Deno.serve(async (req) => {
     }
 
     if (!existingUser) {
-      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-        data: {
-          role: "driver",
-          account_type: "driver",
-          driver_id: driver.id,
-          company_id: driver.company_id,
-        },
-        redirectTo: "https://appfalaj.com/driver",
-      });
+      const inviteLinkResult = await generateDriverInviteLink(supabase, email, driver);
 
-      if (inviteError) {
-        if (!isExistingUserError(inviteError.message)) {
-          return jsonResponse({ ok: false, error: inviteError.message }, 500);
+      if (inviteLinkResult.error) {
+        if (!isExistingUserError(inviteLinkResult.message)) {
+          return jsonResponse({ ok: false, error: inviteLinkResult.message }, 500);
         }
 
         const user = await findUserByEmail(supabase, email);
         if (!user) {
-          return jsonResponse({ ok: false, error: inviteError.message }, 500);
+          return jsonResponse({ ok: false, error: inviteLinkResult.message }, 500);
         }
 
         const linkResult = await linkDriverUser(supabase, user, driver, caller.id);
         if (linkResult.error) return linkResult.error;
 
-        const magicResult = await sendDriverMagicLink(supabase, email);
+        const magicLinkResult = await generateDriverMagicLink(supabase, email);
+        if (magicLinkResult.error) return jsonResponse({ ok: false, error: magicLinkResult.message }, 500);
+
+        const magicResult = await sendDriverInviteEmail(email, driver, magicLinkResult.actionLink, true);
         if (magicResult) return magicResult;
 
         return jsonResponse({
@@ -158,8 +153,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      const invitedUser = inviteData?.user
-        ? { id: inviteData.user.id, email: inviteData.user.email ?? email }
+      const invitedUser = inviteLinkResult.user
+        ? { id: inviteLinkResult.user.id, email: inviteLinkResult.user.email ?? email }
         : await findUserByEmail(supabase, email);
 
       if (!invitedUser) {
@@ -168,6 +163,9 @@ Deno.serve(async (req) => {
 
       const linkResult = await linkDriverUser(supabase, invitedUser, driver, caller.id);
       if (linkResult.error) return linkResult.error;
+
+      const emailResult = await sendDriverInviteEmail(email, driver, inviteLinkResult.actionLink, false);
+      if (emailResult) return emailResult;
 
       return jsonResponse({
         ok: true,
@@ -179,7 +177,10 @@ Deno.serve(async (req) => {
     const linkResult = await linkDriverUser(supabase, existingUser, driver, caller.id);
     if (linkResult.error) return linkResult.error;
 
-    const magicResult = await sendDriverMagicLink(supabase, email);
+    const magicLinkResult = await generateDriverMagicLink(supabase, email);
+    if (magicLinkResult.error) return jsonResponse({ ok: false, error: magicLinkResult.message }, 500);
+
+    const magicResult = await sendDriverInviteEmail(email, driver, magicLinkResult.actionLink, true);
     if (magicResult) return magicResult;
 
     return jsonResponse({
@@ -299,23 +300,154 @@ async function verifyDriverLink(
   return { error: null };
 }
 
-async function sendDriverMagicLink(
+async function generateDriverInviteLink(
   supabase: ReturnType<typeof createClient>,
   email: string,
-): Promise<Response | null> {
-  const { error } = await supabase.auth.signInWithOtp({
+  driver: DriverRow,
+): Promise<{ actionLink: string; user: AuthUser | null; error: boolean; message: string }> {
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "invite",
     email,
     options: {
-      emailRedirectTo: "https://appfalaj.com/driver",
-      shouldCreateUser: false,
+      data: {
+        role: "driver",
+        account_type: "driver",
+        driver_id: driver.id,
+        company_id: driver.company_id,
+      },
+      redirectTo: "https://appfalaj.com/driver",
     },
   });
 
   if (error) {
-    return jsonResponse({ ok: false, error: error.message }, 500);
+    return { actionLink: "", user: null, error: true, message: error.message };
+  }
+
+  const actionLink = data?.properties?.action_link;
+  if (!actionLink) {
+    return { actionLink: "", user: null, error: true, message: "Driver invite link could not be generated" };
+  }
+
+  const user = data?.user ? { id: data.user.id, email: data.user.email ?? email } : null;
+  return { actionLink, user, error: false, message: "" };
+}
+
+async function generateDriverMagicLink(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+): Promise<{ actionLink: string; error: boolean; message: string }> {
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: {
+      redirectTo: "https://appfalaj.com/driver",
+    },
+  });
+
+  if (error) {
+    return { actionLink: "", error: true, message: error.message };
+  }
+
+  const actionLink = data?.properties?.action_link;
+  if (!actionLink) {
+    return { actionLink: "", error: true, message: "Driver login link could not be generated" };
+  }
+
+  return { actionLink, error: false, message: "" };
+}
+
+async function sendDriverInviteEmail(
+  email: string,
+  driver: DriverRow,
+  actionLink: string,
+  existingUser: boolean,
+): Promise<Response | null> {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendApiKey) {
+    return jsonResponse({ ok: false, error: "Driver email provider is not configured" }, 500);
+  }
+
+  const from = Deno.env.get("FALAJ_EMAIL_FROM") ?? "Falaj <onboarding@resend.dev>";
+  const driverName = driver.name?.trim() || "Falaj Driver";
+  const subject = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
+  const text = buildDriverInviteText(driverName, actionLink, existingUser);
+  const html = buildDriverInviteHtml(driverName, actionLink, existingUser);
+
+  const emailResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject,
+      text,
+      html,
+    }),
+  });
+
+  if (!emailResponse.ok) {
+    const errorText = await emailResponse.text();
+    console.warn("Driver invite email failed:", errorText);
+    return jsonResponse({ ok: false, error: "Driver invite email could not be sent" }, 500);
   }
 
   return null;
+}
+
+function buildDriverInviteText(driverName: string, actionLink: string, existingUser: boolean) {
+  const title = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
+  const englishTitle = existingUser ? "Falaj Driver Login Link" : "Invitation to Join Falaj as a Driver";
+
+  return [
+    title,
+    "",
+    `مرحبًا ${driverName},`,
+    "تمت دعوتك لاستخدام بوابة السائق في فلج لإدارة طلبات التوصيل المسندة إليك.",
+    existingUser
+      ? "افتح الرابط التالي للدخول إلى صفحة السائق."
+      : "افتح الرابط التالي لقبول الدعوة وتفعيل حساب السائق.",
+    actionLink,
+    "",
+    englishTitle,
+    `Hello ${driverName},`,
+    "You have been invited to use the Falaj driver portal for assigned deliveries.",
+    existingUser ? "Open the link above to sign in." : "Open the link above to accept the driver invitation.",
+  ].join("\n");
+}
+
+function buildDriverInviteHtml(driverName: string, actionLink: string, existingUser: boolean) {
+  const title = existingUser ? "رابط دخول السائق إلى فلج" : "دعوة للانضمام كسائق في فلج";
+  const englishTitle = existingUser ? "Falaj Driver Login Link" : "Invitation to Join Falaj as a Driver";
+  const cta = existingUser ? "دخول بوابة السائق" : "قبول دعوة السائق";
+
+  return `
+    <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7;color:#123;">
+      <h2>${escapeHtml(title)}</h2>
+      <p>مرحبًا ${escapeHtml(driverName)},</p>
+      <p>تمت دعوتك لاستخدام بوابة السائق في فلج لإدارة طلبات التوصيل المسندة إليك.</p>
+      <p>
+        <a href="${escapeHtml(actionLink)}" style="display:inline-block;padding:12px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:8px;">
+          ${escapeHtml(cta)}
+        </a>
+      </p>
+      <p style="direction:ltr;text-align:left;margin-top:28px;">
+        <strong>${escapeHtml(englishTitle)}</strong><br>
+        You have been invited to use the Falaj driver portal for assigned deliveries.
+      </p>
+    </div>
+  `;
+}
+
+function escapeHtml(value: string) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 async function findUserByEmail(supabase: ReturnType<typeof createClient>, email: string): Promise<AuthUser | null> {
