@@ -274,8 +274,13 @@ async function validateRecoveryAccount(session, accountKind) {
 
   if (profileError) throw Object.assign(profileError, { stage: "account_check" });
 
-  const role = String(profile?.role || user.user_metadata?.role || "").toLowerCase();
-  const accountType = String(profile?.account_type || user.user_metadata?.account_type || "").toLowerCase();
+  if (!profile) {
+    await supabase.auth.signOut();
+    throw Object.assign(new Error("Recovery account profile is missing"), { stage: "wrong_account_type" });
+  }
+
+  const role = String(profile.role || "").toLowerCase();
+  const accountType = String(profile.account_type || "").toLowerCase();
 
   if (accountKind === "driver") {
     if (role === "company" || accountType === "company" || role === "admin" || accountType === "admin") {

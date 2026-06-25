@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "security:audit": "node scripts/security-audit-check.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
