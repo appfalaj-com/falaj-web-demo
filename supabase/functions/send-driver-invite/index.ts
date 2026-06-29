@@ -27,6 +27,9 @@ type ProfileRow = {
   account_type: string | null;
 };
 
+const DRIVER_ACCEPT_INVITE_URL = "https://appfalaj.com/driver/accept-invite";
+const DRIVER_INVITE_TICKET_TTL_MINUTES = 30;
+
 const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
   "هذا البريد مستخدم كحساب شركة. أدخل بريدًا مختلفًا للسائق.";
 
@@ -140,10 +143,9 @@ Deno.serve(async (req) => {
         const linkResult = await linkDriverUser(supabase, user, driver, caller.id);
         if (linkResult.error) return linkResult.error;
 
-        const recoveryLinkResult = await generateDriverRecoveryLink(supabase, email);
-        if (recoveryLinkResult.error) return jsonResponse({ ok: false, error: recoveryLinkResult.message }, 500);
+        const ticketResult = await createDriverAcceptLink(driver.id, serviceRoleKey);
 
-        const magicResult = await sendDriverInviteEmail(email, driver, recoveryLinkResult.actionLink, true);
+        const magicResult = await sendDriverInviteEmail(email, driver, ticketResult.acceptLink, true);
         if (magicResult) return magicResult;
 
         return jsonResponse({
@@ -164,7 +166,9 @@ Deno.serve(async (req) => {
       const linkResult = await linkDriverUser(supabase, invitedUser, driver, caller.id);
       if (linkResult.error) return linkResult.error;
 
-      const emailResult = await sendDriverInviteEmail(email, driver, inviteLinkResult.actionLink, false);
+      const ticketResult = await createDriverAcceptLink(driver.id, serviceRoleKey);
+
+      const emailResult = await sendDriverInviteEmail(email, driver, ticketResult.acceptLink, false);
       if (emailResult) return emailResult;
 
       return jsonResponse({
@@ -177,10 +181,9 @@ Deno.serve(async (req) => {
     const linkResult = await linkDriverUser(supabase, existingUser, driver, caller.id);
     if (linkResult.error) return linkResult.error;
 
-    const recoveryLinkResult = await generateDriverRecoveryLink(supabase, email);
-    if (recoveryLinkResult.error) return jsonResponse({ ok: false, error: recoveryLinkResult.message }, 500);
+    const ticketResult = await createDriverAcceptLink(driver.id, serviceRoleKey);
 
-    const magicResult = await sendDriverInviteEmail(email, driver, recoveryLinkResult.actionLink, true);
+    const magicResult = await sendDriverInviteEmail(email, driver, ticketResult.acceptLink, true);
     if (magicResult) return magicResult;
 
     return jsonResponse({
@@ -332,28 +335,40 @@ async function generateDriverInviteLink(
   return { actionLink, user, error: false, message: "" };
 }
 
-async function generateDriverRecoveryLink(
-  supabase: ReturnType<typeof createClient>,
-  email: string,
-): Promise<{ actionLink: string; error: boolean; message: string }> {
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: {
-      redirectTo: "https://appfalaj.com/driver/set-password",
-    },
-  });
+async function createDriverAcceptLink(driverId: string, signingSecret: string): Promise<{ acceptLink: string }> {
+  const payload = {
+    driver_id: driverId,
+    exp: Math.floor(Date.now() / 1000) + DRIVER_INVITE_TICKET_TTL_MINUTES * 60,
+    nonce: crypto.randomUUID(),
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signature = await signInvitePayload(encodedPayload, signingSecret);
+  const token = `${encodedPayload}.${signature}`;
+  return {
+    acceptLink: `${DRIVER_ACCEPT_INVITE_URL}?ticket=${encodeURIComponent(token)}`,
+  };
+}
 
-  if (error) {
-    return { actionLink: "", error: true, message: error.message };
-  }
+async function signInvitePayload(encodedPayload: string, signingSecret: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(signingSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(encodedPayload));
+  return base64UrlEncodeBytes(new Uint8Array(signature));
+}
 
-  const actionLink = data?.properties?.action_link;
-  if (!actionLink) {
-    return { actionLink: "", error: true, message: "Driver password reset link could not be generated" };
-  }
+function base64UrlEncode(value: string) {
+  return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
 
-  return { actionLink, error: false, message: "" };
+function base64UrlEncodeBytes(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 async function sendDriverInviteEmail(

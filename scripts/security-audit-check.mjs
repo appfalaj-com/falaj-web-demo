@@ -8,6 +8,7 @@ const driverServiceSource = readFileSync(resolve("src/services/driverService.js"
 const companyLoginSource = readFileSync(resolve("src/pages/CompanyLoginPage.jsx"), "utf8");
 const adminLoginSource = readFileSync(resolve("src/pages/AdminLoginPage.jsx"), "utf8");
 const companyAuthSource = readFileSync(resolve("src/services/companyAuthService.js"), "utf8");
+const sendDriverInviteSource = readFileSync(resolve("supabase/functions/send-driver-invite/index.ts"), "utf8");
 
 const failures = [];
 
@@ -37,6 +38,21 @@ if (updatePasswordIndex === -1) {
 
 if (/resolveDriverLoginIdentifier/.test(driverLoginSource) || /resolve_driver_login_identifier/.test(driverServiceSource)) {
   failures.push("Driver phone login must not call a client-side phone-to-email resolver.");
+}
+
+if (
+  /sendDriverInviteEmail\([^)]*\.actionLink/.test(sendDriverInviteSource) ||
+  /sendDriverInviteEmail\([^)]*action_link/.test(sendDriverInviteSource)
+) {
+  failures.push("Driver invite emails must not contain direct Supabase one-time action links.");
+}
+
+if (!sendDriverInviteSource.includes("createDriverAcceptLink")) {
+  failures.push("Driver invite emails must use intermediate Falaj accept links.");
+}
+
+if (/resetPasswordForEmail\s*\(/.test(companyAuthSource)) {
+  failures.push("Company password reset must not send direct Supabase one-time links from the frontend.");
 }
 
 for (const [label, loginSource] of [

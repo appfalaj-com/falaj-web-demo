@@ -236,6 +236,16 @@ async function ensureRecoverySession() {
   const code = currentUrl.searchParams.get("code");
   const tokenHash = currentUrl.searchParams.get("token_hash");
   const tokenType = currentUrl.searchParams.get("type");
+  const searchErrorCode = currentUrl.searchParams.get("error_code") || currentUrl.searchParams.get("error");
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const hashErrorCode = hashParams.get("error_code") || hashParams.get("error");
+
+  if (searchErrorCode || hashErrorCode) {
+    await supabase.auth.signOut();
+    throw Object.assign(new Error(searchErrorCode || hashErrorCode || "Invalid recovery link"), {
+      stage: "invalid_recovery_link",
+    });
+  }
 
   if (code) {
     await supabase.auth.signOut();
@@ -245,7 +255,6 @@ async function ensureRecoverySession() {
     return { session: data?.session ?? null };
   }
 
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const hashTokenHash = hashParams.get("token_hash");
   const hashTokenType = hashParams.get("type");
 

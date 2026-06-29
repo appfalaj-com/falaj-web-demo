@@ -297,12 +297,16 @@ export async function sendCompanyEmailMagicLink(email) {
 
 export async function sendCompanyPasswordReset(email) {
   const client = requireSupabase();
-  const { error } = await client.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/company/set-password`,
+  const { data, error } = await client.functions.invoke("company-request-password-reset", {
+    body: { email },
   });
 
   if (error) {
     throw error;
+  }
+
+  if (data && data.ok === false) {
+    throw new Error(data.error || "Company password reset could not be requested.");
   }
 }
 

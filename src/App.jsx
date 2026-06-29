@@ -11,6 +11,7 @@ import AdminSupplierAccountPage from "./pages/AdminSupplierAccountPage.jsx";
 import AdminSupplierRequestsPage from "./pages/AdminSupplierRequestsPage.jsx";
 import AdminSuppliersPage from "./pages/AdminSuppliersPage.jsx";
 import CompanyDashboard from "./pages/CompanyDashboard.jsx";
+import CompanyAcceptResetPage from "./pages/CompanyAcceptResetPage.jsx";
 import CompanyDriversLivePage from "./pages/CompanyDriversLivePage.jsx";
 import CompanyDriversPage from "./pages/CompanyDriversPage.jsx";
 import CompanyLoginPage from "./pages/CompanyLoginPage.jsx";
@@ -18,6 +19,7 @@ import CompanyOrdersPage from "./pages/CompanyOrdersPage.jsx";
 import CompanyPendingReviewPage from "./pages/CompanyPendingReviewPage.jsx";
 import CompanyProductsPage from "./pages/CompanyProductsPage.jsx";
 import CompanySetPasswordPage from "./pages/CompanySetPasswordPage.jsx";
+import DriverAcceptInvitePage from "./pages/DriverAcceptInvitePage.jsx";
 import DriverLoginPage from "./pages/DriverLoginPage.jsx";
 import DriverPage from "./pages/DriverPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
@@ -180,6 +182,10 @@ export default function App() {
     return <CompanySetPasswordPage accountKind="company" onSaved={() => replacePath("/company/login")} />;
   }
 
+  if (currentPath === "/company/accept-reset") {
+    return <CompanyAcceptResetPage onNavigate={navigate} />;
+  }
+
   if (currentPath === "/") {
     return <LandingPage onNavigate={navigate} />;
   }
@@ -194,6 +200,10 @@ export default function App() {
 
   if (currentPath === "/driver/login") {
     return <DriverLoginPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/driver/accept-invite") {
+    return <DriverAcceptInvitePage onNavigate={navigate} />;
   }
 
   if (currentPath === "/driver/set-password") {
