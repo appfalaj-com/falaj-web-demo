@@ -71,6 +71,11 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [activeStatus, setActiveStatus] = useState("all");
   const [activeCompanyId, setActiveCompanyId] = useState("all");
+  const [activeDriverId, setActiveDriverId] = useState("all");
+  const [activePaymentStatus, setActivePaymentStatus] = useState("all");
+  const [activeCashFilter, setActiveCashFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [timeline, setTimeline] = useState([]);
@@ -120,19 +125,34 @@ export default function AdminOrdersPage() {
     return Array.from(suppliers, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, "ar"));
   }, [orders]);
 
+  const driverOptions = useMemo(() => {
+    const drivers = new Map();
+    orders.forEach((order) => {
+      if (order.driverId) {
+        drivers.set(order.driverId, order.driverName || order.driverId);
+      }
+    });
+    return Array.from(drivers, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  }, [orders]);
+
   const visibleOrders = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
     return orders.filter((order) => {
       if (activeStatus !== "all" && order.status !== activeStatus) return false;
       if (activeCompanyId !== "all" && order.companyId !== activeCompanyId) return false;
+      if (activeDriverId !== "all" && order.driverId !== activeDriverId) return false;
+      if (activePaymentStatus !== "all" && order.paymentStatus !== activePaymentStatus) return false;
+      if (activeCashFilter !== "all" && !matchesCashFilter(order, activeCashFilter)) return false;
+      if (dateFrom && !isOnOrAfterDate(order.createdAt, dateFrom)) return false;
+      if (dateTo && !isOnOrBeforeDate(order.createdAt, dateTo)) return false;
       if (!query) return true;
 
-      return [order.id, order.customer, order.phone, order.companyName]
+      return [order.id, order.publicCode, order.customer, order.phone, order.companyName, order.driverName, order.area]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
-  }, [activeCompanyId, activeStatus, orders, searchTerm]);
+  }, [activeCashFilter, activeCompanyId, activeDriverId, activePaymentStatus, activeStatus, dateFrom, dateTo, orders, searchTerm]);
 
   const selectedOrder =
     visibleOrders.find((order) => order.rawId === selectedOrderId) ??
@@ -242,6 +262,43 @@ export default function AdminOrdersPage() {
               ))}
             </select>
           </label>
+          <label>
+            السائق
+            <select value={activeDriverId} onChange={(event) => setActiveDriverId(event.target.value)}>
+              <option value="all">كل السائقين</option>
+              {driverOptions.map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            حالة الدفع
+            <select value={activePaymentStatus} onChange={(event) => setActivePaymentStatus(event.target.value)}>
+              <option value="all">كل الحالات</option>
+              {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            تحصيل الكاش
+            <select value={activeCashFilter} onChange={(event) => setActiveCashFilter(event.target.value)}>
+              <option value="all">الكل</option>
+              <option value="cash_uncollected">كاش غير محصل</option>
+              <option value="cash_collected">كاش محصل</option>
+              <option value="non_cash">غير كاش</option>
+            </select>
+          </label>
+          <label>
+            من تاريخ
+            <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+          </label>
+          <label>
+            إلى تاريخ
+            <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+          </label>
         </div>
       </section>
 
@@ -329,6 +386,7 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
         <DetailRow label="حالة الدفع" value={paymentStatusLabel(order.paymentStatus)} />
         <DetailRow label="تحصيل الكاش" value={cashCollectionLabel(order)} />
         <DetailRow label="السائق" value={order.driverName || order.driverId || "-"} />
+        <DetailRow label="محصل الكاش" value={order.cashCollectorDriverName || order.cashCollectedByDriverId || "-"} />
         <DetailRow label="الإجمالي" value={formatMoney(order.amount)} />
         <DetailRow label="تاريخ الإنشاء" value={formatDateTime(order.createdAt)} />
         <DetailRow label="آخر تحديث" value={formatDateTime(order.updatedAt)} />
@@ -353,6 +411,10 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
       </section>
 
       <section className="order-timeline-section">
+        <div className="next-action-banner">
+          <span>الإجراء التالي المقترح</span>
+          <strong>{nextActionHint(order.status)}</strong>
+        </div>
         <h3>سجل حالة الطلب</h3>
         {isTimelineLoading ? (
           <p className="empty-state">جاري تحميل السجل...</p>
@@ -361,8 +423,9 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
         ) : (
           <ol className="supplier-request-timeline">
             {timeline.map((item) => (
-              <li className="done" key={item.id}>
-                {statusLabel(item.status)} · {formatDateTime(item.createdAt)}
+              <li className={item.status === order.status ? "active done" : "done"} key={item.id}>
+                <strong>{statusLabel(item.status)} · {formatDateTime(item.createdAt)}</strong>
+                {item.note ? <small>{item.note}</small> : null}
               </li>
             ))}
           </ol>
@@ -434,6 +497,42 @@ function cashCollectionLabel(order) {
     return order.cashCollectedAt ? `تم التحصيل · ${formatDateTime(order.cashCollectedAt)}` : "تم التحصيل";
   }
   return "لم يتم التحصيل بعد";
+}
+
+function matchesCashFilter(order, filter) {
+  if (filter === "cash_collected") return order.paymentMethod === "cash" && Boolean(order.cashCollectedByDriver);
+  if (filter === "cash_uncollected") return order.paymentMethod === "cash" && !order.cashCollectedByDriver;
+  if (filter === "non_cash") return order.paymentMethod !== "cash";
+  return true;
+}
+
+function isOnOrAfterDate(value, date) {
+  if (!value || !date) return true;
+  const orderDate = new Date(value);
+  const startDate = new Date(`${date}T00:00:00`);
+  return orderDate >= startDate;
+}
+
+function isOnOrBeforeDate(value, date) {
+  if (!value || !date) return true;
+  const orderDate = new Date(value);
+  const endDate = new Date(`${date}T23:59:59`);
+  return orderDate <= endDate;
+}
+
+function nextActionHint(status) {
+  const hints = {
+    pending: "مراجعة الطلب وقبوله أو إلغاؤه.",
+    accepted: "تجهيز الطلب ثم تعيين سائق أو وضعه جاهزًا للتسليم.",
+    assigned: "متابعة السائق حتى يبدأ التوصيل.",
+    en_route: "متابعة التوصيل حتى الوصول للعميل.",
+    arrived: "تأكيد التسليم أو تسجيل تعثر.",
+    delivered: "مراجعة تحصيل الكاش إن كان الدفع عند الاستلام.",
+    failed: "مراجعة سبب التعثر مع المورد.",
+    cancelled: "لا يوجد إجراء تشغيلي مطلوب.",
+    rejected: "لا يوجد إجراء تشغيلي مطلوب.",
+  };
+  return hints[status] ?? "راجع تفاصيل الطلب وحدد الإجراء المناسب.";
 }
 
 function formatMoney(value) {

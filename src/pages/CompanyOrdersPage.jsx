@@ -355,6 +355,13 @@ function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUp
       </section>
 
       <section className="order-timeline-section">
+        <div className="next-action-banner">
+          <span>الإجراء التالي المقترح</span>
+          <strong>{nextCompanyActionHint(order)}</strong>
+        </div>
+      </section>
+
+      <section className="order-timeline-section">
         <h3>تعيين السائق</h3>
         {drivers.length === 0 ? (
           <p className="empty-state">لا يوجد سائقون نشطون حاليًا. أضف سائقًا من صفحة السائقين قبل الإسناد.</p>
@@ -386,8 +393,9 @@ function OrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUp
         ) : (
           <ol className="supplier-request-timeline">
             {timeline.map((item) => (
-              <li className="done" key={item.id}>
-                {statusLabel(item.status)} · {formatDateTime(item.createdAt)}
+              <li className={item.status === order.status ? "active done" : "done"} key={item.id}>
+                <strong>{statusLabel(item.status)} · {formatDateTime(item.createdAt)}</strong>
+                {item.note ? <small>{item.note}</small> : null}
               </li>
             ))}
           </ol>
@@ -471,6 +479,24 @@ function cashCollectionLabel(order) {
 function driverLabel(order, drivers = []) {
   if (order.driverName) return order.driverName;
   return drivers.find((driver) => driver.id === order.driverId)?.name || "-";
+}
+
+function nextCompanyActionHint(order) {
+  if (!order) return "-";
+  const hasDriver = Boolean(order.driverId);
+
+  if (order.status === "pending") return "اقبل الطلب إذا كان قابلًا للتنفيذ، أو ألغِه إذا تعذر التوريد.";
+  if (order.status === "accepted" && !hasDriver) return "عيّن سائقًا نشطًا أو اجعل الطلب جاهزًا للتسليم.";
+  if (order.status === "accepted" && hasDriver) return "ضع الطلب كجاهز للتسليم بعد انتهاء التجهيز.";
+  if (order.status === "assigned") return "تابع السائق حتى يبدأ التوصيل.";
+  if (order.status === "en_route") return "تابع التوصيل حتى وصول السائق للعميل.";
+  if (order.status === "arrived") return "انتظر تأكيد التسليم أو سجل التعثر إذا لزم.";
+  if (order.status === "delivered" && order.paymentMethod === "cash" && !order.cashCollectedByDriver) {
+    return "الطلب مكتمل لكن الكاش غير مسجل كمحصل بعد.";
+  }
+  if (order.status === "delivered") return "الطلب مكتمل ولا يوجد إجراء مطلوب.";
+  if (["cancelled", "failed", "rejected"].includes(order.status)) return "راجع السبب داخليًا إذا احتجت متابعة.";
+  return "راجع تفاصيل الطلب وحدد الإجراء المناسب.";
 }
 
 function formatMoney(value) {

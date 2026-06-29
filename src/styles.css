@@ -1720,6 +1720,7 @@ tbody tr:hover td {
 
 .filter-row input,
 .filter-row select,
+.inline-select-label select,
 .falaj-input {
   background: var(--white);
   border: 1px solid var(--border);
@@ -1727,6 +1728,34 @@ tbody tr:hover td {
   color: var(--text);
   min-width: 0;
   padding: 10px 12px;
+}
+
+.inline-select-label {
+  color: var(--dark);
+  display: grid;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.next-action-banner {
+  background: linear-gradient(135deg, rgba(18, 153, 144, 0.12), rgba(255, 251, 222, 0.5));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.next-action-banner span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.next-action-banner strong {
+  color: var(--dark);
+  line-height: 1.7;
 }
 
 .admin-actions-panel {

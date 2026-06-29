@@ -19,6 +19,7 @@ const DRIVER_NEXT_ACTIONS = {
 };
 
 const DRIVER_ACTIVE_STATUSES = ["assigned", "en_route", "arrived"];
+const DRIVER_COMPLETED_STATUSES = ["delivered", "failed", "cancelled", "rejected"];
 const ISSUE_REASONS = ["العميل لا يرد", "العنوان غير واضح", "تأخير في التوصيل"];
 
 export default function DriverPage({ onNavigate }) {
@@ -47,6 +48,14 @@ export default function DriverPage({ onNavigate }) {
   );
 
   const currentOrder = activeOrders[0] ?? null;
+  const completedOrders = useMemo(
+    () => orders.filter((order) => DRIVER_COMPLETED_STATUSES.includes(order.status)),
+    [orders]
+  );
+  const assignedOrders = useMemo(
+    () => orders.filter((order) => !DRIVER_COMPLETED_STATUSES.includes(order.status)),
+    [orders]
+  );
 
   async function loadDriverContext() {
     setLoading(true);
@@ -282,6 +291,7 @@ export default function DriverPage({ onNavigate }) {
             driver={driver}
             activeCount={activeOrders.length}
             availableCount={availableOrders.length}
+            completedCount={completedOrders.length}
             locationState={locationState}
           />
 
@@ -323,9 +333,9 @@ export default function DriverPage({ onNavigate }) {
             )}
           </DriverSection>
 
-          <DriverSection title="طلباتي" description="الطلبات المسندة لك حاليًا أو المنتهية.">
-            {orders.length > 0 ? (
-              orders.map((order) => (
+          <DriverSection title="طلباتي المسندة" description="الطلبات التي تعمل عليها الآن أو تنتظر بدء التوصيل.">
+            {assignedOrders.length > 0 ? (
+              assignedOrders.map((order) => (
                 <DriverOrderCard
                   key={order.rawId}
                   order={order}
@@ -338,6 +348,22 @@ export default function DriverPage({ onNavigate }) {
               ))
             ) : (
               <EmptyDriverCard text="لا توجد طلبات مسندة لك" />
+            )}
+          </DriverSection>
+
+          <DriverSection title="توصيلات مكتملة أو مغلقة" description="طلبات تم تسليمها أو تعثرت أو أُغلقت.">
+            {completedOrders.length > 0 ? (
+              completedOrders.map((order) => (
+                <DriverOrderCard
+                  key={order.rawId}
+                  order={order}
+                  isUpdating={updatingOrderId === order.rawId}
+                  variant="completed"
+                  onCashCollected={handleCashCollected}
+                />
+              ))
+            ) : (
+              <EmptyDriverCard text="لا توجد توصيلات مكتملة بعد" />
             )}
           </DriverSection>
         </>
@@ -354,13 +380,14 @@ export default function DriverPage({ onNavigate }) {
   );
 }
 
-function DriverOperationsSummary({ driver, activeCount, availableCount, locationState }) {
+function DriverOperationsSummary({ driver, activeCount, availableCount, completedCount, locationState }) {
   return (
     <section className="driver-ops-summary" aria-label="ملخص السائق">
       <SummaryTile label="السائق" value={driver.name || "غير محدد"} note={driver.companyName || "الشركة غير محددة"} />
       <SummaryTile label="الحالة" value={driver.isActive ? "نشط" : "غير نشط"} note={driver.profileId ? "مربوط بحساب دخول" : "غير مربوط"} />
       <SummaryTile label="طلباتي الحالية" value={activeCount} note="طلبات قيد التشغيل" />
       <SummaryTile label="طلبات متاحة" value={availableCount} note="جاهزة للاستلام" />
+      <SummaryTile label="مكتملة" value={completedCount} note="تم تسليمها أو إغلاقها" />
       <SummaryTile label="التتبع" value={trackingLabel(locationState.status)} note="يبدأ عند مشاركة الموقع" />
     </section>
   );
