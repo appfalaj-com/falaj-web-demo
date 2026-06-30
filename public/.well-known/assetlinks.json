@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.appfalaj.customer",
+      "sha256_cert_fingerprints": [
+        "31:4F:A4:21:10:0B:C0:44:31:B5:EE:BC:43:7E:3B:01:DB:6E:11:40:68:04:24:44:A5:61:B0:44:9F:15:59:E9"
+      ]
+    }
+  }
+]
