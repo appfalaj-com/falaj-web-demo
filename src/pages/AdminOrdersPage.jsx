@@ -32,15 +32,15 @@ const PAYMENT_STATUS_LABELS = {
 
 const STATUS_FILTERS = [
   { value: "all", label: "الكل" },
-  { value: "pending", label: "pending" },
-  { value: "accepted", label: "accepted" },
-  { value: "assigned", label: "assigned" },
-  { value: "en_route", label: "en_route" },
-  { value: "arrived", label: "arrived" },
-  { value: "delivered", label: "delivered" },
-  { value: "failed", label: "failed" },
-  { value: "cancelled", label: "cancelled" },
-  { value: "rejected", label: "rejected" },
+  { value: "pending", label: "جديد" },
+  { value: "accepted", label: "مقبول" },
+  { value: "assigned", label: "مسند" },
+  { value: "en_route", label: "في الطريق" },
+  { value: "arrived", label: "وصل" },
+  { value: "delivered", label: "مكتمل" },
+  { value: "failed", label: "فشل" },
+  { value: "cancelled", label: "ملغي" },
+  { value: "rejected", label: "مرفوض" },
 ];
 
 const NEXT_ACTIONS = {
@@ -206,7 +206,7 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page orders-page admin-orders-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">الإدارة</p>
@@ -218,7 +218,7 @@ export default function AdminOrdersPage() {
       {message ? <p className="auth-alert success">{message}</p> : null}
       {errorMessage ? <p className="auth-alert error">{errorMessage}</p> : null}
 
-      <section className="metrics-grid">
+      <section className="metrics-grid orders-metrics-grid">
         <MetricCard label="إجمالي الطلبات" value={summary.total} tone="primary" />
         <MetricCard label="الجديدة pending" value={summary.pending} />
         <MetricCard label="المقبولة accepted" value={summary.accepted} />
@@ -227,7 +227,7 @@ export default function AdminOrdersPage() {
         <MetricCard label="ملغية/مرفوضة" value={summary.cancelled} />
       </section>
 
-      <section className="status-tabs" aria-label="تصفية حالات الطلبات">
+      <section className="status-tabs order-status-tabs" aria-label="تصفية حالات الطلبات">
         {STATUS_FILTERS.map((filter) => (
           <button
             key={filter.value}
@@ -240,8 +240,8 @@ export default function AdminOrdersPage() {
         ))}
       </section>
 
-      <section className="panel overview">
-        <div className="filter-row supplier-requests-search">
+      <section className="panel overview filter-bar-panel">
+        <div className="filter-row order-filter-bar supplier-requests-search">
           <label>
             بحث
             <input
@@ -302,8 +302,8 @@ export default function AdminOrdersPage() {
         </div>
       </section>
 
-      <section className="supplier-requests-review-grid">
-        <div className="panel">
+      <section className="supplier-requests-review-grid orders-workspace-grid">
+        <div className="panel order-list-panel">
           <div className="panel-header">
             <div>
               <h2>قائمة الطلبات</h2>
@@ -324,10 +324,10 @@ export default function AdminOrdersPage() {
                 <button
                   key={order.rawId}
                   type="button"
-                  className={`supplier-request-card ${selectedOrder?.rawId === order.rawId ? "active" : ""}`}
+                  className={`supplier-request-card order-list-card ${selectedOrder?.rawId === order.rawId ? "active" : ""}`}
                   onClick={() => setSelectedOrderId(order.rawId)}
                 >
-                  <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
+                  <span className={`status status-badge ${order.status}`}>{statusLabel(order.status)}</span>
                   <strong>{order.id}</strong>
                   <small>{order.companyName || "مورد غير محدد"} · {order.customer || "عميل غير محدد"}</small>
                   <span>{formatDateTime(order.createdAt)}</span>
@@ -352,7 +352,7 @@ export default function AdminOrdersPage() {
 function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating, onUpdateStatus }) {
   if (!order) {
     return (
-      <aside className="panel supplier-request-detail-panel">
+      <aside className="panel supplier-request-detail-panel order-detail-panel">
         <div className="empty-state">
           <strong>اختر طلبًا</strong>
           <span>ستظهر تفاصيل الطلب هنا.</span>
@@ -364,34 +364,41 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
   const actions = NEXT_ACTIONS[order.status] ?? [];
 
   return (
-    <aside className="panel supplier-request-detail-panel">
+    <aside className="panel supplier-request-detail-panel order-detail-panel">
       <div className="panel-header">
         <div>
           <h2>{order.id}</h2>
           <p>{order.companyName || "مورد غير محدد"}</p>
         </div>
-        <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
+        <span className={`status status-badge ${order.status}`}>{statusLabel(order.status)}</span>
       </div>
 
-      <dl className="supplier-request-detail-list">
-        <DetailRow label="الشركة / المورد" value={order.companyName} />
-        <DetailRow label="Company ID" value={order.companyId} />
-        <DetailRow label="اسم العميل" value={order.customer} />
-        <DetailRow label="هاتف العميل" value={order.phone} />
-        <DetailRow label="المنطقة" value={order.area} />
-        <DetailRow label="العنوان" value={order.address} />
-        <DetailRow label="نوع المياه" value={order.waterType} />
-        <DetailRow label="الكمية" value={order.volume} />
-        <DetailRow label="طريقة الدفع" value={paymentMethodLabel(order.paymentMethod)} />
-        <DetailRow label="حالة الدفع" value={paymentStatusLabel(order.paymentStatus)} />
-        <DetailRow label="تحصيل الكاش" value={cashCollectionLabel(order)} />
-        <DetailRow label="السائق" value={order.driverName || order.driverId || "-"} />
-        <DetailRow label="محصل الكاش" value={order.cashCollectorDriverName || order.cashCollectedByDriverId || "-"} />
-        <DetailRow label="الإجمالي" value={formatMoney(order.amount)} />
-        <DetailRow label="تاريخ الإنشاء" value={formatDateTime(order.createdAt)} />
-        <DetailRow label="آخر تحديث" value={formatDateTime(order.updatedAt)} />
-        <DetailRow label="ملاحظات" value={order.notes || "-"} />
-      </dl>
+      <section className="order-detail-section">
+        <h3>بيانات العميل والمورد</h3>
+        <dl className="supplier-request-detail-list">
+          <DetailRow label="الشركة / المورد" value={order.companyName} />
+          <DetailRow label="Company ID" value={order.companyId} />
+          <DetailRow label="اسم العميل" value={order.customer} />
+          <DetailRow label="هاتف العميل" value={order.phone} />
+          <DetailRow label="المنطقة" value={order.area} />
+          <DetailRow label="العنوان" value={order.address} />
+        </dl>
+      </section>
+
+      <section className="order-detail-section">
+        <h3>الدفع والتشغيل</h3>
+        <dl className="supplier-request-detail-list">
+          <DetailRow label="طريقة الدفع" value={paymentMethodLabel(order.paymentMethod)} />
+          <DetailRow label="حالة الدفع" value={paymentStatusLabel(order.paymentStatus)} />
+          <DetailRow label="تحصيل الكاش" value={cashCollectionLabel(order)} />
+          <DetailRow label="السائق" value={order.driverName || order.driverId || "-"} />
+          <DetailRow label="محصل الكاش" value={order.cashCollectorDriverName || order.cashCollectedByDriverId || "-"} />
+          <DetailRow label="الإجمالي" value={formatMoney(order.amount)} />
+          <DetailRow label="تاريخ الإنشاء" value={formatDateTime(order.createdAt)} />
+          <DetailRow label="آخر تحديث" value={formatDateTime(order.updatedAt)} />
+          <DetailRow label="ملاحظات" value={order.notes || "-"} />
+        </dl>
+      </section>
 
       <section className="order-products-empty">
         <h3>منتجات الطلب</h3>
@@ -438,11 +445,17 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
             لا توجد إجراءات متاحة
           </button>
         ) : (
-          actions.map((action) => (
+          actions.map((action, index) => (
             <button
               key={action.status}
               type="button"
-              className={["cancelled", "failed", "rejected"].includes(action.status) ? "ghost danger-action" : "ghost"}
+              className={
+                ["cancelled", "failed", "rejected"].includes(action.status)
+                  ? "ghost danger-action"
+                  : index === 0
+                    ? "primary-action"
+                    : "ghost"
+              }
               onClick={() => onUpdateStatus(order, action.status)}
               disabled={isUpdating}
             >

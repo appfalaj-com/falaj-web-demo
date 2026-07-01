@@ -7,6 +7,15 @@ export default function OrderTable({
   onRejectOrder,
   onAssignDriver,
 }) {
+  if (!orders.length) {
+    return (
+      <div className="empty-state data-empty-state">
+        <strong>لا توجد طلبات حاليًا</strong>
+        <span>ستظهر الطلبات هنا عند وصولها من النظام.</span>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="table-wrap">
@@ -35,14 +44,14 @@ export default function OrderTable({
                   if (event.key === "Enter" || event.key === " ") onSelectOrder?.(order.id);
                 }}
               >
-                <td className="mono">{order.id}</td>
+                <td className="mono order-code-cell">{order.id}</td>
                 <td>{order.customer}</td>
                 <td>{order.area}</td>
                 <td>{order.volume}</td>
                 <td>{getDriverName(order.driverId, drivers)}</td>
                 <td>{order.amount.toFixed(3)} ر.ع</td>
                 <td>
-                  <span className={`status falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
+                  <span className={`status status-badge falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
                 </td>
                 <td>
                   <PaymentBadge order={order} />
@@ -132,7 +141,7 @@ function OrderActions({ orderId, onAcceptOrder, onRejectOrder, onAssignDriver })
 
 function PaymentBadge({ order }) {
   return (
-    <span className={`payment-badge falaj-badge ${order.paymentStatus}`}>
+    <span className={`payment-badge falaj-badge ${order.paymentMethod} ${order.paymentStatus}`}>
       {paymentMethodLabel(order.paymentMethod)} - {paymentStatusLabel(order.paymentStatus)}
     </span>
   );
@@ -156,11 +165,14 @@ function statusLabel(status) {
 }
 
 function paymentMethodLabel(paymentMethod) {
-  return paymentMethod === "card" ? "card" : "cash";
+  return paymentMethod === "card" ? "بطاقة" : "كاش";
 }
 
 function paymentStatusLabel(paymentStatus) {
-  return paymentStatus === "paid" ? "paid" : "unpaid";
+  if (paymentStatus === "paid") return "مدفوع";
+  if (paymentStatus === "collected") return "محصل";
+  if (paymentStatus === "refunded") return "مسترجع";
+  return "غير مدفوع";
 }
 
 function getDriverName(driverId, drivers = []) {

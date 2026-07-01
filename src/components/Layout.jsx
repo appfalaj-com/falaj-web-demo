@@ -21,6 +21,22 @@ const adminLinks = [
 
 const driverLinks = [{ href: "/driver", labelKey: "nav.driver.login" }];
 
+const navIcons = {
+  "/admin": "⌂",
+  "/admin/orders": "▤",
+  "/admin/suppliers": "◫",
+  "/admin/product-moderation": "◇",
+  "/admin/supplier-requests": "✦",
+  "/admin/finance": "ر.ع",
+  "/admin/live-tracking": "⌖",
+  "/company": "⌂",
+  "/company/orders": "▤",
+  "/company/products": "◈",
+  "/company/drivers": "☉",
+  "/company/drivers/live": "⌖",
+  "/driver": "↪",
+};
+
 export default function Layout({
   children,
   companyName,
@@ -73,7 +89,12 @@ export default function Layout({
                 onNavigate?.(link.href);
               }}
             >
+              <span className="nav-link-icon" aria-hidden="true">
+                {navIcons[link.href] ?? "•"}
+              </span>
+              <span className="nav-link-label">
               {t(link.labelKey)}
+              </span>
             </a>
           ))}
         </nav>

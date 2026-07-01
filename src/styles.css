@@ -179,17 +179,46 @@ button:disabled {
 
 .nav-link,
 .falaj-nav-link {
+  align-items: center;
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.84);
+  display: flex;
+  gap: 10px;
   min-width: 0;
   padding: 12px 14px;
   text-decoration: none;
+}
+
+.nav-link-icon {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: inline-grid;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  height: 28px;
+  place-items: center;
+  width: 28px;
+}
+
+.nav-link-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav-link.active,
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.14);
   color: var(--white);
+}
+
+.nav-link.active .nav-link-icon,
+.nav-link:hover .nav-link-icon {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .sidebar-signout {
@@ -1209,14 +1238,18 @@ html[dir="ltr"] input[inputmode="numeric"] {
   padding: 18px;
 }
 
-.metric-card span {
+.metric-card span,
+.metric-label {
   color: var(--muted);
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.metric-card strong {
+.metric-card strong,
+.metric-value {
   color: var(--dark);
   font-size: 28px;
+  line-height: 1.12;
 }
 
 .metric-card.primary {
@@ -1804,6 +1837,259 @@ tbody tr:hover td {
 .admin-supplier-requests-card button {
   background: var(--cream);
   color: var(--dark);
+}
+
+.orders-page {
+  gap: 18px;
+}
+
+.orders-page .page-header {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(244, 251, 250, 0.92)),
+    radial-gradient(circle at top left, rgba(144, 209, 202, 0.28), transparent 24rem);
+  border-color: rgba(9, 107, 104, 0.12);
+}
+
+.orders-page .page-header p {
+  color: var(--muted);
+  max-width: 760px;
+}
+
+.orders-metrics-grid .metric-card {
+  min-height: 96px;
+  padding: 16px;
+}
+
+.orders-metrics-grid .metric-card strong {
+  font-size: 25px;
+}
+
+.order-status-tabs {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(9, 107, 104, 0.06);
+  padding: 10px;
+}
+
+.order-status-tabs button {
+  box-shadow: none;
+  min-height: 38px;
+}
+
+.order-status-tabs button.active {
+  background: var(--dark);
+  color: var(--white);
+}
+
+.filter-bar-panel {
+  padding: 16px;
+}
+
+.order-filter-bar {
+  align-items: end;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.order-filter-bar label {
+  max-width: none;
+}
+
+.order-filter-bar input,
+.order-filter-bar select {
+  min-height: 42px;
+}
+
+.orders-workspace-grid {
+  grid-template-columns: minmax(300px, 0.82fr) minmax(420px, 1.38fr);
+}
+
+.order-list-panel .panel-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.order-list-panel .supplier-request-list {
+  padding-top: 16px;
+}
+
+.order-list-card {
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(9, 107, 104, 0.04);
+  gap: 9px;
+  padding: 15px;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.order-list-card:hover,
+.order-list-card.active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 251, 250, 0.95));
+  transform: translateY(-1px);
+}
+
+.order-list-card.active {
+  border-color: var(--primary);
+  box-shadow: 0 14px 34px rgba(9, 107, 104, 0.12);
+}
+
+.order-list-card strong {
+  letter-spacing: 0;
+}
+
+.order-detail-panel {
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(9, 107, 104, 0.1);
+}
+
+.order-detail-panel > .panel-header {
+  background: linear-gradient(135deg, rgba(18, 153, 144, 0.09), rgba(255, 251, 222, 0.42));
+  border-bottom: 1px solid var(--border);
+}
+
+.order-detail-panel > .panel-header h2 {
+  color: var(--dark);
+  letter-spacing: 0;
+}
+
+.order-detail-section,
+.order-products-empty,
+.order-timeline-section {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 20px;
+}
+
+.order-detail-section:first-of-type {
+  border-top: 0;
+}
+
+.order-detail-section h3,
+.order-products-empty h3,
+.order-timeline-section h3,
+.details-section-card h3 {
+  color: var(--dark);
+  font-size: 15px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.order-detail-section .supplier-request-detail-list {
+  padding: 0;
+}
+
+.order-detail-section .supplier-request-detail-list div {
+  background: rgba(244, 251, 250, 0.86);
+}
+
+.order-detail-panel .next-action-banner {
+  margin: 0;
+}
+
+.status-badge,
+.status,
+.payment-badge {
+  align-items: center;
+  border: 1px solid transparent;
+  line-height: 1;
+  min-height: 28px;
+}
+
+.payment-badge.cash.unpaid,
+.payment-badge.unpaid {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.18);
+  color: #8a5a00;
+}
+
+.payment-badge.cash.paid,
+.payment-badge.cash.collected,
+.payment-badge.paid,
+.payment-badge.collected {
+  background: rgba(18, 153, 144, 0.12);
+  border-color: rgba(18, 153, 144, 0.18);
+  color: var(--dark);
+}
+
+.status.cancelled,
+.status.failed,
+.status.rejected {
+  border-color: rgba(194, 65, 12, 0.16);
+}
+
+.data-empty-state,
+.loading-state,
+.error-state {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  min-height: 150px;
+  place-content: center;
+  text-align: center;
+}
+
+.loading-state {
+  color: var(--muted);
+}
+
+.error-state {
+  color: var(--danger);
+}
+
+.details-section-list {
+  align-content: start;
+  display: grid;
+  gap: 14px;
+}
+
+.details-section-card {
+  background: rgba(244, 251, 250, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.details-section-card dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.details-section-card .details-list div,
+.details-section-card div {
+  background: transparent;
+}
+
+.details-section-card dl > div {
+  border-bottom: 1px solid rgba(9, 107, 104, 0.1);
+  padding-bottom: 10px;
+}
+
+.details-section-card dl > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.details-actions button:first-child,
+.supplier-request-actions button:not(.ghost):first-child {
+  background: linear-gradient(135deg, var(--primary), var(--dark));
+}
+
+.danger-action {
+  background: rgba(194, 65, 12, 0.1) !important;
+  color: var(--danger) !important;
+}
+
+.primary-action {
+  background: linear-gradient(135deg, var(--primary), var(--dark));
+  color: var(--white);
 }
 
 .supplier-detail-grid {
@@ -2737,6 +3023,14 @@ tbody tr:hover td {
   .supplier-requests-review-grid {
     grid-template-columns: 1fr;
   }
+
+  .orders-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -2826,11 +3120,19 @@ tbody tr:hover td {
     padding: 0 14px 14px;
   }
 
+  .order-detail-section .supplier-request-detail-list {
+    padding: 0;
+  }
+
   .supplier-request-list,
   .supplier-request-detail-panel .supplier-request-timeline,
   .supplier-request-actions {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .order-filter-bar {
+    grid-template-columns: 1fr;
   }
 
   .company-alert {

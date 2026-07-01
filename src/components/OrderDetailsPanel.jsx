@@ -27,22 +27,39 @@ export default function OrderDetailsPanel({
           </button>
         </div>
 
-        <dl className="details-list">
-          <Detail label="رقم الطلب" value={order.id} mono />
-          <Detail label="اسم العميل" value={order.customer} />
-          <Detail label="الهاتف" value={order.phone} mono />
-          <Detail label="المنطقة" value={order.area} />
-          <Detail label="تفاصيل العنوان" value={order.address} />
-          <Detail label="نوع المياه" value={order.waterType} />
-          <Detail label="الحجم" value={order.volume} />
-          <Detail label="السعر" value={`${order.amount.toFixed(3)} ر.ع`} />
-          <Detail label="طريقة الدفع" value={order.paymentMethod} mono />
-          <Detail label="حالة الدفع" value={order.paymentStatus} mono />
-          <Detail label="استلام الكاش بواسطة السائق" value={cashCollectedLabel(order)} />
-          <Detail label="الحالة الحالية" value={statusLabel(order.status)} />
-          <Detail label="السائق" value={getDriverName(order.driverId, drivers)} />
-          <Detail label="الملاحظات" value={order.notes || "لا توجد ملاحظات"} />
-        </dl>
+        <div className="details-list details-section-list">
+          <section className="details-section-card">
+            <h3>بيانات العميل</h3>
+            <dl>
+              <Detail label="رقم الطلب" value={order.id} mono />
+              <Detail label="اسم العميل" value={order.customer} />
+              <Detail label="الهاتف" value={order.phone} mono />
+              <Detail label="المنطقة" value={order.area} />
+              <Detail label="تفاصيل العنوان" value={order.address} />
+            </dl>
+          </section>
+
+          <section className="details-section-card">
+            <h3>الطلب والدفع</h3>
+            <dl>
+              <Detail label="نوع المياه" value={order.waterType} />
+              <Detail label="الحجم" value={order.volume} />
+              <Detail label="السعر" value={`${order.amount.toFixed(3)} ر.ع`} />
+              <Detail label="طريقة الدفع" value={paymentMethodLabel(order.paymentMethod)} />
+              <Detail label="حالة الدفع" value={paymentLabel(order.paymentStatus)} />
+              <Detail label="استلام الكاش بواسطة السائق" value={cashCollectedLabel(order)} />
+            </dl>
+          </section>
+
+          <section className="details-section-card">
+            <h3>التشغيل</h3>
+            <dl>
+              <Detail label="الحالة الحالية" value={statusLabel(order.status)} />
+              <Detail label="السائق" value={getDriverName(order.driverId, drivers)} />
+              <Detail label="الملاحظات" value={order.notes || "لا توجد ملاحظات"} />
+            </dl>
+          </section>
+        </div>
 
         <div className="details-actions">
           <button type="button" onClick={() => onAccept(order.id)}>
@@ -87,7 +104,14 @@ function statusLabel(status) {
 }
 
 function paymentLabel(paymentStatus) {
-  return paymentStatus === "paid" ? "مدفوع" : "غير مدفوع";
+  if (paymentStatus === "paid") return "مدفوع";
+  if (paymentStatus === "collected") return "محصل";
+  if (paymentStatus === "refunded") return "مسترجع";
+  return "غير مدفوع";
+}
+
+function paymentMethodLabel(paymentMethod) {
+  return paymentMethod === "card" ? "بطاقة" : "كاش";
 }
 
 function cashCollectedLabel(order) {
