@@ -4,8 +4,6 @@ import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 import { clearExistingAuthSessionForLogin } from "../services/authSessionBoundary.js";
 
-const GENERIC_ERROR = "تعذر بدء إعداد كلمة المرور. اطلب رابطًا جديدًا من الشركة.";
-
 export default function DriverAcceptInvitePage({ onNavigate }) {
   const { direction, t } = useI18n();
   const [loading, setLoading] = useState(false);
@@ -19,12 +17,12 @@ export default function DriverAcceptInvitePage({ onNavigate }) {
     setError("");
 
     if (!ticket) {
-      setError("رابط دعوة السائق غير صالح أو منتهي.");
+      setError(t("driver.accept.invalidTicket"));
       return;
     }
 
     if (!supabase) {
-      setError("تعذر الاتصال بخدمة فلج حاليًا.");
+      setError(t("driver.accept.connectionError"));
       return;
     }
 
@@ -47,7 +45,7 @@ export default function DriverAcceptInvitePage({ onNavigate }) {
             status: invokeError?.status,
           });
         }
-        setError(data?.error || GENERIC_ERROR);
+        setError(t("driver.accept.genericError"));
         return;
       }
 
@@ -60,7 +58,7 @@ export default function DriverAcceptInvitePage({ onNavigate }) {
           status: acceptError?.status,
         });
       }
-      setError(GENERIC_ERROR);
+      setError(t("driver.accept.genericError"));
     } finally {
       setLoading(false);
     }
@@ -74,15 +72,15 @@ export default function DriverAcceptInvitePage({ onNavigate }) {
           <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
           <div>
             <strong>{t("common.appName")}</strong>
-            <small>بوابة السائق</small>
+            <small>{t("driver.accept.brand")}</small>
           </div>
         </div>
 
         <header className="login-header">
-          <p className="eyebrow">دعوة السائق</p>
-          <h1 id="driver-accept-invite-title">إعداد حساب السائق</h1>
+          <p className="eyebrow">{t("driver.accept.eyebrow")}</p>
+          <h1 id="driver-accept-invite-title">{t("driver.accept.title")}</h1>
           <p className="auth-note">
-            اضغط الزر أدناه لبدء إعداد كلمة المرور. لن يتم إنشاء رابط Supabase الآمن إلا بعد هذه الخطوة.
+            {t("driver.accept.note")}
           </p>
         </header>
 
@@ -94,11 +92,11 @@ export default function DriverAcceptInvitePage({ onNavigate }) {
           disabled={loading || !ticket}
           onClick={handleStartPasswordSetup}
         >
-          {loading ? "جاري تجهيز الرابط..." : "بدء إعداد كلمة المرور"}
+          {loading ? t("driver.accept.loading") : t("driver.accept.start")}
         </button>
 
         <button type="button" className="auth-text-button" onClick={() => onNavigate?.("/driver/login")}>
-          العودة لتسجيل دخول السائق
+          {t("driver.accept.back")}
         </button>
       </section>
     </main>

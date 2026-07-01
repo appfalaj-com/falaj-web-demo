@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
+import PageHeader from "../components/PageHeader.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import {
   formatMoney,
   getFinancialRows,
@@ -8,6 +10,7 @@ import {
 } from "../services/adminFinanceService.js";
 
 export default function AdminFinancePage({ onNavigate }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -25,7 +28,7 @@ export default function AdminFinancePage({ onNavigate }) {
       } catch (error) {
         if (!cancelled) {
           setRows([]);
-          setErrorMessage(error.message || "تعذر تحميل البيانات المالية من قاعدة البيانات.");
+          setErrorMessage(error.message || t("page.admin.finance.loadError"));
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -37,64 +40,59 @@ export default function AdminFinancePage({ onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const summary = summarizeFinance(rows);
   const supplierRows = summarizeFinanceBySupplier(rows);
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">الإدارة المالية</p>
-          <h1>المالية والتسويات</h1>
-        </div>
-      </header>
+      <PageHeader eyebrowKey="page.admin.finance.eyebrow" titleKey="page.admin.finance.title" />
 
-      {errorMessage ? <p className="auth-alert error">تعذر تحميل البيانات المالية من قاعدة البيانات.</p> : null}
+      {errorMessage ? <p className="auth-alert error">{t("page.admin.finance.loadError")}</p> : null}
 
       <section className="metrics-grid admin-metrics-grid">
-        <MetricCard label="إجمالي المبيعات" value={formatMoney(summary.totalSales)} tone="primary" />
-        <MetricCard label="مبيعات البطاقة" value={formatMoney(summary.cardSales)} />
-        <MetricCard label="مبيعات الكاش" value={formatMoney(summary.cashSales)} />
-        <MetricCard label="عمولة فلج" value={formatMoney(summary.falajCommission)} tone="cash" />
-        <MetricCard label="مستحقات الموردين" value={formatMoney(summary.supplierPayable)} />
-        <MetricCard label="مستحق على الموردين" value={formatMoney(summary.falajReceivableFromSuppliers)} />
-        <MetricCard label="صافي التحويلات" value={formatMoney(summary.netTransferAmount)} />
+        <MetricCard label={t("page.admin.finance.totalSales")} value={formatMoney(summary.totalSales)} tone="primary" />
+        <MetricCard label={t("page.admin.finance.cardSales")} value={formatMoney(summary.cardSales)} />
+        <MetricCard label={t("page.admin.finance.cashSales")} value={formatMoney(summary.cashSales)} />
+        <MetricCard label={t("page.admin.finance.falajCommission")} value={formatMoney(summary.falajCommission)} tone="cash" />
+        <MetricCard label={t("page.admin.finance.supplierPayable")} value={formatMoney(summary.supplierPayable)} />
+        <MetricCard label={t("page.admin.finance.falajReceivable")} value={formatMoney(summary.falajReceivableFromSuppliers)} />
+        <MetricCard label={t("page.admin.finance.netTransfers")} value={formatMoney(summary.netTransferAmount)} />
       </section>
 
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h2>حسب المورد</h2>
-            <p>الأرقام مبنية على القيود المالية الحقيقية المسجلة في قاعدة البيانات.</p>
+            <h2>{t("page.admin.finance.bySupplier")}</h2>
+            <p>{t("page.admin.finance.bySupplierSubtitle")}</p>
           </div>
         </div>
 
         {isLoading ? (
-          <p className="empty-state">جاري تحميل البيانات المالية...</p>
+          <p className="empty-state">{t("page.admin.finance.loading")}</p>
         ) : errorMessage ? (
-          <p className="empty-state">تعذر تحميل البيانات المالية من قاعدة البيانات.</p>
+          <p className="empty-state">{t("page.admin.finance.loadError")}</p>
         ) : supplierRows.length === 0 ? (
           <div className="empty-state">
-            <strong>لا توجد بيانات مالية حتى الآن</strong>
-            <span>ستظهر هنا العمولات والتسويات بعد إنشاء الطلبات الحقيقية.</span>
+            <strong>{t("page.admin.finance.emptyTitle")}</strong>
+            <span>{t("page.admin.finance.emptyText")}</span>
           </div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>المورد</th>
-                  <th>عدد الطلبات</th>
-                  <th>إجمالي المبيعات</th>
-                  <th>كاش</th>
-                  <th>بطاقة</th>
-                  <th>عمولة فلج</th>
-                  <th>صافي المورد</th>
-                  <th>مستحق على المورد</th>
-                  <th>التسوية</th>
-                  <th>إجراء</th>
+                  <th>{t("page.admin.finance.supplier")}</th>
+                  <th>{t("page.admin.finance.orderCount")}</th>
+                  <th>{t("page.admin.finance.totalSalesColumn")}</th>
+                  <th>{t("page.admin.finance.cash")}</th>
+                  <th>{t("page.admin.finance.card")}</th>
+                  <th>{t("page.admin.finance.falajCommission")}</th>
+                  <th>{t("page.admin.finance.supplierNet")}</th>
+                  <th>{t("page.admin.finance.supplierOwes")}</th>
+                  <th>{t("page.admin.finance.settlement")}</th>
+                  <th>{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +112,7 @@ export default function AdminFinancePage({ onNavigate }) {
                         type="button"
                         onClick={() => onNavigate?.(`/admin/suppliers/${supplier.companyId}/account`)}
                       >
-                        عرض حساب المورد
+                        {t("page.admin.finance.viewSupplierAccount")}
                       </button>
                     </td>
                   </tr>

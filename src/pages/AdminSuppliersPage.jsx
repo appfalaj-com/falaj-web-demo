@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import PageHeader from "../components/PageHeader.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import {
   formatMoney,
   getSuppliers,
@@ -8,20 +10,14 @@ import {
 } from "../services/adminFinanceService.js";
 
 const STATUS_FILTERS = [
-  { value: "all", label: "الكل" },
-  { value: "approved", label: "نشط" },
-  { value: "pending", label: "قيد الإعداد" },
-  { value: "suspended", label: "موقوف" },
+  { value: "all", labelKey: "page.admin.suppliers.status.all" },
+  { value: "approved", labelKey: "page.admin.suppliers.status.approved" },
+  { value: "pending", labelKey: "page.admin.suppliers.status.pending" },
+  { value: "suspended", labelKey: "page.admin.suppliers.status.suspended" },
 ];
 
-const SUPPLIER_STATUS_LABELS = {
-  pending: "قيد الإعداد",
-  approved: "نشط",
-  rejected: "غير نشط",
-  suspended: "موقوف",
-};
-
 export default function AdminSuppliersPage({ onNavigate }) {
+  const { language, t } = useI18n();
   const [suppliers, setSuppliers] = useState([]);
   const [activeStatus, setActiveStatus] = useState("all");
   const [message, setMessage] = useState("");
@@ -38,7 +34,7 @@ export default function AdminSuppliersPage({ onNavigate }) {
       } catch {
         if (!cancelled) {
           setSuppliers([]);
-          setErrorMessage("تعذر تحميل الموردين من قاعدة البيانات.");
+          setErrorMessage(t("page.admin.suppliers.loadError"));
         }
       }
     }
@@ -48,7 +44,7 @@ export default function AdminSuppliersPage({ onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const visibleSuppliers =
     activeStatus === "all"
@@ -60,7 +56,7 @@ export default function AdminSuppliersPage({ onNavigate }) {
     setErrorMessage("");
 
     if (!isUuid(companyId)) {
-      setErrorMessage("لا يمكن تنفيذ العملية على بيانات تجريبية.");
+      setErrorMessage(t("page.admin.suppliers.demoActionError"));
       return;
     }
 
@@ -73,9 +69,9 @@ export default function AdminSuppliersPage({ onNavigate }) {
             : supplier
         )
       );
-      setMessage("تم تحديث حالة المورد.");
+      setMessage(t("page.admin.suppliers.statusUpdated"));
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحديث حالة المورد.");
+      setErrorMessage(error.message || t("page.admin.suppliers.statusUpdateError"));
     }
   }
 
@@ -84,16 +80,16 @@ export default function AdminSuppliersPage({ onNavigate }) {
     setErrorMessage("");
 
     if (!isUuid(supplier.id)) {
-      setErrorMessage("لا يمكن تنفيذ العملية على بيانات تجريبية.");
+      setErrorMessage(t("page.admin.suppliers.demoActionError"));
       return;
     }
 
-    const nextValue = window.prompt("نسبة عمولة فلج", String(supplier.commissionRate ?? 0));
+    const nextValue = window.prompt(t("page.admin.suppliers.commissionPrompt"), String(supplier.commissionRate ?? 0));
     if (nextValue === null) return;
 
     const commissionRate = Number(nextValue);
     if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100) {
-      setErrorMessage("نسبة العمولة يجب أن تكون بين 0 و 100.");
+      setErrorMessage(t("page.admin.suppliers.commissionRangeError"));
       return;
     }
 
@@ -102,23 +98,21 @@ export default function AdminSuppliersPage({ onNavigate }) {
       setSuppliers((current) =>
         current.map((item) => (item.id === supplier.id ? { ...item, commissionRate } : item))
       );
-      setMessage("تم تعديل نسبة العمولة.");
+      setMessage(t("page.admin.suppliers.commissionUpdated"));
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تعديل نسبة العمولة.");
+      setErrorMessage(error.message || t("page.admin.suppliers.commissionUpdateError"));
     }
   }
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">الإدارة</p>
-          <h1>إدارة الموردين المعتمدين</h1>
-          <p>إدارة الشركات التي تم قبولها أو تفعيلها داخل منصة فلج.</p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrowKey="page.admin.suppliers.eyebrow"
+        titleKey="page.admin.suppliers.title"
+        subtitleKey="page.admin.suppliers.subtitle"
+      />
 
-      <section className="status-tabs" aria-label="تصفية الموردين">
+      <section className="status-tabs" aria-label={t("page.admin.suppliers.filterLabel")}>
         {STATUS_FILTERS.map((filter) => (
           <button
             key={filter.value}
@@ -126,7 +120,7 @@ export default function AdminSuppliersPage({ onNavigate }) {
             className={activeStatus === filter.value ? "active" : "ghost"}
             onClick={() => setActiveStatus(filter.value)}
           >
-            {filter.label}
+            {t(filter.labelKey)}
           </button>
         ))}
       </section>
@@ -136,21 +130,21 @@ export default function AdminSuppliersPage({ onNavigate }) {
 
       <section className="panel">
         {visibleSuppliers.length === 0 && !errorMessage ? (
-          <p className="empty-state">لا توجد شركات موردة حتى الآن.</p>
+          <p className="empty-state">{t("page.admin.suppliers.empty")}</p>
         ) : errorMessage ? (
-          <p className="empty-state">تعذر تحميل الموردين من قاعدة البيانات.</p>
+          <p className="empty-state">{t("page.admin.suppliers.loadError")}</p>
         ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>اسم الشركة</th>
-                <th>الهاتف</th>
-                <th>الإيميل</th>
-                <th>الحالة</th>
-                <th>عمولة فلج</th>
-                <th>تاريخ التسجيل</th>
-                <th>الإجراءات</th>
+                <th>{t("page.admin.suppliers.companyName")}</th>
+                <th>{t("common.phone")}</th>
+                <th>{t("common.email")}</th>
+                <th>{t("common.status")}</th>
+                <th>{t("page.admin.suppliers.commission")}</th>
+                <th>{t("page.admin.suppliers.registrationDate")}</th>
+                <th>{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -164,33 +158,33 @@ export default function AdminSuppliersPage({ onNavigate }) {
                     <td>{supplier.email}</td>
                     <td>
                       <span className={`status ${supplier.status}`}>
-                        {supplierDisplayStatusLabel(supplier.status)}
+                        {supplierDisplayStatusLabel(t, supplier.status)}
                       </span>
                     </td>
                     <td>{Number(supplier.commissionRate || 0).toFixed(2)}%</td>
-                    <td>{formatDate(supplier.createdAt)}</td>
+                    <td>{formatDate(supplier.createdAt, language)}</td>
                     <td>
                       <div className="row-actions wide-actions">
                         <button type="button" onClick={() => onNavigate?.(`/admin/suppliers/${supplier.id}`)}>
-                          عرض التفاصيل
+                          {t("page.admin.suppliers.viewDetails")}
                         </button>
                         <button type="button" className="ghost" onClick={() => onNavigate?.("/admin/product-moderation")}>
-                          عرض كتالوج المورد
+                          {t("page.admin.suppliers.viewCatalog")}
                         </button>
                         <button type="button" className="ghost" onClick={() => setStatus(supplier.id, "approved")} disabled={!canRunActions}>
-                          اعتماد
+                          {t("page.admin.suppliers.approve")}
                         </button>
                         <button type="button" className="ghost" onClick={() => setStatus(supplier.id, "rejected")} disabled={!canRunActions}>
-                          رفض
+                          {t("page.admin.suppliers.reject")}
                         </button>
                         <button type="button" className="ghost" onClick={() => setStatus(supplier.id, "suspended")} disabled={!canRunActions}>
-                          إيقاف
+                          {t("page.admin.suppliers.suspend")}
                         </button>
                         <button type="button" className="ghost" onClick={() => setStatus(supplier.id, "approved")} disabled={!canRunActions}>
-                          إعادة تفعيل
+                          {t("page.admin.suppliers.reactivate")}
                         </button>
                         <button type="button" className="ghost" onClick={() => editCommission(supplier)} disabled={!canRunActions}>
-                          تعديل العمولة
+                          {t("page.admin.suppliers.editCommission")}
                         </button>
                       </div>
                     </td>
@@ -204,26 +198,28 @@ export default function AdminSuppliersPage({ onNavigate }) {
       </section>
 
       <section className="panel overview">
-        <h2>ملخص الموردين</h2>
+        <h2>{t("page.admin.suppliers.summaryTitle")}</h2>
         <p>
-          إجمالي الموردين: {suppliers.length}، متوسط العمولة:{" "}
-          {formatMoney(
+          {t("page.admin.suppliers.summary")
+            .replace("{count}", suppliers.length)
+            .replace("{average}", formatMoney(
             suppliers.reduce((sum, supplier) => sum + Number(supplier.commissionRate || 0), 0) /
               Math.max(suppliers.length, 1)
-          ).replace("ر.ع", "%")}
+          ).replace("ر.ع", "%"))}
         </p>
       </section>
     </div>
   );
 }
 
-function formatDate(value) {
+function formatDate(value, language = "ar") {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("ar-OM");
+  return new Date(value).toLocaleDateString(language === "ar" ? "ar-OM" : "en-OM");
 }
 
-function supplierDisplayStatusLabel(status) {
-  return SUPPLIER_STATUS_LABELS[status] ?? supplierStatusLabel(status);
+function supplierDisplayStatusLabel(t, status) {
+  const translated = t(`page.admin.suppliers.status.${status}`);
+  return translated === `page.admin.suppliers.status.${status}` ? supplierStatusLabel(status) : translated;
 }
 
 function isUuid(value) {

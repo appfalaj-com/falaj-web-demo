@@ -8,7 +8,7 @@ export default function LanguageToggle({ className = "" }) {
       type="button"
       className={["language-toggle", className].filter(Boolean).join(" ")}
       onClick={toggleLanguage}
-      aria-label={language === "ar" ? "Switch to English" : "التبديل إلى العربية"}
+      aria-label={t(language === "ar" ? "common.switchToEnglish" : "common.switchToArabic")}
     >
       {t("common.languageSwitch")}
     </button>

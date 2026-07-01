@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import PageHeader from "../components/PageHeader.jsx";
+import { orderStatusLabel } from "../components/StatusBadge.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 
 const ACTIVE_ORDER_STATUSES = ["accepted", "assigned", "en_route", "arrived"];
 
 export default function AdminLiveTrackingPage() {
+  const { language, t } = useI18n();
   const [companies, setCompanies] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -31,7 +35,7 @@ export default function AdminLiveTrackingPage() {
           setCompanies([]);
           setDrivers([]);
           setOrders([]);
-          setErrorMessage(error.message || "تعذر تحميل بيانات التتبع من قاعدة البيانات.");
+          setErrorMessage(error.message || t("page.admin.tracking.loadError"));
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -43,7 +47,7 @@ export default function AdminLiveTrackingPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const visibleDrivers = useMemo(
     () =>
@@ -67,21 +71,16 @@ export default function AdminLiveTrackingPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">التتبع العام</p>
-          <h1>متابعة الطلبات والسائقين</h1>
-        </div>
-      </header>
+      <PageHeader eyebrowKey="page.admin.tracking.eyebrow" titleKey="page.admin.tracking.title" />
 
-      {errorMessage ? <p className="auth-alert error">تعذر تحميل بيانات التتبع من قاعدة البيانات.</p> : null}
+      {errorMessage ? <p className="auth-alert error">{t("page.admin.tracking.loadError")}</p> : null}
 
       <section className="panel overview">
         <div className="filter-row">
           <label>
-            المورد
+            {t("page.admin.tracking.supplier")}
             <select value={companyFilter} onChange={(event) => setCompanyFilter(event.target.value)}>
-              <option value="all">كل الموردين</option>
+              <option value="all">{t("page.admin.tracking.allSuppliers")}</option>
               {companies.map((company) => (
                 <option value={company.id} key={company.id}>
                   {company.name}
@@ -90,12 +89,12 @@ export default function AdminLiveTrackingPage() {
             </select>
           </label>
           <label>
-            حالة الطلب
+            {t("page.admin.tracking.orderStatus")}
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="all">كل الحالات</option>
+              <option value="all">{t("page.admin.tracking.allStatuses")}</option>
               {ACTIVE_ORDER_STATUSES.map((status) => (
                 <option value={status} key={status}>
-                  {statusLabel(status)}
+                  {orderStatusLabel(t, status)}
                 </option>
               ))}
             </select>
@@ -105,17 +104,17 @@ export default function AdminLiveTrackingPage() {
 
       {isLoading ? (
         <section className="panel">
-          <p className="empty-state">جاري تحميل بيانات التتبع...</p>
+          <p className="empty-state">{t("page.admin.tracking.loading")}</p>
         </section>
       ) : errorMessage ? (
         <section className="panel">
-          <p className="empty-state">تعذر تحميل بيانات التتبع من قاعدة البيانات.</p>
+          <p className="empty-state">{t("page.admin.tracking.loadError")}</p>
         </section>
       ) : !hasTrackingData ? (
         <section className="panel">
           <div className="empty-state">
-            <strong>لا يوجد تتبع مباشر حاليًا</strong>
-            <span>ستظهر هنا مواقع السائقين بعد تسجيل دخولهم وبدء مشاركة الموقع.</span>
+            <strong>{t("page.admin.tracking.emptyTitle")}</strong>
+            <span>{t("page.admin.tracking.emptyText")}</span>
           </div>
         </section>
       ) : (
@@ -124,23 +123,23 @@ export default function AdminLiveTrackingPage() {
             {visibleDrivers.map((driver) => (
               <article className="driver-card" key={driver.id}>
                 <h2>{driver.name}</h2>
-                <p>{driver.companies?.name || "مورد غير محدد"}</p>
+                <p>{driver.companies?.name || t("ui.orders.unknownSupplier")}</p>
                 <dl>
                   <div>
-                    <dt>الحالة</dt>
-                    <dd>{driver.is_online ? "متصل" : "غير متصل"}</dd>
+                    <dt>{t("common.status")}</dt>
+                    <dd>{driver.is_online ? t("page.admin.tracking.online") : t("page.admin.tracking.offline")}</dd>
                   </div>
                   <div>
-                    <dt>الطلب الحالي</dt>
-                    <dd>{visibleOrders.find((order) => order.driver_id === driver.id)?.public_code ?? "لا يوجد"}</dd>
+                    <dt>{t("page.admin.tracking.currentOrder")}</dt>
+                    <dd>{visibleOrders.find((order) => order.driver_id === driver.id)?.public_code ?? t("page.admin.tracking.noCurrentOrder")}</dd>
                   </div>
                   <div>
-                    <dt>آخر موقع معروف</dt>
-                    <dd>{formatLocation(driver.lastLocation)}</dd>
+                    <dt>{t("page.admin.tracking.lastLocation")}</dt>
+                    <dd>{formatLocation(driver.lastLocation, t)}</dd>
                   </div>
                   <div>
-                    <dt>آخر تحديث</dt>
-                    <dd>{formatDateTime(driver.lastLocation?.recorded_at)}</dd>
+                    <dt>{t("page.admin.tracking.lastUpdate")}</dt>
+                    <dd>{formatDateTime(driver.lastLocation?.recorded_at, language)}</dd>
                   </div>
                 </dl>
               </article>
@@ -150,26 +149,26 @@ export default function AdminLiveTrackingPage() {
           <section className="panel">
             <div className="panel-header">
               <div>
-                <h2>الطلبات الجارية</h2>
-                <p>الطلبات النشطة المرتبطة بالسائقين والشركات في قاعدة البيانات.</p>
+                <h2>{t("page.admin.tracking.activeOrders")}</h2>
+                <p>{t("page.admin.tracking.activeOrdersSubtitle")}</p>
               </div>
             </div>
             {visibleOrders.length === 0 ? (
               <div className="empty-state">
-                <strong>لا توجد طلبات نشطة حاليًا</strong>
-                <span>ستظهر هنا الطلبات بعد قبولها أو إسنادها للسائقين.</span>
+                <strong>{t("page.admin.tracking.noActiveOrdersTitle")}</strong>
+                <span>{t("page.admin.tracking.noActiveOrdersText")}</span>
               </div>
             ) : (
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>الطلب</th>
-                      <th>الزبون</th>
-                      <th>المورد</th>
-                      <th>المنطقة</th>
-                      <th>السائق</th>
-                      <th>الحالة</th>
+                      <th>{t("page.admin.tracking.order")}</th>
+                      <th>{t("page.admin.tracking.customer")}</th>
+                      <th>{t("page.admin.tracking.supplier")}</th>
+                      <th>{t("page.admin.tracking.area")}</th>
+                      <th>{t("page.admin.tracking.driver")}</th>
+                      <th>{t("common.status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -180,7 +179,7 @@ export default function AdminLiveTrackingPage() {
                         <td>{order.companies?.name || "-"}</td>
                         <td>{order.delivery_area || "-"}</td>
                         <td>{order.drivers?.name || "-"}</td>
-                        <td>{statusLabel(order.status)}</td>
+                        <td>{orderStatusLabel(t, order.status)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -260,23 +259,12 @@ async function fetchLatestDriverLocations(driverIds, companyIds) {
   return data ?? [];
 }
 
-function formatLocation(location) {
-  if (!location) return "لا يوجد تتبع نشط حاليًا";
+function formatLocation(location, t) {
+  if (!location) return t("page.admin.tracking.noTracking");
   return `${Number(location.latitude).toFixed(6)}, ${Number(location.longitude).toFixed(6)}`;
 }
 
-function formatDateTime(value) {
+function formatDateTime(value, language = "ar") {
   if (!value) return "-";
-  return new Date(value).toLocaleString("ar-OM");
-}
-
-function statusLabel(status) {
-  const labels = {
-    accepted: "مقبول",
-    assigned: "مسند",
-    en_route: "في الطريق",
-    arrived: "وصل",
-  };
-
-  return labels[status] ?? status;
+  return new Date(value).toLocaleString(language === "ar" ? "ar-OM" : "en-OM");
 }

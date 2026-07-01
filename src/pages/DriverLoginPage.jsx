@@ -8,8 +8,6 @@ import {
   signInDriverWithIdentifier,
 } from "../services/driverService.js";
 
-const DRIVER_LOGIN_ERROR = "بيانات تسجيل الدخول غير صحيحة.";
-
 export default function DriverLoginPage({ onNavigate }) {
   const { direction, t } = useI18n();
   const [identifier, setIdentifier] = useState("");
@@ -43,7 +41,7 @@ export default function DriverLoginPage({ onNavigate }) {
             code: driverError?.code,
           });
         }
-        setError(DRIVER_LOGIN_ERROR);
+        setError(t("driver.login.invalidCredentials"));
         return;
       }
 
@@ -56,7 +54,7 @@ export default function DriverLoginPage({ onNavigate }) {
           status: loginError?.status,
         });
       }
-      setError(DRIVER_LOGIN_ERROR);
+      setError(t("driver.login.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -76,14 +74,14 @@ export default function DriverLoginPage({ onNavigate }) {
 
         <div className="login-header">
           <h1>{t("login.driver.title")}</h1>
-          <p>ادخل برقم الهاتف أو البريد الإلكتروني المرتبط بحساب السائق.</p>
+          <p>{t("driver.login.identifierHelp")}</p>
         </div>
 
         {error && <div className="auth-alert error">{error}</div>}
 
         <form className="auth-form" onSubmit={handlePasswordLogin}>
           <label>
-            البريد الإلكتروني أو رقم الهاتف
+            {t("driver.login.identifierLabel")}
             <input
               type="text"
               autoComplete="username"
@@ -91,7 +89,7 @@ export default function DriverLoginPage({ onNavigate }) {
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
               required
-              placeholder="driver@example.com أو 9xxxxxxx"
+              placeholder={t("driver.login.identifierPlaceholder")}
             />
           </label>
 
