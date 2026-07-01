@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
+import PageHeader from "../components/PageHeader.jsx";
+import SectionCard from "../components/SectionCard.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 
 const ZERO_METRICS = {
@@ -15,6 +18,7 @@ const ZERO_METRICS = {
 };
 
 export default function AdminPage({ onNavigate }) {
+  const { t } = useI18n();
   const [metrics, setMetrics] = useState(ZERO_METRICS);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -30,7 +34,7 @@ export default function AdminPage({ onNavigate }) {
       } catch (error) {
         if (!cancelled) {
           setMetrics(ZERO_METRICS);
-          setErrorMessage(error.message || "تعذر تحميل مؤشرات لوحة الإدارة من قاعدة البيانات.");
+          setErrorMessage(error.message || t("page.admin.dashboard.loadError"));
         }
       }
     }
@@ -40,72 +44,72 @@ export default function AdminPage({ onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">الإدارة</p>
-          <h1>لوحة تحكم فلج</h1>
-        </div>
-      </header>
+    <div className="page admin-dashboard-page">
+      <PageHeader
+        eyebrowKey="page.admin.dashboard.eyebrow"
+        titleKey="page.admin.dashboard.title"
+        subtitleKey="page.admin.dashboard.subtitle"
+      />
 
-      {errorMessage ? (
-        <p className="auth-alert error">تعذر تحميل مؤشرات لوحة الإدارة من قاعدة البيانات.</p>
-      ) : null}
+      {errorMessage ? <p className="auth-alert error">{t("page.admin.dashboard.loadError")}</p> : null}
 
       <section className="admin-supplier-requests-card">
         <div>
-          <p className="eyebrow">طلبات الموردين</p>
-          <h2>طلبات انضمام الموردين</h2>
-          <p>مراجعة طلبات الشركات الراغبة بالانضمام إلى فلج</p>
+          <p className="eyebrow">{t("page.admin.dashboard.joinRequestsEyebrow")}</p>
+          <h2>{t("page.admin.dashboard.joinRequestsTitle")}</h2>
+          <p>{t("page.admin.dashboard.joinRequestsText")}</p>
         </div>
         <strong className="admin-supplier-requests-count">{metrics.pendingJoinRequests}</strong>
         <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
-          فتح الطلبات
+          {t("page.admin.dashboard.openRequests")}
         </button>
       </section>
 
       <section className="metrics-grid admin-metrics-grid">
-        <MetricCard label="إجمالي الموردين" value={metrics.totalSuppliers} tone="primary" />
-        <MetricCard label="موردون مفعلون" value={metrics.approvedSuppliers} tone="primary" />
-        <MetricCard label="طلبات الانضمام" value={metrics.pendingJoinRequests} tone="cash" />
-        <MetricCard label="طلبات اليوم" value={metrics.todayOrders} />
-        <MetricCard label="إجمالي السائقين" value={metrics.totalDrivers} />
-        <MetricCard label="مبيعات اليوم" value={formatMoney(metrics.todaySales)} />
-        <MetricCard label="عمولة فلج اليوم" value={formatMoney(metrics.todayCommission)} />
-        <MetricCard label="طلبات قيد التوصيل" value={metrics.activeDeliveries} />
-        <MetricCard label="طلبات متعثرة" value={metrics.failedOrders} />
+        <MetricCard label={t("metric.totalSuppliers")} value={metrics.totalSuppliers} tone="primary" />
+        <MetricCard label={t("metric.approvedSuppliers")} value={metrics.approvedSuppliers} tone="primary" />
+        <MetricCard label={t("metric.pendingJoinRequests")} value={metrics.pendingJoinRequests} tone="cash" />
+        <MetricCard label={t("metric.todayOrders")} value={metrics.todayOrders} />
+        <MetricCard label={t("metric.totalDrivers")} value={metrics.totalDrivers} />
+        <MetricCard label={t("metric.todaySales")} value={formatMoney(metrics.todaySales)} />
+        <MetricCard label={t("metric.todayCommission")} value={formatMoney(metrics.todayCommission)} />
+        <MetricCard label={t("metric.activeDeliveries")} value={metrics.activeDeliveries} />
+        <MetricCard label={t("metric.failedOrders")} value={metrics.failedOrders} />
       </section>
 
-      <section className="panel overview admin-actions-panel">
-        <h2>مراكز الإدارة</h2>
+      <SectionCard
+        className="admin-actions-panel"
+        title={t("page.admin.dashboard.actionTitle")}
+        description={t("page.admin.dashboard.actionText")}
+      >
         <div className="admin-action-grid">
           <button type="button" onClick={() => onNavigate?.("/admin/suppliers")}>
-            إدارة الموردين
+            {t("nav.admin.suppliers")}
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/supplier-requests")}>
-            طلبات انضمام الموردين
+            {t("nav.admin.supplierRequests")}
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/product-moderation")}>
-            مراجعة الكتالوج
+            {t("nav.admin.productModeration")}
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/finance")}>
-            المالية والتسويات
+            {t("nav.admin.finance")}
           </button>
           <button type="button" onClick={() => onNavigate?.("/admin/live-tracking")}>
-            التتبع العام
+            {t("nav.admin.liveTracking")}
           </button>
         </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }
 
 async function getAdminMetricsFromSupabase() {
   if (!supabase) {
-    throw new Error("Supabase غير مفعّل حاليًا.");
+    throw new Error("Supabase is not configured.");
   }
 
   const todayStart = new Date();

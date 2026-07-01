@@ -1,3 +1,6 @@
+import { useI18n } from "../i18n/I18nProvider.jsx";
+import StatusBadge, { paymentMethodLabel, paymentStatusLabel } from "./StatusBadge.jsx";
+
 export default function OrderTable({
   orders,
   drivers,
@@ -7,11 +10,13 @@ export default function OrderTable({
   onRejectOrder,
   onAssignDriver,
 }) {
+  const { t } = useI18n();
+
   if (!orders.length) {
     return (
       <div className="empty-state data-empty-state">
-        <strong>لا توجد طلبات حاليًا</strong>
-        <span>ستظهر الطلبات هنا عند وصولها من النظام.</span>
+        <strong>{t("ui.orders.emptyTitle")}</strong>
+        <span>{t("ui.orders.emptyText")}</span>
       </div>
     );
   }
@@ -22,15 +27,15 @@ export default function OrderTable({
         <table className="falaj-table">
           <thead>
             <tr>
-              <th>رقم الطلب</th>
-              <th>العميل</th>
-              <th>المنطقة</th>
-              <th>الكمية</th>
-              <th>السائق</th>
-              <th>المبلغ</th>
-              <th>الحالة</th>
-              <th>الدفع</th>
-              {showActions && <th>إجراء</th>}
+              <th>{t("ui.orders.orderNumber")}</th>
+              <th>{t("ui.orders.customer")}</th>
+              <th>{t("ui.orders.area")}</th>
+              <th>{t("ui.orders.quantity")}</th>
+              <th>{t("ui.orders.driver")}</th>
+              <th>{t("ui.orders.amount")}</th>
+              <th>{t("ui.orders.status")}</th>
+              <th>{t("ui.orders.payment")}</th>
+              {showActions && <th>{t("ui.orders.action")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -49,9 +54,9 @@ export default function OrderTable({
                 <td>{order.area}</td>
                 <td>{order.volume}</td>
                 <td>{getDriverName(order.driverId, drivers)}</td>
-                <td>{order.amount.toFixed(3)} ر.ع</td>
+                <td>{formatMoney(order.amount)}</td>
                 <td>
-                  <span className={`status status-badge falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
+                  <StatusBadge value={order.status} />
                 </td>
                 <td>
                   <PaymentBadge order={order} />
@@ -86,7 +91,7 @@ export default function OrderTable({
             <div className="order-mobile-head">
               <strong className="mono">{order.id}</strong>
               <span className="badge-pair">
-                <span className={`status falaj-badge ${order.status}`}>{statusLabel(order.status)}</span>
+                <StatusBadge value={order.status} />
                 <PaymentBadge order={order} />
               </span>
             </div>
@@ -99,8 +104,8 @@ export default function OrderTable({
               <strong>{order.volume}</strong>
             </div>
             <div className="order-mobile-detail">
-              <span>السعر</span>
-              <strong>{order.amount.toFixed(3)} ر.ع</strong>
+              <span>{t("ui.orders.amount")}</span>
+              <strong>{formatMoney(order.amount)}</strong>
             </div>
 
             {showActions && (
@@ -119,6 +124,8 @@ export default function OrderTable({
 }
 
 function OrderActions({ orderId, onAcceptOrder, onRejectOrder, onAssignDriver }) {
+  const { t } = useI18n();
+
   function runAction(event, action) {
     event.stopPropagation();
     action?.(orderId);
@@ -127,55 +134,33 @@ function OrderActions({ orderId, onAcceptOrder, onRejectOrder, onAssignDriver })
   return (
     <div className="row-actions">
       <button type="button" onClick={(event) => runAction(event, onAcceptOrder)}>
-        قبول
+        {t("ui.orders.accept")}
       </button>
       <button type="button" className="ghost" onClick={(event) => runAction(event, onRejectOrder)}>
-        رفض
+        {t("ui.orders.reject")}
       </button>
       <button type="button" className="ghost" onClick={(event) => runAction(event, onAssignDriver)}>
-        تعيين سائق
+        {t("ui.orders.assignDriver")}
       </button>
     </div>
   );
 }
 
 function PaymentBadge({ order }) {
+  const { t } = useI18n();
+
   return (
     <span className={`payment-badge falaj-badge ${order.paymentMethod} ${order.paymentStatus}`}>
-      {paymentMethodLabel(order.paymentMethod)} - {paymentStatusLabel(order.paymentStatus)}
+      {paymentMethodLabel(t, order.paymentMethod)} - {paymentStatusLabel(t, order.paymentStatus)}
     </span>
   );
 }
 
-function statusLabel(status) {
-  const labels = {
-    pending: "جديد",
-    active: "نشط",
-    accepted: "مقبول",
-    assigned: "مسند",
-    en_route: "في الطريق",
-    arrived: "وصل",
-    delivered: "تم التسليم",
-    failed: "فشل التسليم",
-    rejected: "مرفوض",
-    completed: "مكتمل",
-  };
-
-  return labels[status] ?? status;
-}
-
-function paymentMethodLabel(paymentMethod) {
-  return paymentMethod === "card" ? "بطاقة" : "كاش";
-}
-
-function paymentStatusLabel(paymentStatus) {
-  if (paymentStatus === "paid") return "مدفوع";
-  if (paymentStatus === "collected") return "محصل";
-  if (paymentStatus === "refunded") return "مسترجع";
-  return "غير مدفوع";
-}
-
 function getDriverName(driverId, drivers = []) {
-  if (!driverId) return "لم يعين";
-  return drivers.find((driver) => driver.id === driverId)?.name ?? "غير معروف";
+  if (!driverId) return "—";
+  return drivers.find((driver) => driver.id === driverId)?.name ?? "—";
+}
+
+function formatMoney(value) {
+  return `${Number(value || 0).toFixed(3)} ر.ع`;
 }

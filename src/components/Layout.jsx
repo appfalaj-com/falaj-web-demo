@@ -84,6 +84,7 @@ export default function Layout({
               key={link.href}
               className={isActiveLink(link.href) ? "nav-link falaj-nav-link active" : "nav-link falaj-nav-link"}
               href={link.href}
+              aria-current={isActiveLink(link.href) ? "page" : undefined}
               onClick={(event) => {
                 event.preventDefault();
                 onNavigate?.(link.href);

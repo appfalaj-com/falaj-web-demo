@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import MetricCard from "../components/MetricCard.jsx";
+import StatusBadge from "../components/StatusBadge.jsx";
 import {
   getAdminOrdersFromSupabase,
   getOrderStatusHistoryFromSupabase,
@@ -327,7 +328,7 @@ export default function AdminOrdersPage() {
                   className={`supplier-request-card order-list-card ${selectedOrder?.rawId === order.rawId ? "active" : ""}`}
                   onClick={() => setSelectedOrderId(order.rawId)}
                 >
-                  <span className={`status status-badge ${order.status}`}>{statusLabel(order.status)}</span>
+                  <StatusBadge value={order.status} />
                   <strong>{order.id}</strong>
                   <small>{order.companyName || "مورد غير محدد"} · {order.customer || "عميل غير محدد"}</small>
                   <span>{formatDateTime(order.createdAt)}</span>
@@ -370,7 +371,7 @@ function AdminOrderDetailPanel({ order, timeline, isTimelineLoading, isUpdating,
           <h2>{order.id}</h2>
           <p>{order.companyName || "مورد غير محدد"}</p>
         </div>
-        <span className={`status status-badge ${order.status}`}>{statusLabel(order.status)}</span>
+        <StatusBadge value={order.status} />
       </div>
 
       <section className="order-detail-section">
