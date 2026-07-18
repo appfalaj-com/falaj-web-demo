@@ -4,6 +4,7 @@ import { getOrdersByDriver } from "./orderService.js";
 
 const ACTIVE_DRIVER_STATUSES = ["assigned", "en_route", "arrived"];
 const DONE_DRIVER_STATUSES = ["delivered", "failed"];
+const ACTIVE_TRACKING_ORDER_STATUSES = ["assigned", "en_route", "arrived"];
 export const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
   "لا يمكن استخدام بريد حساب الشركة كسائق. استخدم بريدًا مختلفًا للسائق.";
 export const DRIVER_COMPANY_PHONE_CONFLICT_ERROR =
@@ -287,15 +288,27 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
   if (normalizedDrivers.length === 0) return [];
 
   const driverIds = normalizedDrivers.map((driver) => driver.id);
-  const { data: locations, error: locationsError } = await supabase
-    .from("driver_locations")
-    .select("id, driver_id, company_id, latitude, longitude, accuracy, recorded_at, source")
-    .eq("company_id", companyId)
-    .in("driver_id", driverIds)
-    .order("recorded_at", { ascending: false });
+  const [{ data: locations, error: locationsError }, { data: orders, error: ordersError }] = await Promise.all([
+    supabase
+      .from("driver_locations")
+      .select(driverLocationSelectColumns())
+      .eq("company_id", companyId)
+      .in("driver_id", driverIds)
+      .order("recorded_at", { ascending: false }),
+    supabase
+      .from("orders")
+      .select("id, public_code, company_id, driver_id, status")
+      .eq("company_id", companyId)
+      .in("driver_id", driverIds)
+      .in("status", ACTIVE_TRACKING_ORDER_STATUSES)
+      .order("updated_at", { ascending: false }),
+  ]);
 
   if (locationsError) {
     throw locationsError;
+  }
+  if (ordersError) {
+    throw ordersError;
   }
 
   const locationsByDriverId = new Map();
@@ -304,14 +317,21 @@ export async function getDriversLiveLocationsByCompanyFromSupabase(companyId) {
       locationsByDriverId.set(location.driver_id, location);
     }
   });
+  const ordersByDriverId = new Map();
+  (orders ?? []).forEach((order) => {
+    if (!ordersByDriverId.has(order.driver_id)) {
+      ordersByDriverId.set(order.driver_id, order);
+    }
+  });
 
   return normalizedDrivers.map((driver) => ({
     ...driver,
     lastLocation: locationsByDriverId.get(driver.id) ?? null,
+    activeOrder: ordersByDriverId.get(driver.id) ?? null,
   }));
 }
 
-export async function saveDriverLocationInSupabase(driver, position) {
+export async function saveDriverLocationInSupabase(driver, position, order = null) {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
   }
@@ -325,12 +345,15 @@ export async function saveDriverLocationInSupabase(driver, position) {
     .insert({
       driver_id: driver.id,
       company_id: driver.companyId,
+      order_id: order?.rawId ?? order?.id ?? null,
       latitude: position.latitude,
       longitude: position.longitude,
       accuracy: position.accuracy ?? null,
+      heading: Number.isFinite(position.heading) ? position.heading : null,
+      speed: Number.isFinite(position.speed) ? position.speed : null,
       source: "web",
     })
-    .select("id, driver_id, company_id, latitude, longitude, accuracy, recorded_at, source")
+    .select(driverLocationSelectColumns())
     .single();
 
   if (error) {
@@ -415,6 +438,23 @@ function driverSelectColumns() {
     "is_online",
     "created_at",
     "updated_at",
+  ].join(",");
+}
+
+function driverLocationSelectColumns() {
+  return [
+    "id",
+    "driver_id",
+    "company_id",
+    "order_id",
+    "latitude",
+    "longitude",
+    "accuracy",
+    "heading",
+    "speed",
+    "recorded_at",
+    "updated_at",
+    "source",
   ].join(",");
 }
 

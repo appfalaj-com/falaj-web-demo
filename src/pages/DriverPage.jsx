@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 import {
   getCurrentDriverFromSupabase,
@@ -20,6 +20,9 @@ const DRIVER_NEXT_ACTIONS = {
 
 const DRIVER_ACTIVE_STATUSES = ["assigned", "en_route", "arrived"];
 const DRIVER_COMPLETED_STATUSES = ["delivered", "failed", "cancelled", "rejected"];
+const DRIVER_TRACKING_STATUSES = ["en_route", "arrived"];
+const LOCATION_SAVE_MIN_INTERVAL_MS = 15000;
+const LOCATION_SAVE_MIN_MOVEMENT_METERS = 25;
 const ISSUE_REASONS = ["العميل لا يرد", "العنوان غير واضح", "تأخير في التوصيل"];
 
 export default function DriverPage({ onNavigate }) {
@@ -34,9 +37,14 @@ export default function DriverPage({ onNavigate }) {
     latitude: null,
     longitude: null,
     accuracy: null,
+    heading: null,
+    speed: null,
     recordedAt: null,
+    warning: "",
   });
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const watchIdRef = useRef(null);
+  const lastSavedLocationRef = useRef(null);
 
   useEffect(() => {
     loadDriverContext();
@@ -56,6 +64,123 @@ export default function DriverPage({ onNavigate }) {
     () => orders.filter((order) => !DRIVER_COMPLETED_STATUSES.includes(order.status)),
     [orders]
   );
+
+  const stopForegroundTracking = useCallback(() => {
+    if (watchIdRef.current !== null && navigator.geolocation?.clearWatch) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+    watchIdRef.current = null;
+    lastSavedLocationRef.current = null;
+    setLocationState((current) =>
+      current.status === "watching" || current.status === "shared" || current.status === "requesting"
+        ? { ...current, status: "idle" }
+        : current
+    );
+  }, []);
+
+  const startForegroundTracking = useCallback(
+    (order = currentOrder, options = {}) => {
+      if (!driver?.id || !driver?.isActive || !order || !DRIVER_TRACKING_STATUSES.includes(order.status)) {
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        setLocationState((current) => ({
+          ...current,
+          status: "unavailable",
+          warning: "الموقع غير متاح على هذا الجهاز. يمكنك متابعة الطلب بدون تتبع مباشر.",
+        }));
+        if (!options.silent) {
+          setMessage("يمكنك متابعة الطلب، لكن التتبع المباشر غير متاح على هذا الجهاز.");
+        }
+        return;
+      }
+
+      if (watchIdRef.current !== null) {
+        return;
+      }
+
+      setLocationState((current) => ({ ...current, status: "requesting", warning: "" }));
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        async (position) => {
+          const coords = normalizePositionCoords(position);
+          if (!coords) return;
+
+          setLocationState({
+            status: "shared",
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            accuracy: coords.accuracy,
+            heading: coords.heading,
+            speed: coords.speed,
+            recordedAt: new Date(position.timestamp || Date.now()).toISOString(),
+            warning: "",
+          });
+
+          if (!shouldSaveLocation(coords, lastSavedLocationRef.current)) return;
+
+          try {
+            const savedLocation = await saveDriverLocationInSupabase(driver, coords, order);
+            lastSavedLocationRef.current = {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              savedAt: Date.now(),
+            };
+            setLocationState((current) => ({
+              ...current,
+              status: "shared",
+              latitude: Number(savedLocation.latitude),
+              longitude: Number(savedLocation.longitude),
+              accuracy: savedLocation.accuracy,
+              heading: savedLocation.heading,
+              speed: savedLocation.speed,
+              recordedAt: savedLocation.recorded_at,
+              warning: "",
+            }));
+          } catch (locationError) {
+            if (import.meta.env.DEV) {
+              console.warn("driver_location_save_failed", {
+                stage: "foreground_watch",
+                message: locationError?.message,
+                code: locationError?.code,
+              });
+            }
+            setLocationState((current) => ({
+              ...current,
+              status: "shared",
+              warning: "تعذر حفظ آخر موقع، لكن يمكنك متابعة التوصيل بدون توقف.",
+            }));
+          }
+        },
+        () => {
+          if (watchIdRef.current !== null && navigator.geolocation?.clearWatch) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+          }
+          watchIdRef.current = null;
+          setLocationState((current) => ({
+            ...current,
+            status: "denied",
+            warning: "لم يتم السماح بمشاركة الموقع. يمكنك متابعة الطلب، ويمكنك المحاولة مرة أخرى من زر التتبع.",
+          }));
+          if (!options.silent) {
+            setMessage("تم تعطيل التتبع المباشر، لكن مسار الطلب لا يزال يعمل.");
+          }
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 }
+      );
+    },
+    [currentOrder, driver]
+  );
+
+  useEffect(() => () => stopForegroundTracking(), [stopForegroundTracking]);
+
+  useEffect(() => {
+    if (!driver?.id || !currentOrder || !DRIVER_TRACKING_STATUSES.includes(currentOrder.status)) {
+      stopForegroundTracking();
+      return;
+    }
+    startForegroundTracking(currentOrder, { silent: true });
+  }, [currentOrder?.rawId, currentOrder?.status, driver?.id, startForegroundTracking, stopForegroundTracking]);
 
   async function loadDriverContext() {
     setLoading(true);
@@ -108,6 +233,7 @@ export default function DriverPage({ onNavigate }) {
   }
 
   async function handleSignOut() {
+    stopForegroundTracking();
     await supabase?.auth.signOut();
     onNavigate?.("/driver/login");
   }
@@ -115,6 +241,16 @@ export default function DriverPage({ onNavigate }) {
   async function handleShareLocation() {
     setError("");
     setMessage("");
+
+    if (driver?.id && driver?.isActive && currentOrder && DRIVER_TRACKING_STATUSES.includes(currentOrder.status)) {
+      startForegroundTracking(currentOrder);
+      return;
+    }
+
+    if (driver?.id && driver?.isActive) {
+      setMessage("يبدأ التتبع المباشر بعد بدء التوصيل. يمكنك متابعة الطلب بدون موقع.");
+      return;
+    }
 
     if (!driver?.id || !driver?.isActive) {
       setError("لا يمكن حفظ الموقع إلا لسائق مربوط ونشط.");
@@ -174,6 +310,11 @@ export default function DriverPage({ onNavigate }) {
 
     try {
       const updatedOrder = await updateDriverOrderStatusInSupabase(driver.id, order.rawId, nextStatus);
+      if (DRIVER_TRACKING_STATUSES.includes(updatedOrder.status)) {
+        startForegroundTracking(updatedOrder, { silent: true });
+      } else if (DRIVER_COMPLETED_STATUSES.includes(updatedOrder.status)) {
+        stopForegroundTracking();
+      }
       setOrders((currentOrders) =>
         currentOrders.map((item) => (item.rawId === updatedOrder.rawId ? updatedOrder : item))
       );
@@ -233,6 +374,7 @@ export default function DriverPage({ onNavigate }) {
 
     try {
       const updatedOrder = await markDriverCashCollectedInSupabase(driver.id, order.rawId);
+      stopForegroundTracking();
       setOrders((currentOrders) =>
         currentOrders.map((item) => (item.rawId === updatedOrder.rawId ? updatedOrder : item))
       );
@@ -380,6 +522,42 @@ export default function DriverPage({ onNavigate }) {
   );
 }
 
+function normalizePositionCoords(position) {
+  const coords = position?.coords;
+  const latitude = Number(coords?.latitude);
+  const longitude = Number(coords?.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return {
+    latitude,
+    longitude,
+    accuracy: Number.isFinite(Number(coords?.accuracy)) ? Number(coords.accuracy) : null,
+    heading: Number.isFinite(Number(coords?.heading)) ? Number(coords.heading) : null,
+    speed: Number.isFinite(Number(coords?.speed)) ? Number(coords.speed) : null,
+  };
+}
+
+function shouldSaveLocation(coords, lastSaved) {
+  if (!lastSaved) return true;
+  if (Date.now() - lastSaved.savedAt >= LOCATION_SAVE_MIN_INTERVAL_MS) return true;
+  return distanceMeters(coords, lastSaved) >= LOCATION_SAVE_MIN_MOVEMENT_METERS;
+}
+
+function distanceMeters(a, b) {
+  if (!a || !b) return Number.POSITIVE_INFINITY;
+  const lat1 = toRadians(Number(a.latitude));
+  const lat2 = toRadians(Number(b.latitude));
+  const dLat = toRadians(Number(b.latitude) - Number(a.latitude));
+  const dLng = toRadians(Number(b.longitude) - Number(a.longitude));
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function toRadians(value) {
+  return (value * Math.PI) / 180;
+}
+
 function DriverOperationsSummary({ driver, activeCount, availableCount, completedCount, locationState }) {
   return (
     <section className="driver-ops-summary" aria-label="ملخص السائق">
@@ -405,12 +583,13 @@ function SummaryTile({ label, value, note }) {
 
 function TrackingPanel({ driver, locationState, currentOrder, onShareLocation }) {
   const canShareLocation = driver?.isActive && Boolean(currentOrder);
+  const isTracking = locationState.status === "watching" || locationState.status === "shared";
 
   return (
     <section className="driver-tracking-panel">
       <div>
         <p className="eyebrow">التتبع</p>
-        <h2>{locationState.status === "shared" ? "التتبع نشط" : "التتبع غير نشط"}</h2>
+        <h2>{isTracking ? "التتبع نشط" : "التتبع غير نشط"}</h2>
         <p>
           {currentOrder
             ? "يمكنك مشاركة موقعك بعد بدء العمل على الطلب الحالي."
@@ -425,6 +604,7 @@ function TrackingPanel({ driver, locationState, currentOrder, onShareLocation })
       >
         {locationState.status === "requesting" ? "جاري تحديد الموقع..." : "مشاركة موقعي الآن"}
       </button>
+      {locationState.warning ? <p className="auth-alert warning">{locationState.warning}</p> : null}
       {locationState.status === "shared" ? (
         <dl>
           <div>
@@ -659,6 +839,8 @@ function statusLabel(status) {
 }
 
 function trackingLabel(status) {
+  if (status === "watching") return "نشط";
+  if (status === "unavailable") return "غير متاح";
   const labels = {
     idle: "غير نشط",
     requesting: "جاري التحديد",

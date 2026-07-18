@@ -2201,6 +2201,94 @@ tbody tr:hover td {
   margin: 4px 0 0;
 }
 
+.live-map-panel {
+  display: grid;
+  gap: 16px;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.live-map-canvas {
+  background:
+    linear-gradient(90deg, rgba(18, 153, 144, 0.09) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(18, 153, 144, 0.09) 1px, transparent 1px),
+    rgba(144, 209, 202, 0.1);
+  background-size: 56px 56px;
+  border: 1px solid rgba(18, 153, 144, 0.22);
+  border-radius: 12px;
+  min-height: 320px;
+  overflow: hidden;
+  position: relative;
+}
+
+.live-map-canvas::before {
+  border: 1px dashed rgba(9, 107, 104, 0.22);
+  border-radius: 999px;
+  content: "";
+  inset: 32px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.live-map-marker {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid rgba(18, 153, 144, 0.38);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  color: var(--dark);
+  display: grid;
+  gap: 3px;
+  min-width: 118px;
+  padding: 9px 11px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+html[dir="rtl"] .live-map-marker {
+  transform: translate(50%, -50%);
+}
+
+.live-map-marker span {
+  background: var(--primary);
+  border: 3px solid var(--surface);
+  border-radius: 999px;
+  box-shadow: 0 0 0 5px rgba(18, 153, 144, 0.18);
+  height: 14px;
+  position: absolute;
+  inset-block-start: -7px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+}
+
+html[dir="rtl"] .live-map-marker span {
+  transform: translateX(50%);
+}
+
+.live-map-marker strong,
+.live-map-marker small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-map-marker small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.live-map-marker.stale {
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.live-map-marker.stale span {
+  background: #f59e0b;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.18);
+}
+
 .driver-page {
   max-width: 980px;
 }
