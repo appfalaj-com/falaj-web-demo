@@ -1,297 +1,490 @@
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 
-const navLinks = [
-  { labelKey: "landing.nav.home", href: "#top" },
-  { labelKey: "landing.nav.how", href: "#how-it-works" },
-  { labelKey: "landing.nav.suppliers", href: "#suppliers" },
-  { labelKey: "landing.nav.contact", href: "#contact" },
-];
+const content = {
+  ar: {
+    nav: [
+      ["الرئيسية", "#top"],
+      ["ما هو فلج؟", "#about"],
+      ["التجربة", "#experience"],
+      ["للموردين", "#suppliers"],
+      ["الإطلاق", "#launch"],
+    ],
+    headerCta: "انضم كمورد",
+    eyebrow: "منصة مياه رقمية تنطلق من عُمان",
+    title: "فلج ينظّم طلب المياه",
+    titleAccent: "من أقرب مورد حتى بابك",
+    description:
+      "بدل الاتصالات المتفرقة ورسائل الواتساب، فلج يجمع طلب مياه الشرب والكراتين والصهاريج في تجربة واحدة: مورد قريب، موقع واضح، وتتبّع لحالة التوصيل.",
+    primaryCta: "انضم كمورد",
+    secondaryCta: "شاهد التجربة",
+    status: "تطبيق الزبون قريبًا",
+    proof: ["طلبات منظمة", "تتبّع التوصيل", "لوحة للموردين"],
+    phoneTitle: "طلب مياه جديد",
+    phoneLocation: "الخوير، مسقط",
+    phoneSupplier: "مورد قريب متاح",
+    phoneProgress: ["تم الطلب", "قيد التجهيز", "في الطريق"],
+    routeLabel: "مسار التوصيل",
+    liveLabel: "توصيل مباشر",
+    orderNumber: "الطلب #2481",
+    deliveryEta: "الوصول خلال ٢٥ دقيقة",
+    aboutEyebrow: "ما هو فلج؟",
+    aboutTitle: "منصة تربط الزبائن بموردي المياه القريبين",
+    aboutText:
+      "فلج يحوّل طلب المياه من عملية يدوية إلى تجربة رقمية واضحة للزبون، ولوحة تشغيلية للموردين لإدارة الطلبات والسائقين والعمولات.",
+    problemTitle: "المشكلة اليوم",
+    problemText: "طلبات متفرقة، مواقع غير دقيقة، ومتابعة يدوية بين الزبون والمورد والسائق.",
+    solutionTitle: "الحل مع فلج",
+    solutionText: "طلب واحد، موقع واضح، مورد مناسب، وتحديثات حالة من لحظة الطلب حتى التسليم.",
+    marketTitle: "لماذا الآن؟",
+    marketText: "سوق المياه يعتمد على السرعة والثقة. فلج يعطي الموردين قناة رقمية جاهزة قبل إطلاق تطبيق الزبون.",
+    experienceEyebrow: "تجربة الطلب",
+    experienceTitle: "رحلة بسيطة بدل مكالمات متكررة",
+    steps: [
+      ["اختر نوع المياه", "عبوات، كراتين، أو صهريج حسب احتياجك."],
+      ["حدد موقعك", "أدخل العنوان وتفاصيل الوصول بدقة."],
+      ["تابع التوصيل", "اعرف حالة الطلب من التجهيز حتى الوصول."],
+    ],
+    services: ["مياه شرب", "كراتين مياه", "صهاريج مياه", "توصيل مجدول"],
+    suppliersEyebrow: "للموردين",
+    suppliersTitle: "افتح قناة بيع رقمية بدون فوضى تشغيلية",
+    suppliersText:
+      "لوحة الموردين تساعد شركة المياه على استقبال الطلبات، تنظيم المنتجات، متابعة السائقين، ومراجعة الأداء من مكان واحد.",
+    supplierPoints: ["طلبات واضحة حسب المنطقة", "إدارة السائقين والتوصيل", "كتالوج منتجات وأسعار", "تقارير وعمولات"],
+    joinCta: "أرسل طلب الانضمام",
+    dashboardTitle: "لوحة المورد",
+    dashboardRows: ["طلبات اليوم", "سائقون نشطون", "منتجات متاحة"],
+    launchEyebrow: "حالة الإطلاق",
+    launchTitle: "نبني شبكة الموردين أولًا، ثم نفتح تجربة الزبون",
+    launchText:
+      "نركّز الآن على ضم الموردين وتجهيز الكتالوج ومناطق التغطية، لنقدّم تجربة موثوقة للزبون من أول طلب.",
+    launchItems: ["ضم الموردين الأوائل", "تجهيز الكتالوج والمناطق", "إطلاق تطبيق الزبون قريبًا"],
+    faqTitle: "أسئلة سريعة",
+    faqs: [
+      ["هل التطبيق متاح للزبائن الآن؟", "تطبيق الزبون قريبًا. التركيز الحالي على ضم الموردين وتجهيز العمليات."],
+      ["من يستفيد من فلج؟", "الزبائن يطلبون بسهولة، والموردون يستقبلون الطلبات ويديرون التوصيل من لوحة واحدة."],
+      ["هل يوجد دخول للأدمن والسائق؟", "نعم، لكنها روابط تشغيلية وليست الدعوة الأساسية في الصفحة التسويقية."],
+    ],
+    contact: "info@appfalaj.com",
+    supplierLogin: "دخول الموردين",
+    adminLogin: "دخول الأدمن",
+    driverLogin: "دخول السائق",
+    footerTagline: "مياهك أقرب، وطلبك أوضح.",
+  },
+  en: {
+    nav: [
+      ["Home", "#top"],
+      ["What is Falaj?", "#about"],
+      ["Experience", "#experience"],
+      ["For suppliers", "#suppliers"],
+      ["Launch", "#launch"],
+    ],
+    headerCta: "Join as supplier",
+    eyebrow: "A digital water platform starting in Oman",
+    title: "Falaj organizes water orders",
+    titleAccent: "from the nearest supplier to your door",
+    description:
+      "Instead of scattered calls and WhatsApp messages, Falaj brings drinking water, cartons, and tankers into one clear flow: nearby supplier, precise location, and delivery tracking.",
+    primaryCta: "Join as supplier",
+    secondaryCta: "See the experience",
+    status: "Customer app coming soon",
+    proof: ["Organized orders", "Delivery tracking", "Supplier dashboard"],
+    phoneTitle: "New water order",
+    phoneLocation: "Al Khuwair, Muscat",
+    phoneSupplier: "Nearby supplier available",
+    phoneProgress: ["Ordered", "Preparing", "On the way"],
+    routeLabel: "Delivery route",
+    liveLabel: "Live delivery",
+    orderNumber: "Order #2481",
+    deliveryEta: "Arriving in 25 minutes",
+    aboutEyebrow: "What is Falaj?",
+    aboutTitle: "A platform connecting customers with nearby water suppliers",
+    aboutText:
+      "Falaj turns water ordering from a manual process into a clear customer experience and an operations dashboard for suppliers.",
+    problemTitle: "The problem today",
+    problemText: "Scattered requests, unclear locations, and manual follow-up between customer, supplier, and driver.",
+    solutionTitle: "The Falaj answer",
+    solutionText: "One order, clear location, suitable supplier, and status updates from request to delivery.",
+    marketTitle: "Why now?",
+    marketText: "Water delivery runs on speed and trust. Falaj gives suppliers a digital channel before the customer app launch.",
+    experienceEyebrow: "Ordering experience",
+    experienceTitle: "A simple journey instead of repeated calls",
+    steps: [
+      ["Choose water type", "Bottles, cartons, or a tanker based on the need."],
+      ["Set location", "Enter the address and delivery access details."],
+      ["Track delivery", "Follow the order from preparation to arrival."],
+    ],
+    services: ["Drinking water", "Water cartons", "Water tankers", "Scheduled delivery"],
+    suppliersEyebrow: "For suppliers",
+    suppliersTitle: "Open a digital sales channel without operations clutter",
+    suppliersText:
+      "The supplier dashboard helps water companies receive orders, organize products, track drivers, and review performance in one place.",
+    supplierPoints: ["Area-based orders", "Driver and delivery management", "Products and pricing catalog", "Reports and commissions"],
+    joinCta: "Send join request",
+    dashboardTitle: "Supplier dashboard",
+    dashboardRows: ["Today's orders", "Active drivers", "Available products"],
+    launchEyebrow: "Launch status",
+    launchTitle: "We build the supplier network first, then open the customer experience",
+    launchText:
+      "We are onboarding suppliers and preparing the catalog and coverage areas to make every customer order reliable from day one.",
+    launchItems: ["Onboard first suppliers", "Prepare catalog and areas", "Launch customer app soon"],
+    faqTitle: "Quick questions",
+    faqs: [
+      ["Is the customer app live?", "The customer app is coming soon. The current focus is supplier onboarding and operations readiness."],
+      ["Who benefits from Falaj?", "Customers order easily, and suppliers receive orders and manage delivery from one dashboard."],
+      ["Are admin and driver logins available?", "Yes, but they are operational links, not the primary marketing action."],
+    ],
+    contact: "info@appfalaj.com",
+    supplierLogin: "Supplier login",
+    adminLogin: "Admin login",
+    driverLogin: "Driver login",
+    footerTagline: "Water closer. Ordering clearer.",
+  },
+};
 
-const stepKeys = [
-  ["landing.step1.title", "landing.step1.text"],
-  ["landing.step2.title", "landing.step2.text"],
-  ["landing.step3.title", "landing.step3.text"],
-  ["landing.step4.title", "landing.step4.text"],
-];
-
-const services = [
-  { titleKey: "landing.service.drinking", icon: "drop" },
-  { titleKey: "landing.service.boxes", icon: "box" },
-  { titleKey: "landing.service.tankers", icon: "truck" },
-  { titleKey: "landing.service.scheduled", icon: "calendar" },
-];
-
-const supplierPoints = [
-  "landing.supplierPoint.orders",
-  "landing.supplierPoint.drivers",
-  "landing.supplierPoint.commissions",
-  "landing.supplierPoint.reports",
-];
-
-function goToHash(event, href) {
+function scrollToHash(event, href) {
   event.preventDefault();
   document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function Icon({ type }) {
-  if (type === "truck") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M7 17h24v16H7z" />
-        <path d="M31 22h7l4 5v6H31z" />
-        <circle cx="16" cy="35" r="4" />
-        <circle cx="36" cy="35" r="4" />
-      </svg>
-    );
-  }
-
-  if (type === "box") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <path d="M10 16l14-7 14 7-14 7z" />
-        <path d="M10 16v16l14 7V23z" />
-        <path d="M38 16v16l-14 7V23z" />
-      </svg>
-    );
-  }
-
-  if (type === "calendar") {
-    return (
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <rect x="9" y="12" width="30" height="28" rx="4" />
-        <path d="M9 20h30M17 8v8M31 8v8M17 28h4M27 28h4M17 34h4M27 34h4" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M24 6s13 14 13 24a13 13 0 0 1-26 0C11 20 24 6 24 6z" />
-      <path d="M18 31c2 3 6 5 10 3" />
-    </svg>
-  );
-}
-
 export default function LandingPage({ onNavigate }) {
-  const { direction, t } = useI18n();
+  const { direction, language, t } = useI18n();
+  const copy = content[language] ?? content.ar;
 
   return (
-    <main className="landing-page" dir={direction} id="top">
-      <header className="landing-header">
+    <main className="landing-page falaj-marketing" dir={direction} id="top">
+      <header className="falaj-site-header">
         <a
-          className="landing-logo"
+          className="falaj-site-logo"
           href="/"
           onClick={(event) => {
             event.preventDefault();
             onNavigate?.("/");
           }}
         >
-          <img className="landing-logo-image" src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
+          <img src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
         </a>
 
-        <nav className="landing-nav" aria-label={t("nav.main")}>
-          {navLinks.map((link) => (
-            <a href={link.href} key={link.href} onClick={(event) => goToHash(event, link.href)}>
-              {t(link.labelKey)}
+        <nav className="falaj-site-nav" aria-label={t("nav.main")}>
+          {copy.nav.map(([label, href]) => (
+            <a href={href} key={href} onClick={(event) => scrollToHash(event, href)}>
+              {label}
             </a>
           ))}
         </nav>
 
-        <div className="landing-header-actions">
+        <div className="falaj-site-actions">
           <LanguageToggle />
-          <button type="button" className="landing-header-cta" onClick={() => onNavigate?.("/company/login")}>
-            {t("landing.headerCta")}
+          <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
+            {copy.headerCta}
           </button>
         </div>
       </header>
 
-      <section className="landing-hero">
-        <div className="landing-copy">
-          <p className="landing-eyebrow">{t("landing.eyebrow")}</p>
-          <h1>{t("landing.title")}</h1>
-          <p className="landing-description">
-            {t("landing.description")}
+      <section className="falaj-hero">
+        <div className="falaj-hero-copy">
+          <p className="falaj-eyebrow">
+            <span className="falaj-eyebrow-dot" aria-hidden="true" />
+            {copy.eyebrow}
           </p>
-          <div className="landing-actions">
-            <button type="button" onClick={() => onNavigate?.("/company/login")}>
-              {t("landing.companyLogin")}
+          <h1>
+            {copy.title}
+            <span>{copy.titleAccent}</span>
+          </h1>
+          <p className="falaj-lead">{copy.description}</p>
+
+          <div className="falaj-hero-actions">
+            <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
+              {copy.primaryCta}
+              <span aria-hidden="true">←</span>
             </button>
-            <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-              {t("landing.adminLogin")}
-            </button>
-            <button type="button" className="ghost" disabled>
-              {t("landing.customerSoon")}
-            </button>
+            <a href="#experience" onClick={(event) => scrollToHash(event, "#experience")}>
+              {copy.secondaryCta}
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+
+          <div className="falaj-proof-strip" aria-label={copy.status}>
+            <strong>
+              <i aria-hidden="true" />
+              {copy.status}
+            </strong>
+            {copy.proof.map((item) => (
+              <span key={item}>
+                <i aria-hidden="true">✓</i>
+                {item}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="hero-illustration" aria-label={t("landing.title")}>
-          <div className="route-line" />
-          <div className="hero-drop one" />
-          <div className="hero-drop two" />
-          <div className="phone-mockup">
-            <div className="phone-speaker" />
-            <div className="phone-screen">
-              <div className="phone-top">
-                <span>{t("landing.customerAppText")}</span>
-                <strong>{t("landing.title")}</strong>
+        <div className="falaj-hero-visual" aria-label={copy.phoneTitle}>
+          <div className="falaj-visual-aura" aria-hidden="true" />
+          <div className="falaj-route-card">
+            <header>
+              <span>{copy.routeLabel}</span>
+              <strong>
+                <i aria-hidden="true" />
+                {copy.liveLabel}
+              </strong>
+            </header>
+            <div className="falaj-route-map">
+              <i className="route-node supplier" />
+              <i className="route-node customer" />
+              <i className="route-truck" />
+            </div>
+            <footer>
+              <span>{copy.phoneLocation}</span>
+              <strong>25 min</strong>
+            </footer>
+          </div>
+
+          <div className="falaj-phone-3d">
+            <div className="falaj-phone-glass">
+              <div className="falaj-phone-topbar">
+                <span>9:41</span>
+                <i className="falaj-phone-bar" />
+                <span>•••</span>
               </div>
-              <div className="product-chip">
-                <Icon type="drop" />
+              <div className="falaj-phone-appbar">
+                <span>
+                  <img src="/brand/Falaj_Icon.png" alt="" />
+                  <strong>Falaj</strong>
+                </span>
+                <i aria-hidden="true">⌁</i>
+              </div>
+              <section className="falaj-order-panel">
                 <div>
-                  <strong>{t("landing.service.drinking")}</strong>
-                  <span>{t("landing.servicesTitle")}</span>
+                  <span>{copy.orderNumber}</span>
+                  <strong>{copy.liveLabel}</strong>
                 </div>
+                <h2>{copy.phoneTitle}</h2>
+                <p>{copy.phoneSupplier}</p>
+              </section>
+              <div className="falaj-status-stack">
+                {copy.phoneProgress.map((item, index) => (
+                  <div className={`falaj-status-row ${index < 2 ? "is-complete" : "is-current"}`} key={item}>
+                    <span>{index + 1}</span>
+                    <div>
+                      <strong>{item}</strong>
+                      {index === 2 && <small>{copy.deliveryEta}</small>}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="product-chip">
-                <Icon type="truck" />
-                <div>
-                  <strong>{t("landing.service.scheduled")}</strong>
-                  <span>{t("landing.step4.title")}</span>
+              <div className="falaj-phone-location">
+                <i aria-hidden="true" />
+                <span>{copy.phoneLocation}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="falaj-floating-order order-one">
+            <span>
+              <small>24</small>
+              <i aria-hidden="true">↗</i>
+            </span>
+            <strong>{copy.services[1]}</strong>
+          </div>
+          <div className="falaj-floating-order order-two">
+            <span>
+              <small>8T</small>
+              <i aria-hidden="true">↗</i>
+            </span>
+            <strong>{copy.services[2]}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="falaj-about" id="about">
+        <div className="falaj-section-intro">
+          <div>
+            <p className="falaj-eyebrow">{copy.aboutEyebrow}</p>
+            <span aria-hidden="true">01</span>
+          </div>
+          <h2>{copy.aboutTitle}</h2>
+          <p>{copy.aboutText}</p>
+        </div>
+        <div className="falaj-insight-grid">
+          {[
+            [copy.problemTitle, copy.problemText],
+            [copy.solutionTitle, copy.solutionText],
+            [copy.marketTitle, copy.marketText],
+          ].map(([title, text], index) => (
+            <article key={title}>
+              <div>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <i aria-hidden="true">{["⌁", "✓", "↗"][index]}</i>
+              </div>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="falaj-experience" id="experience">
+        <div className="falaj-section-intro compact">
+          <div>
+            <p className="falaj-eyebrow">{copy.experienceEyebrow}</p>
+            <span aria-hidden="true">02</span>
+          </div>
+          <h2>{copy.experienceTitle}</h2>
+        </div>
+
+        <div className="falaj-flow">
+          {copy.steps.map(([title, text], index) => (
+            <article className="falaj-flow-step" key={title}>
+              <span>
+                <i aria-hidden="true">{["◌", "⌖", "↗"][index]}</i>
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="falaj-service-rail">
+          {copy.services.map((service, index) => (
+            <span key={service}>
+              <i aria-hidden="true">{["◉", "▦", "▰", "◷"][index]}</i>
+              {service}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="falaj-supplier-section" id="suppliers">
+        <div className="falaj-supplier-copy">
+          <div className="falaj-section-kicker">
+            <p className="falaj-eyebrow">{copy.suppliersEyebrow}</p>
+            <span aria-hidden="true">03</span>
+          </div>
+          <h2>{copy.suppliersTitle}</h2>
+          <p>{copy.suppliersText}</p>
+          <ul>
+            {copy.supplierPoints.map((point) => (
+              <li key={point}>
+                <i aria-hidden="true">✓</i>
+                {point}
+              </li>
+            ))}
+          </ul>
+          <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
+            {copy.joinCta}
+            <span aria-hidden="true">←</span>
+          </button>
+        </div>
+
+        <div className="falaj-dashboard-preview" aria-label={copy.dashboardTitle}>
+          <aside aria-hidden="true">
+            <img src="/brand/Falaj_Icon.png" alt="" />
+            <i />
+            <i />
+            <i />
+            <i />
+          </aside>
+          <div className="falaj-dashboard-main">
+            <header>
+              <div>
+                <span>{copy.dashboardTitle}</span>
+                <strong>Falaj Ops</strong>
+              </div>
+              <i aria-hidden="true" />
+            </header>
+            <div className="falaj-dashboard-metrics">
+              {copy.dashboardRows.map((row, index) => (
+                <div className="falaj-dashboard-row" key={row}>
+                  <span>{row}</span>
+                  <strong>{[18, 6, 42][index]}</strong>
+                  <small>{["+12%", "Live", "+8%"][index]}</small>
                 </div>
-              </div>
-              <div className="progress-track">
+              ))}
+            </div>
+            <div className="falaj-dashboard-chart">
+              <header>
+                <strong>{copy.dashboardRows[0]}</strong>
+                <span>7D</span>
+              </header>
+              <div>
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
                 <span />
               </div>
             </div>
           </div>
-          <div className="floating-product card-a">
-            <Icon type="box" />
-            <strong>{t("landing.service.boxes")}</strong>
-          </div>
-          <div className="floating-product card-b">
-            <Icon type="truck" />
-            <strong>{t("landing.service.tankers")}</strong>
-          </div>
         </div>
       </section>
 
-      <section className="landing-section" id="how-it-works">
-        <div className="landing-section-head">
-          <p className="landing-eyebrow">{t("landing.howEyebrow")}</p>
-          <h2>{t("landing.howTitle")}</h2>
+      <section className="falaj-launch" id="launch">
+        <div className="falaj-launch-copy">
+          <div className="falaj-section-kicker">
+            <p className="falaj-eyebrow">{copy.launchEyebrow}</p>
+            <span aria-hidden="true">04</span>
+          </div>
+          <h2>{copy.launchTitle}</h2>
+          <p>{copy.launchText}</p>
         </div>
-        <div className="steps-grid">
-          {stepKeys.map(([titleKey, textKey], index) => (
-            <article className="step-card" key={titleKey}>
-              <span>{index + 1}</span>
-              <h3>{t(titleKey)}</h3>
-              <p>{t(textKey)}</p>
-            </article>
+        <ol>
+          {copy.launchItems.map((item, index) => (
+            <li key={item}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{item}</strong>
+              <i aria-hidden="true">{index < 2 ? "✓" : "◌"}</i>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="falaj-faq">
+        <div className="falaj-faq-heading">
+          <p className="falaj-eyebrow">FAQ</p>
+          <h2>{copy.faqTitle}</h2>
+        </div>
+        <div>
+          {copy.faqs.map(([question, answer], index) => (
+            <details key={question} open={index === 0}>
+              <summary>
+                <span>{question}</span>
+                <i aria-hidden="true">+</i>
+              </summary>
+              <p>{answer}</p>
+            </details>
           ))}
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="landing-section-head">
-          <p className="landing-eyebrow">{t("landing.servicesEyebrow")}</p>
-          <h2>{t("landing.servicesTitle")}</h2>
+      <footer className="falaj-footer" id="contact">
+        <div className="falaj-footer-brand">
+          <img src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
+          <p>{copy.footerTagline}</p>
         </div>
-        <div className="services-grid">
-          {services.map((service) => (
-            <article className="service-card" key={service.titleKey}>
-              <span className="service-icon">
-                <Icon type={service.icon} />
-              </span>
-              <h3>{t(service.titleKey)}</h3>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="supplier-band" id="suppliers">
-        <div>
-          <p className="landing-eyebrow">{t("landing.suppliersEyebrow")}</p>
-          <h2>{t("landing.suppliersTitle")}</h2>
-          <ul>
-            {supplierPoints.map((point) => (
-              <li key={point}>{t(point)}</li>
-            ))}
-          </ul>
-        </div>
-        <button type="button" onClick={() => onNavigate?.("/company/login")}>
-          {t("landing.companyLogin")}
-        </button>
-      </section>
-
-      <section className="landing-section supplier-join-section">
-        <div>
-          <p className="landing-eyebrow">{t("landing.joinEyebrow")}</p>
-          <h2>{t("landing.joinTitle")}</h2>
-          <p>
-            {t("landing.joinDescription")}
-          </p>
-        </div>
-
-        <div className="supplier-benefits-grid">
-          <article>
-            <span>01</span>
-            <strong>{t("landing.joinBenefit1")}</strong>
-          </article>
-          <article>
-            <span>02</span>
-            <strong>{t("landing.joinBenefit2")}</strong>
-          </article>
-          <article>
-            <span>03</span>
-            <strong>{t("landing.joinBenefit3")}</strong>
-          </article>
-        </div>
-
-        <div className="supplier-join-actions">
-          <button type="button" onClick={() => onNavigate?.("/supplier-join")}>
-            {t("landing.joinCta")}
-          </button>
-        </div>
-      </section>
-
-      <section className="landing-section split-section">
-        <article className="admin-card">
-          <p className="landing-eyebrow">{t("login.admin.eyebrow")}</p>
-          <h2>{t("landing.adminCardTitle")}</h2>
-          <p>{t("landing.adminCardText")}</p>
-          <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-            {t("landing.adminLogin")}
-          </button>
-        </article>
-
-        <article className="mobile-soon-card">
-          <p className="landing-eyebrow">{t("landing.mobileSoon")}</p>
-          <div className="soon-grid">
-            <div>
-              <strong>{t("landing.customerAppSoon")}</strong>
-              <span>{t("landing.customerAppText")}</span>
-            </div>
-            <div>
-              <strong>{t("landing.driverAppSoon")}</strong>
-              <span>{t("landing.driverAppText")}</span>
-            </div>
+        <div className="falaj-footer-content">
+          <div className="falaj-footer-contact">
+            <a href={`mailto:${copy.contact}`}>{copy.contact}</a>
+            <span>appfalaj.com</span>
           </div>
-          <button type="button" className="ghost" onClick={() => onNavigate?.("/driver")}>
-            {t("landing.driverLogin")}
-          </button>
-        </article>
-      </section>
-
-      <footer className="landing-footer" id="contact">
-        <div>
-          <img className="footer-logo-image" src="/brand/Falaj_Logo.png" alt={t("common.appName")} />
-          <span>appfalaj.com</span>
-          <span>info@appfalaj.com</span>
-          <span>© Falaj</span>
+          <nav aria-label={t("nav.main")}>
+            <button type="button" className="ghost" onClick={() => onNavigate?.("/company/login")}>
+              {copy.supplierLogin}
+            </button>
+            <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
+              {copy.adminLogin}
+            </button>
+            <button type="button" className="ghost" onClick={() => onNavigate?.("/driver")}>
+              {copy.driverLogin}
+            </button>
+          </nav>
         </div>
-        <nav aria-label={t("nav.main")}>
-          <button type="button" className="ghost" onClick={() => onNavigate?.("/company/login")}>
-            {t("landing.companyLogin")}
-          </button>
-          <button type="button" className="ghost" onClick={() => onNavigate?.("/admin")}>
-            {t("landing.adminLogin")}
-          </button>
-          <button type="button" className="ghost" onClick={() => onNavigate?.("/driver")}>
-            {t("landing.driverLogin")}
-          </button>
-        </nav>
+        <div className="falaj-footer-bottom">
+          <span>© 2026 Falaj</span>
+          <span>Made in Oman · صُنع في عُمان</span>
+        </div>
       </footer>
     </main>
   );
