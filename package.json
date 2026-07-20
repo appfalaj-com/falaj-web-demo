@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
     "test:e2e": "playwright test",
     "security:audit": "node scripts/security-audit-check.mjs",
     "preview": "vite preview"
