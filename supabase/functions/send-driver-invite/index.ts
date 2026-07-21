@@ -29,9 +29,11 @@ type ProfileRow = {
 
 const DRIVER_ACCEPT_INVITE_URL = "https://www.appfalaj.com/driver/accept-invite";
 const DRIVER_INVITE_TICKET_TTL_MINUTES = 30;
+const ACCOUNT_EMAIL_ALREADY_USED_ERROR =
+  "هذا البريد مستخدم مسبقًا في فلج. استخدم بريدًا مختلفًا.";
 
 const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
-  "هذا البريد مستخدم كحساب شركة. أدخل بريدًا مختلفًا للسائق.";
+  ACCOUNT_EMAIL_ALREADY_USED_ERROR;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -121,10 +123,13 @@ Deno.serve(async (req) => {
 
     if (
       existingUser?.id === company.owner_id ||
-      existingProfile?.id === company.owner_id ||
-      isCompanyOrAdminProfile(existingProfile)
+      existingProfile?.id === company.owner_id
     ) {
       return jsonResponse({ ok: false, error: DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR }, 400);
+    }
+
+    if (isEmailAlreadyUsedForAnotherAccount(existingUser, existingProfile, driver)) {
+      return jsonResponse({ ok: false, error: ACCOUNT_EMAIL_ALREADY_USED_ERROR }, 400);
     }
 
     if (!existingUser) {
@@ -215,6 +220,10 @@ async function linkDriverUser(
   }
 
   const existingProfile = await findProfileByUserOrEmail(supabase, user.id, email);
+  if (existingProfile && isEmailAlreadyUsedForAnotherAccount(user, existingProfile, driver)) {
+    return { error: jsonResponse({ ok: false, error: ACCOUNT_EMAIL_ALREADY_USED_ERROR }, 400) };
+  }
+
   if (isCompanyOrAdminProfile(existingProfile)) {
     return { error: jsonResponse({ ok: false, error: DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR }, 400) };
   }
@@ -515,6 +524,29 @@ function isCompanyOrAdminProfile(profile: ProfileRow | null) {
   const role = `${profile.role ?? ""}`.trim().toLowerCase();
   const accountType = `${profile.account_type ?? ""}`.trim().toLowerCase();
   return role === "company" || role === "admin" || accountType === "company" || accountType === "admin";
+}
+
+function isDriverProfile(profile: ProfileRow | null) {
+  if (!profile) return false;
+  const role = `${profile.role ?? ""}`.trim().toLowerCase();
+  const accountType = `${profile.account_type ?? ""}`.trim().toLowerCase();
+  return role === "driver" && accountType === "driver";
+}
+
+function isEmailAlreadyUsedForAnotherAccount(
+  user: AuthUser | null,
+  profile: ProfileRow | null,
+  driver: DriverRow,
+) {
+  const isSameLinkedDriver =
+    Boolean(user?.id) &&
+    Boolean(driver.profile_id) &&
+    user?.id === driver.profile_id &&
+    profile?.id === driver.profile_id &&
+    isDriverProfile(profile);
+
+  if (isSameLinkedDriver) return false;
+  return Boolean(user || profile);
 }
 
 function isExistingUserError(message: string) {

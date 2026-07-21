@@ -44,6 +44,7 @@ export default function SupplierJoinPage({ onNavigate }) {
     setErrorMessage("");
 
     try {
+      const email = form.email.trim().toLowerCase();
       const requestId = crypto.randomUUID();
       const { error } = await supabase
         .from("supplier_join_requests")
@@ -52,7 +53,7 @@ export default function SupplierJoinPage({ onNavigate }) {
           company_name: form.companyName,
           contact_name: form.managerName,
           phone: form.phone,
-          email: form.email,
+          email,
           area: form.area,
           service_type: form.serviceType,
           notes: form.notes || null,
@@ -73,7 +74,8 @@ export default function SupplierJoinPage({ onNavigate }) {
       setForm(initialForm);
       setStatusMessage(t("supplierJoin.success"));
     } catch (error) {
-      setErrorMessage(error.message || t("supplierJoin.error"));
+      console.warn("Supplier join request failed:", error?.message || "Unexpected error");
+      setErrorMessage(t("supplierJoin.error"));
     } finally {
       setIsSubmitting(false);
     }

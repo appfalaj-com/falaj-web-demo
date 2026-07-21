@@ -5,8 +5,10 @@ import { getOrdersByDriver } from "./orderService.js";
 const ACTIVE_DRIVER_STATUSES = ["assigned", "en_route", "arrived"];
 const DONE_DRIVER_STATUSES = ["delivered", "failed"];
 const ACTIVE_TRACKING_ORDER_STATUSES = ["assigned", "en_route", "arrived"];
+export const ACCOUNT_EMAIL_ALREADY_USED_ERROR =
+  "هذا البريد مستخدم مسبقًا في فلج. استخدم بريدًا مختلفًا.";
 export const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
-  "لا يمكن استخدام بريد حساب الشركة كسائق. استخدم بريدًا مختلفًا للسائق.";
+  ACCOUNT_EMAIL_ALREADY_USED_ERROR;
 export const DRIVER_COMPANY_PHONE_CONFLICT_ERROR =
   "رقم هاتف السائق يطابق رقم حساب الشركة. استخدم رقمًا مختلفًا للسائق.";
 

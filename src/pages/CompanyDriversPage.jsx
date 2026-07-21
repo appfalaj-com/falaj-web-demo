@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ACCOUNT_EMAIL_ALREADY_USED_ERROR,
   createCompanyDriverInSupabase,
   DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR,
   DRIVER_COMPANY_PHONE_CONFLICT_ERROR,
@@ -420,9 +421,9 @@ function isValidEmail(value) {
 function driverSafeErrorMessage(error, fallback) {
   const message = error?.message || "";
   if (
+    message === ACCOUNT_EMAIL_ALREADY_USED_ERROR ||
     message === DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR ||
-    message === DRIVER_COMPANY_PHONE_CONFLICT_ERROR ||
-    message.includes("هذا البريد مستخدم كحساب شركة")
+    message === DRIVER_COMPANY_PHONE_CONFLICT_ERROR
   ) {
     return message;
   }

@@ -15,6 +15,7 @@ type SupplierJoinRequest = {
 
 type Company = {
   id: string;
+  owner_id?: string | null;
   supplier_join_request_id: string | null;
   approved_join_request_id: string | null;
   onboarding_status: string | null;
@@ -31,6 +32,9 @@ type Profile = {
   role: string | null;
   account_type: string | null;
 };
+
+const ACCOUNT_EMAIL_ALREADY_USED_ERROR =
+  "هذا البريد مستخدم مسبقًا في فلج. استخدم بريدًا مختلفًا.";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -96,7 +100,7 @@ Deno.serve(async (req) => {
 
     const { data: companyRows, error: companyError } = await supabase
       .from("companies")
-      .select("id, supplier_join_request_id, approved_join_request_id, onboarding_status")
+      .select("id, owner_id, supplier_join_request_id, approved_join_request_id, onboarding_status")
       .or(`supplier_join_request_id.eq.${request_id},approved_join_request_id.eq.${request_id}`)
       .limit(1);
 
@@ -111,6 +115,13 @@ Deno.serve(async (req) => {
     }
 
     const existingUser = await findUserByEmail(supabase, supplierJoinRequest.email);
+    const existingProfile = existingUser
+      ? await findProfileByUserOrEmail(supabase, existingUser.id, supplierJoinRequest.email)
+      : await findProfileByUserOrEmail(supabase, null, supplierJoinRequest.email);
+
+    if (isEmailAlreadyUsedForAnotherSupplierAccount(existingUser, existingProfile, company)) {
+      return jsonResponse({ ok: false, error: ACCOUNT_EMAIL_ALREADY_USED_ERROR }, 400);
+    }
 
     if (!existingUser) {
       const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
@@ -275,6 +286,29 @@ async function findUserByEmail(supabase: ReturnType<typeof createClient>, email:
   return null;
 }
 
+async function findProfileByUserOrEmail(
+  supabase: ReturnType<typeof createClient>,
+  userId: string | null,
+  email: string,
+): Promise<Profile | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  let query = supabase
+    .from("profiles")
+    .select("id, email, role, account_type")
+    .limit(1);
+
+  if (userId) {
+    query = query.or(`id.eq.${userId},email.eq.${normalizedEmail}`);
+  } else {
+    query = query.eq("email", normalizedEmail);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data?.[0] as Profile | undefined) ?? null;
+}
+
 async function ensureSupplierAccountLink(
   supabase: ReturnType<typeof createClient>,
   user: AuthUser,
@@ -287,6 +321,21 @@ async function ensureSupplierAccountLink(
   }
 
   const fullName = request.contact_name || request.company_name || email || "Supplier User";
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, owner_id, supplier_join_request_id, approved_join_request_id, onboarding_status")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (companyError) {
+    return { error: jsonResponse({ ok: false, error: companyError.message }, 500) };
+  }
+
+  const existingProfile = await findProfileByUserOrEmail(supabase, user.id, email);
+  if (existingProfile && isEmailAlreadyUsedForAnotherSupplierAccount(user, existingProfile, company as Company | null)) {
+    return { error: jsonResponse({ ok: false, error: ACCOUNT_EMAIL_ALREADY_USED_ERROR }, 400) };
+  }
+
   const metadata = {
     role: "company",
     account_type: "company",
@@ -444,10 +493,27 @@ function isExistingUserError(message: string) {
     message.toLowerCase().includes("already exists");
 }
 
-function isCompanyProfile(profile: Pick<Profile, "role" | "account_type">) {
+function isCompanyProfile(profile: Pick<Profile, "role" | "account_type"> | null) {
+  if (!profile) return false;
   const role = profile.role?.trim().toLowerCase();
   const accountType = profile.account_type?.trim().toLowerCase();
   return role === "company" || accountType === "company";
+}
+
+function isEmailAlreadyUsedForAnotherSupplierAccount(
+  user: AuthUser | null,
+  profile: Profile | null,
+  company: Company | null,
+) {
+  const isSameLinkedSupplier =
+    Boolean(user?.id) &&
+    Boolean(company?.owner_id) &&
+    user?.id === company?.owner_id &&
+    profile?.id === company?.owner_id &&
+    isCompanyProfile(profile);
+
+  if (isSameLinkedSupplier) return false;
+  return Boolean(user || profile);
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
