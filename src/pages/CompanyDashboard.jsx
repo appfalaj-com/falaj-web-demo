@@ -24,6 +24,11 @@ const ONBOARDING_LABELS = {
 
 const ACTIVE_ORDER_STATUSES = ["active", "accepted", "assigned", "en_route", "arrived"];
 const DASHBOARD_LOAD_ERROR = "تعذر تحميل ملخص لوحة المورد من قاعدة البيانات. حاول التحديث مرة أخرى.";
+const DASHBOARD_SECTION_LABELS = {
+  products: "المنتجات",
+  orders: "الطلبات",
+  drivers: "السائقين",
+};
 
 export default function CompanyDashboard({ companyId, company, onCompanyUpdated, onNavigate }) {
   const [products, setProducts] = useState([]);
@@ -45,23 +50,28 @@ export default function CompanyDashboard({ companyId, company, onCompanyUpdated,
       setErrorMessage("");
 
       try {
-        const [nextProducts, nextOrders, nextDrivers] = await Promise.all([
+        const results = await Promise.allSettled([
           getProductsByCompanyFromSupabase(companyId),
           getOrdersByCompanyFromSupabase(companyId),
           getDriversByCompanyFromSupabase(companyId),
         ]);
 
         if (!cancelled) {
-          setProducts(nextProducts);
-          setOrders(nextOrders);
-          setDrivers(nextDrivers);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setProducts([]);
-          setOrders([]);
-          setDrivers([]);
-          setErrorMessage(DASHBOARD_LOAD_ERROR);
+          const [productsResult, ordersResult, driversResult] = results;
+          const failedSections = [
+            productsResult.status === "rejected" ? "products" : null,
+            ordersResult.status === "rejected" ? "orders" : null,
+            driversResult.status === "rejected" ? "drivers" : null,
+          ].filter(Boolean);
+
+          setProducts(productsResult.status === "fulfilled" ? productsResult.value : []);
+          setOrders(ordersResult.status === "fulfilled" ? ordersResult.value : []);
+          setDrivers(driversResult.status === "fulfilled" ? driversResult.value : []);
+          setErrorMessage(getDashboardErrorMessage(failedSections));
+
+          if (failedSections.length > 0) {
+            console.warn("Company dashboard partial load failure", summarizeDashboardFailures(results));
+          }
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -423,6 +433,32 @@ function summarizeOrders(orders) {
     },
     { pending: 0, active: 0 }
   );
+}
+
+function getDashboardErrorMessage(failedSections) {
+  if (failedSections.length === 0) return "";
+  if (failedSections.length === Object.keys(DASHBOARD_SECTION_LABELS).length) return DASHBOARD_LOAD_ERROR;
+
+  const sectionNames = failedSections.map((section) => DASHBOARD_SECTION_LABELS[section]).join("، ");
+  return `تعذر تحميل بيانات ${sectionNames}. باقي ملخص اللوحة تم تحميله بنجاح.`;
+}
+
+function summarizeDashboardFailures(results) {
+  return results.map((result, index) => {
+    const section = ["products", "orders", "drivers"][index];
+    if (result.status === "fulfilled") {
+      return { section, ok: true, count: result.value?.length ?? 0 };
+    }
+
+    return {
+      section,
+      ok: false,
+      message: result.reason?.message,
+      code: result.reason?.code,
+      details: result.reason?.details,
+      hint: result.reason?.hint,
+    };
+  });
 }
 
 function normalizeProductStatus(status) {
