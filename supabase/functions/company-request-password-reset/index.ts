@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const COMPANY_ACCEPT_RESET_URL = "https://appfalaj.com/company/accept-reset";
+const COMPANY_ACCEPT_RESET_URL = "https://www.appfalaj.com/company/accept-reset";
 const COMPANY_RESET_TICKET_TTL_MINUTES = 30;
 
 type AuthUser = {

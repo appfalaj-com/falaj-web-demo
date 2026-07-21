@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
             account_type: "company",
             company_id: company.id,
           },
-          redirectTo: "https://appfalaj.com/company/set-password",
+          redirectTo: "https://www.appfalaj.com/company/set-password",
         },
       );
 
@@ -350,7 +350,7 @@ async function linkExistingUserAndSendMagicLink(
   const { error: magicLinkError } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: "https://appfalaj.com/company/set-password",
+      emailRedirectTo: "https://www.appfalaj.com/company/set-password",
       shouldCreateUser: false,
     },
   });

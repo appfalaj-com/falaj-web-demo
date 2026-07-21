@@ -32,6 +32,7 @@ export default function CompanyDriversPage({ companyId }) {
   const [deactivatingDriverId, setDeactivatingDriverId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +65,7 @@ export default function CompanyDriversPage({ companyId }) {
     setEditingDriverId(null);
     setForm(initialDriverForm);
     setMessage("");
+    setInviteLink("");
     setErrorMessage("");
     setIsFormOpen(true);
   }
@@ -77,6 +79,7 @@ export default function CompanyDriversPage({ companyId }) {
       isActive: Boolean(driver.isActive),
     });
     setMessage("");
+    setInviteLink("");
     setErrorMessage("");
     setIsFormOpen(true);
   }
@@ -94,6 +97,7 @@ export default function CompanyDriversPage({ companyId }) {
   async function handleSaveDriver(event) {
     event.preventDefault();
     setMessage("");
+    setInviteLink("");
     setErrorMessage("");
 
     if (!companyId) {
@@ -139,6 +143,7 @@ export default function CompanyDriversPage({ companyId }) {
 
   async function toggleDriverActive(driver) {
     setMessage("");
+    setInviteLink("");
     setErrorMessage("");
     setIsSaving(true);
 
@@ -162,6 +167,7 @@ export default function CompanyDriversPage({ companyId }) {
 
   async function sendDriverInvite(driver) {
     setMessage("");
+    setInviteLink("");
     setErrorMessage("");
 
     if (!driver.id) {
@@ -177,6 +183,7 @@ export default function CompanyDriversPage({ companyId }) {
     setInvitingDriverId(driver.id);
     try {
       const result = await sendDriverInviteFromSupabase(driver.id);
+      setInviteLink(result.accept_link || "");
       setMessage(result.message || "تم إرسال دعوة دخول السائق.");
 
       const refreshedDrivers = await getDriversByCompanyFromSupabase(companyId);
@@ -228,6 +235,17 @@ export default function CompanyDriversPage({ companyId }) {
       </header>
 
       {message ? <p className="auth-alert success">{message}</p> : null}
+      {inviteLink ? (
+        <div className="auth-alert success driver-invite-link-alert">
+          <span>إذا لم يصل البريد، انسخ هذا الرابط وأرسله للسائق. الرابط صالح لمدة 30 دقيقة.</span>
+          <a href={inviteLink} target="_blank" rel="noreferrer">
+            فتح الرابط
+          </a>
+          <button type="button" className="ghost" onClick={() => copyInviteLink(inviteLink, setMessage)}>
+            نسخ الرابط
+          </button>
+        </div>
+      ) : null}
       {errorMessage ? <p className="auth-alert error">{errorMessage}</p> : null}
 
       {isFormOpen ? (
@@ -379,6 +397,15 @@ export default function CompanyDriversPage({ companyId }) {
       </section>
     </div>
   );
+}
+
+async function copyInviteLink(value, setMessage) {
+  try {
+    await navigator.clipboard.writeText(value);
+    setMessage("تم نسخ رابط دعوة السائق.");
+  } catch {
+    window.prompt("انسخ رابط دعوة السائق:", value);
+  }
 }
 
 function formatDate(value) {

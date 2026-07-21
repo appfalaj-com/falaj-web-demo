@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_COMPANY_SET_PASSWORD_URL = "https://appfalaj.com/company/set-password";
+const DEFAULT_COMPANY_SET_PASSWORD_URL = "https://www.appfalaj.com/company/set-password";
 
 type ProfileRow = {
   id: string;
@@ -165,7 +165,7 @@ function sanitizeRedirectTo(value: string | undefined, expectedPath: string) {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
-    const allowedHost = hostname === "appfalaj.com" || hostname === "localhost" || hostname === "127.0.0.1";
+    const allowedHost = hostname === "appfalaj.com" || hostname === "www.appfalaj.com" || hostname === "localhost" || hostname === "127.0.0.1";
     if (!allowedHost || url.pathname !== expectedPath) return "";
     return url.toString();
   } catch {

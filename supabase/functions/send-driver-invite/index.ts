@@ -27,7 +27,7 @@ type ProfileRow = {
   account_type: string | null;
 };
 
-const DRIVER_ACCEPT_INVITE_URL = "https://appfalaj.com/driver/accept-invite";
+const DRIVER_ACCEPT_INVITE_URL = "https://www.appfalaj.com/driver/accept-invite";
 const DRIVER_INVITE_TICKET_TTL_MINUTES = 30;
 
 const DRIVER_COMPANY_ACCOUNT_CONFLICT_ERROR =
@@ -151,6 +151,7 @@ Deno.serve(async (req) => {
         return jsonResponse({
           ok: true,
           existing_user: true,
+          accept_link: ticketResult.acceptLink,
           message: "البريد موجود مسبقًا، تم ربطه بالسائق وإرسال رابط دخول آمن.",
         });
       }
@@ -174,6 +175,7 @@ Deno.serve(async (req) => {
       return jsonResponse({
         ok: true,
         existing_user: false,
+        accept_link: ticketResult.acceptLink,
         message: "تم إرسال دعوة دخول السائق وربطه بالشركة.",
       });
     }
@@ -189,6 +191,7 @@ Deno.serve(async (req) => {
     return jsonResponse({
       ok: true,
       existing_user: true,
+      accept_link: ticketResult.acceptLink,
       message: "البريد موجود مسبقًا، تم ربطه بالسائق وإرسال رابط دخول آمن.",
     });
   } catch (error) {
@@ -318,7 +321,7 @@ async function generateDriverInviteLink(
         driver_id: driver.id,
         company_id: driver.company_id,
       },
-        redirectTo: "https://appfalaj.com/driver/set-password",
+        redirectTo: "https://www.appfalaj.com/driver/set-password",
     },
   });
 

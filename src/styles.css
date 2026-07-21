@@ -434,6 +434,33 @@ html[dir="ltr"] input[inputmode="numeric"] {
   color: var(--dark);
 }
 
+.driver-invite-link-alert {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.driver-invite-link-alert span {
+  flex: 1 1 280px;
+}
+
+.driver-invite-link-alert a {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--dark);
+  font-weight: 900;
+  min-height: 40px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.driver-invite-link-alert button {
+  min-height: 40px;
+}
+
 .pending-copy {
   color: var(--muted);
   line-height: 1.8;
