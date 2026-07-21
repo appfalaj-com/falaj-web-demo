@@ -7708,3 +7708,173 @@ html[dir="rtl"] .falaj-driver-phone {
     width: 38px;
   }
 }
+
+/* Driver sign in */
+.falaj-driver-login-app {
+  background: #f2f7f6;
+}
+
+.falaj-driver-login-main {
+  align-items: center;
+  display: grid;
+  min-height: calc(100vh - 72px);
+  padding: 40px 20px;
+}
+
+.falaj-driver-login-card {
+  background: #fff;
+  border: 1px solid var(--driver-line);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(18, 60, 59, 0.1);
+  display: grid;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 440px;
+  padding: 32px;
+  width: 100%;
+}
+
+.falaj-driver-login-intro {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+}
+
+.falaj-driver-login-symbol {
+  align-items: center;
+  background: #e4f2ef;
+  border: 1px solid #d2e8e3;
+  border-radius: 8px;
+  color: #087970;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.falaj-driver-login-intro > div {
+  min-width: 0;
+}
+
+.falaj-driver-login-intro p,
+.falaj-driver-login-intro h1,
+.falaj-driver-login-intro > div > span {
+  margin: 0;
+}
+
+.falaj-driver-login-intro p {
+  color: #087970;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.falaj-driver-login-intro h1 {
+  color: var(--driver-ink);
+  font-size: 25px;
+  line-height: 1.35;
+}
+
+.falaj-driver-login-intro > div > span {
+  color: var(--driver-muted);
+  display: block;
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 5px;
+}
+
+.falaj-driver-login-form {
+  display: grid;
+  gap: 17px;
+}
+
+.falaj-driver-login-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.falaj-driver-login-form label > span {
+  color: var(--driver-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.falaj-driver-login-input {
+  align-items: center;
+  background: #fbfdfd;
+  border: 1px solid #d8e5e3;
+  border-radius: 8px;
+  color: #6d8380;
+  display: flex;
+  gap: 10px;
+  min-height: 50px;
+  padding-inline: 14px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.falaj-driver-login-input:focus-within {
+  border-color: #78beb6;
+  box-shadow: 0 0 0 3px rgba(19, 153, 143, 0.1);
+}
+
+.falaj-driver-login-input svg {
+  flex: 0 0 auto;
+}
+
+.falaj-driver-login-input input {
+  background: transparent;
+  border: 0;
+  color: var(--driver-ink);
+  height: 48px;
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.falaj-driver-login-input input::placeholder {
+  color: #98a9a7;
+}
+
+.falaj-driver-login-form > button {
+  background: #087970;
+  border-radius: 8px;
+  box-shadow: 0 10px 22px rgba(8, 121, 112, 0.18);
+  font-size: 14px;
+  min-height: 50px;
+  width: 100%;
+}
+
+.falaj-driver-login-form > button:hover {
+  background: #066b64;
+}
+
+@media (max-width: 760px) {
+  .falaj-driver-login-main {
+    align-items: start;
+    min-height: calc(100vh - 64px);
+    padding: 24px 12px;
+  }
+
+  .falaj-driver-login-card {
+    gap: 22px;
+    padding: 24px 20px;
+  }
+
+  .falaj-driver-login-intro h1 {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 390px) {
+  .falaj-driver-login-card {
+    padding: 22px 16px;
+  }
+
+  .falaj-driver-login-symbol {
+    height: 44px;
+    width: 44px;
+  }
+}

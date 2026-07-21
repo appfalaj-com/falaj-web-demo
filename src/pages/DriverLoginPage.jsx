@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { KeyRound, LogIn, Mail, Truck } from "lucide-react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
@@ -61,55 +62,82 @@ export default function DriverLoginPage({ onNavigate }) {
   }
 
   return (
-    <main className="login-page" dir={direction}>
-      <section className="login-panel">
-        <LanguageToggle className="auth-language-toggle" />
-        <div className="login-brand">
-          <img src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
-          <div>
-            <strong>{t("common.appName")}</strong>
+    <div className="falaj-driver-app falaj-driver-login-app" dir={direction}>
+      <header className="falaj-driver-bar falaj-driver-login-bar">
+        <a
+          className="falaj-driver-brand"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            onNavigate?.("/");
+          }}
+          aria-label="Falaj"
+        >
+          <img src="/brand/Falaj_Icon.png" alt="" />
+          <span>
+            <strong>Falaj</strong>
             <small>{t("login.driver.brand")}</small>
+          </span>
+        </a>
+        <LanguageToggle className="falaj-driver-language" />
+      </header>
+
+      <main className="falaj-driver-login-main">
+        <section className="falaj-driver-login-card">
+          <div className="falaj-driver-login-intro">
+            <span className="falaj-driver-login-symbol" aria-hidden="true">
+              <Truck size={25} />
+            </span>
+            <div>
+              <p>{t("login.driver.brand")}</p>
+              <h1>{t("login.driver.title")}</h1>
+              <span>{t("driver.login.identifierHelp")}</span>
+            </div>
           </div>
-        </div>
 
-        <div className="login-header">
-          <h1>{t("login.driver.title")}</h1>
-          <p>{t("driver.login.identifierHelp")}</p>
-        </div>
+          {error && <div className="falaj-driver-alert error" role="alert">{error}</div>}
 
-        {error && <div className="auth-alert error">{error}</div>}
+          <form className="falaj-driver-login-form" onSubmit={handlePasswordLogin}>
+            <label>
+              <span>{t("driver.login.identifierLabel")}</span>
+              <div className="falaj-driver-login-input">
+                <Mail size={19} aria-hidden="true" />
+                <input
+                  type="text"
+                  autoComplete="username"
+                  inputMode="email"
+                  dir="ltr"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                  required
+                  placeholder={t("driver.login.identifierPlaceholder")}
+                />
+              </div>
+            </label>
 
-        <form className="auth-form" onSubmit={handlePasswordLogin}>
-          <label>
-            {t("driver.login.identifierLabel")}
-            <input
-              type="text"
-              autoComplete="username"
-              inputMode="email"
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              required
-              placeholder={t("driver.login.identifierPlaceholder")}
-            />
-          </label>
+            <label>
+              <span>{t("common.password")}</span>
+              <div className="falaj-driver-login-input">
+                <KeyRound size={19} aria-hidden="true" />
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  dir="ltr"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={8}
+                />
+              </div>
+            </label>
 
-          <label>
-            {t("common.password")}
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={8}
-            />
-          </label>
-
-          <button type="submit" disabled={loading}>
-            {loading ? t("common.processing") : t("login.driver.submit")}
-          </button>
-        </form>
-      </section>
-    </main>
+            <button type="submit" disabled={loading}>
+              <LogIn size={19} aria-hidden="true" />
+              {loading ? t("common.processing") : t("login.driver.submit")}
+            </button>
+          </form>
+        </section>
+      </main>
+    </div>
   );
 }
