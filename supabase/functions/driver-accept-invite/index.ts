@@ -9,6 +9,7 @@ const DEFAULT_DRIVER_SET_PASSWORD_URL = "https://www.appfalaj.com/driver/set-pas
 
 type DriverRow = {
   id: string;
+  company_id: string;
   profile_id: string | null;
   email: string | null;
   is_active: boolean | null;
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    let payload: { ticket?: string; redirect_to?: string };
+    let payload: { ticket?: string; password?: string; redirect_to?: string };
     try {
       payload = await req.json();
     } catch {
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
 
     const { data: driverData, error: driverError } = await supabase
       .from("drivers")
-      .select("id, profile_id, email, is_active")
+      .select("id, company_id, profile_id, email, is_active")
       .eq("id", ticket.driverId)
       .maybeSingle();
 
@@ -87,6 +88,42 @@ Deno.serve(async (req) => {
     const profile = profileData as ProfileRow | null;
     if (!profile || profile.role !== "driver" || profile.account_type !== "driver") {
       return jsonResponse({ ok: false, error: "Driver account is not valid." }, 400);
+    }
+
+    const password = String(payload.password || "");
+    if (password) {
+      if (password.length < 8) {
+        return jsonResponse({ ok: false, error: "Password must be at least 8 characters." }, 400);
+      }
+
+      const { error: updateUserError } = await supabase.auth.admin.updateUserById(driver.profile_id, {
+        password,
+        email_confirm: true,
+        user_metadata: {
+          role: "driver",
+          account_type: "driver",
+          driver_id: driver.id,
+          company_id: driver.company_id,
+        },
+      });
+
+      if (updateUserError) {
+        return jsonResponse({ ok: false, error: "Driver password could not be saved." }, 500);
+      }
+
+      const { error: driverUpdateError } = await supabase
+        .from("drivers")
+        .update({
+          invite_status: "accepted",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", driver.id);
+
+      if (driverUpdateError) {
+        return jsonResponse({ ok: false, error: "Driver invite status could not be updated." }, 500);
+      }
+
+      return jsonResponse({ ok: true, password_set: true });
     }
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
