@@ -7878,3 +7878,36 @@ html[dir="rtl"] .falaj-driver-phone {
     width: 44px;
   }
 }
+
+/* Company sign in */
+.falaj-company-forgot-button {
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #087970 !important;
+  font-size: 12px !important;
+  justify-self: center;
+  min-height: 30px !important;
+  padding: 2px 4px !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  width: fit-content !important;
+}
+
+.falaj-company-forgot-button:hover {
+  background: transparent !important;
+  color: #055e59 !important;
+  transform: none !important;
+}
+
+.falaj-company-reset-form {
+  border-top: 1px solid var(--driver-line);
+  padding-top: 20px;
+}
+
+.falaj-company-reset-form > p {
+  color: var(--driver-muted);
+  font-size: 12px;
+  line-height: 1.65;
+  margin: -4px 0 0;
+}

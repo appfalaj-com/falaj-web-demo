@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Building2, KeyRound, LogIn, Mail, RotateCcw } from "lucide-react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { clearExistingAuthSessionForLogin } from "../services/authSessionBoundary.js";
@@ -62,82 +63,109 @@ export default function CompanyLoginPage({ onAuthenticated }) {
   }
 
   return (
-    <main className="login-page" dir={direction}>
-      <section className="login-panel" aria-labelledby="company-login-title">
-        <LanguageToggle className="auth-language-toggle" />
-        <div className="login-brand">
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
-          <div>
-            <strong>{t("common.appName")}</strong>
+    <div className="falaj-driver-app falaj-driver-login-app falaj-company-login-app" dir={direction}>
+      <header className="falaj-driver-bar falaj-driver-login-bar">
+        <a className="falaj-driver-brand" href="/" aria-label="Falaj">
+          <img src="/brand/Falaj_Icon.png" alt="" />
+          <span>
+            <strong>Falaj</strong>
             <small>{t("login.company.brand")}</small>
+          </span>
+        </a>
+        <LanguageToggle className="falaj-driver-language" />
+      </header>
+
+      <main className="falaj-driver-login-main">
+        <section
+          className="falaj-driver-login-card falaj-company-login-card"
+          aria-labelledby="company-login-title"
+        >
+          <div className="falaj-driver-login-intro">
+            <span className="falaj-driver-login-symbol" aria-hidden="true">
+              <Building2 size={25} />
+            </span>
+            <div>
+              <p>{t("login.company.eyebrow")}</p>
+              <h1 id="company-login-title">{t("login.company.title")}</h1>
+              <span>{t("login.company.brand")}</span>
+            </div>
           </div>
-        </div>
 
-        <header className="login-header">
-          <p className="eyebrow">{t("login.company.eyebrow")}</p>
-          <h1 id="company-login-title">{t("login.company.title")}</h1>
-        </header>
+          {error ? <div className="falaj-driver-alert error" role="alert">{error}</div> : null}
+          {status ? <div className="falaj-driver-alert success" role="status">{status}</div> : null}
 
-        {error ? <p className="auth-alert error">{error}</p> : null}
-        {status ? <p className="auth-alert success">{status}</p> : null}
-
-        <form className="auth-form" onSubmit={handleEmailLogin}>
-          <label>
-            {t("common.email")}
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            {t("common.password")}
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("login.signingIn") : t("common.login")}
-          </button>
-          <button
-            type="button"
-            className="auth-text-button"
-            onClick={() => {
-              setShowPasswordReset((value) => !value);
-              setResetEmail(email);
-              setError("");
-              setStatus("");
-            }}
-          >
-            {t("login.company.forgotPassword")}
-          </button>
-        </form>
-
-        {showPasswordReset ? (
-          <form className="auth-form password-reset-form" onSubmit={handlePasswordReset}>
+          <form className="falaj-driver-login-form" onSubmit={handleEmailLogin}>
             <label>
-              {t("common.email")}
-              <input
-                type="email"
-                autoComplete="email"
-                value={resetEmail}
-                onChange={(event) => setResetEmail(event.target.value)}
-                required
-              />
+              <span>{t("common.email")}</span>
+              <div className="falaj-driver-login-input">
+                <Mail size={19} aria-hidden="true" />
+                <input
+                  type="email"
+                  autoComplete="email"
+                  dir="ltr"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </div>
             </label>
-            <p className="auth-note">{t("login.company.resetNote")}</p>
-            <button type="submit" disabled={isResetSubmitting}>
-              {isResetSubmitting ? t("common.processing") : t("login.company.resetPassword")}
+            <label>
+              <span>{t("common.password")}</span>
+              <div className="falaj-driver-login-input">
+                <KeyRound size={19} aria-hidden="true" />
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  dir="ltr"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </div>
+            </label>
+            <button type="submit" disabled={isSubmitting}>
+              <LogIn size={19} aria-hidden="true" />
+              {isSubmitting ? t("login.signingIn") : t("common.login")}
+            </button>
+            <button
+              type="button"
+              className="falaj-company-forgot-button"
+              onClick={() => {
+                setShowPasswordReset((value) => !value);
+                setResetEmail(email);
+                setError("");
+                setStatus("");
+              }}
+            >
+              {t("login.company.forgotPassword")}
             </button>
           </form>
-        ) : null}
-      </section>
-    </main>
+
+          {showPasswordReset ? (
+            <form className="falaj-driver-login-form falaj-company-reset-form" onSubmit={handlePasswordReset}>
+              <label>
+                <span>{t("common.email")}</span>
+                <div className="falaj-driver-login-input">
+                  <Mail size={19} aria-hidden="true" />
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    dir="ltr"
+                    value={resetEmail}
+                    onChange={(event) => setResetEmail(event.target.value)}
+                    required
+                  />
+                </div>
+              </label>
+              <p>{t("login.company.resetNote")}</p>
+              <button type="submit" disabled={isResetSubmitting}>
+                <RotateCcw size={18} aria-hidden="true" />
+                {isResetSubmitting ? t("common.processing") : t("login.company.resetPassword")}
+              </button>
+            </form>
+          ) : null}
+        </section>
+      </main>
+    </div>
   );
 }
