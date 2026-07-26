@@ -6,6 +6,7 @@ import {
   getOrderStatusHistoryFromSupabase,
   updateAdminOrderStatusInSupabase,
 } from "../services/orderService.js";
+import { FALAJ_REALTIME_REFRESH_EVENT } from "../services/realtimeEvents.js";
 
 const STATUS_LABELS = {
   pending: "جديد",
@@ -89,9 +90,11 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadOrders() {
-      setIsLoading(true);
-      setErrorMessage("");
+    async function loadOrders(options = {}) {
+      if (!options.silent) {
+        setIsLoading(true);
+        setErrorMessage("");
+      }
 
       try {
         const nextOrders = await getAdminOrdersFromSupabase();
@@ -100,19 +103,27 @@ export default function AdminOrdersPage() {
           setSelectedOrderId((current) => current ?? nextOrders[0]?.rawId ?? null);
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !options.silent) {
           setOrders([]);
           setErrorMessage("تعذر تحميل الطلبات من قاعدة البيانات.");
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && !options.silent) setIsLoading(false);
+      }
+    }
+
+    function handleRealtimeRefresh(event) {
+      if (event.detail?.table === "orders") {
+        loadOrders({ silent: true });
       }
     }
 
     loadOrders();
+    window.addEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     };
   }, []);
 

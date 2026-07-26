@@ -344,6 +344,7 @@ export default function App() {
 
   return (
     <Layout
+      companyId={companyId}
       companyName={authState.company?.name}
       currentPath={currentPath}
       role={authState.role}

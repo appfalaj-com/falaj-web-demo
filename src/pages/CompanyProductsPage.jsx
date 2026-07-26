@@ -9,6 +9,7 @@ import {
   updateCompanyProductForReview,
   validateProductImageFile,
 } from "../services/productService.js";
+import { FALAJ_REALTIME_REFRESH_EVENT } from "../services/realtimeEvents.js";
 
 const initialProductForm = {
   nameAr: "",
@@ -290,27 +291,37 @@ export default function CompanyProductsPage({ companyId }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadProducts() {
-      setIsLoading(true);
-      setErrorMessage("");
+    async function loadProducts(options = {}) {
+      if (!options.silent) {
+        setIsLoading(true);
+        setErrorMessage("");
+      }
 
       try {
         const supabaseProducts = await getProductsByCompanyFromSupabase(companyId);
         if (!cancelled) setProducts(supabaseProducts);
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !options.silent) {
           setProducts([]);
           setErrorMessage(PRODUCT_LOAD_ERROR);
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && !options.silent) setIsLoading(false);
+      }
+    }
+
+    function handleRealtimeRefresh(event) {
+      if (event.detail?.table === "products") {
+        loadProducts({ silent: true });
       }
     }
 
     loadProducts();
+    window.addEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     };
   }, [companyId]);
 

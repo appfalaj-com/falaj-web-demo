@@ -8,6 +8,7 @@ import {
   updateCompanyOrderStatusInSupabase,
 } from "../services/orderService.js";
 import { getDriversByCompanyFromSupabase } from "../services/driverService.js";
+import { FALAJ_REALTIME_REFRESH_EVENT } from "../services/realtimeEvents.js";
 
 const STATUS_LABELS = {
   pending: "جديد",
@@ -84,9 +85,11 @@ export default function CompanyOrdersPage({ companyId }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadOrders() {
-      setIsLoading(true);
-      setErrorMessage("");
+    async function loadOrders(options = {}) {
+      if (!options.silent) {
+        setIsLoading(true);
+        setErrorMessage("");
+      }
 
       try {
         const [supabaseOrders, supabaseDrivers] = await Promise.all([
@@ -99,19 +102,27 @@ export default function CompanyOrdersPage({ companyId }) {
           setSelectedOrderId((current) => current ?? supabaseOrders[0]?.rawId ?? null);
         }
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !options.silent) {
           setOrders([]);
           setErrorMessage(ORDERS_LOAD_ERROR);
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && !options.silent) setIsLoading(false);
+      }
+    }
+
+    function handleRealtimeRefresh(event) {
+      if (event.detail?.table === "orders") {
+        loadOrders({ silent: true });
       }
     }
 
     loadOrders();
+    window.addEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     };
   }, [companyId]);
 

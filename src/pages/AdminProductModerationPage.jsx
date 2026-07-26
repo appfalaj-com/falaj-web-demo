@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
+import { FALAJ_REALTIME_REFRESH_EVENT } from "../services/realtimeEvents.js";
 
 const STATUS_LABELS = {
   pending_review: "بانتظار المراجعة",
@@ -108,24 +109,36 @@ export default function AdminProductModerationPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadProducts() {
-      setIsLoading(true);
-      setErrorMessage("");
+    async function loadProducts(options = {}) {
+      if (!options.silent) {
+        setIsLoading(true);
+        setErrorMessage("");
+      }
 
       try {
         const nextProducts = await fetchProductsForModeration();
         if (!cancelled) setProducts(nextProducts);
       } catch (error) {
-        if (!cancelled) setErrorMessage(error.message || "تعذر تحميل منتجات الموردين.");
+        if (!cancelled && !options.silent) {
+          setErrorMessage(error.message || "تعذر تحميل منتجات الموردين.");
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && !options.silent) setIsLoading(false);
+      }
+    }
+
+    function handleRealtimeRefresh(event) {
+      if (event.detail?.table === "products") {
+        loadProducts({ silent: true });
       }
     }
 
     loadProducts();
+    window.addEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     };
   }, []);
 

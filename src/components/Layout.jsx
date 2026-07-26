@@ -1,4 +1,5 @@
 import LanguageToggle from "./LanguageToggle.jsx";
+import RealtimeNotificationCenter from "./RealtimeNotificationCenter.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 
 const companyLinks = [
@@ -39,6 +40,7 @@ const navIcons = {
 
 export default function Layout({
   children,
+  companyId,
   companyName,
   currentPath = "/company",
   role,
@@ -62,21 +64,30 @@ export default function Layout({
   return (
     <div className="app-shell falaj-shell">
       <aside className="sidebar falaj-sidebar">
-        <a
-          className="brand"
-          href="/"
-          aria-label="Falaj"
-          onClick={(event) => {
-            event.preventDefault();
-            onNavigate?.("/");
-          }}
-        >
-          <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
-          <span>
-            <strong>{t("common.appName")}</strong>
-            <small>{role === "admin" ? t("layout.adminPanel") : companyName || t("layout.operationsPlatform")}</small>
-          </span>
-        </a>
+        <div className="falaj-sidebar-brand-row">
+          <a
+            className="brand"
+            href="/"
+            aria-label="Falaj"
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate?.("/");
+            }}
+          >
+            <img className="brand-icon" src="/brand/Falaj_Icon.png" alt={t("common.appName")} />
+            <span>
+              <strong>{t("common.appName")}</strong>
+              <small>{role === "admin" ? t("layout.adminPanel") : companyName || t("layout.operationsPlatform")}</small>
+            </span>
+          </a>
+
+          <RealtimeNotificationCenter
+            role={role}
+            companyId={companyId}
+            currentPath={currentPath}
+            onNavigate={onNavigate}
+          />
+        </div>
 
         <nav className="nav-list" aria-label={t("nav.main")}>
           {links.map((link) => (

@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient.js";
+import { markLocalRealtimeMutation } from "./realtimeEvents.js";
 
 function normalizeSupabaseOrder(order) {
   const assignedDriver = order.assigned_driver ?? order.drivers ?? null;
@@ -160,6 +161,7 @@ export async function claimDriverOrderInSupabase(driverId, orderId) {
     throw new Error("Supabase client is not configured.");
   }
 
+  markLocalRealtimeMutation("orders", orderId);
   const { error } = await supabase.rpc("driver_claim_order", {
     p_order_id: orderId,
   });
@@ -181,6 +183,7 @@ export async function updateCompanyOrderStatusInSupabase(companyId, orderId, nex
   const timestampField = timestampFieldByStatus(nextStatus);
   if (timestampField) patch[timestampField] = new Date().toISOString();
 
+  markLocalRealtimeMutation("orders", orderId);
   const { data, error } = await supabase
     .from("orders")
     .update(patch)
@@ -207,6 +210,7 @@ export async function updateAdminOrderStatusInSupabase(orderId, nextStatus) {
   const timestampField = timestampFieldByStatus(nextStatus);
   if (timestampField) patch[timestampField] = new Date().toISOString();
 
+  markLocalRealtimeMutation("orders", orderId);
   const { data, error } = await supabase
     .from("orders")
     .update(patch)
@@ -236,6 +240,7 @@ export async function updateDriverOrderStatusInSupabase(driverId, orderId, nextS
   const timestampField = timestampFieldByStatus(nextStatus);
   if (timestampField) patch[timestampField] = new Date().toISOString();
 
+  markLocalRealtimeMutation("orders", orderId);
   const { data, error } = await supabase
     .from("orders")
     .update(patch)
@@ -258,6 +263,7 @@ export async function assignCompanyOrderDriverInSupabase(companyId, orderId, dri
     throw new Error("Supabase client is not configured.");
   }
 
+  markLocalRealtimeMutation("orders", orderId);
   const { data, error } = await supabase
     .from("orders")
     .update({
@@ -285,6 +291,7 @@ export async function markDriverCashCollectedInSupabase(driverId, orderId) {
   }
 
   const now = new Date().toISOString();
+  markLocalRealtimeMutation("orders", orderId);
   const { data, error } = await supabase
     .from("orders")
     .update({

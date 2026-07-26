@@ -7911,3 +7911,387 @@ html[dir="rtl"] .falaj-driver-phone {
   line-height: 1.65;
   margin: -4px 0 0;
 }
+
+/* Live operational notifications */
+.falaj-sidebar-brand-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+  position: relative;
+}
+
+.falaj-sidebar-brand-row .brand {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.falaj-sidebar-brand-row .brand > span {
+  min-width: 0;
+}
+
+.falaj-sidebar-brand-row .brand small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.falaj-notification-center {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.falaj-notification-bell {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: none;
+  color: #fff;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0;
+  position: relative;
+  width: 42px;
+}
+
+.falaj-notification-bell:hover,
+.falaj-notification-bell:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  transform: none;
+}
+
+.falaj-notification-center.driver .falaj-notification-bell {
+  background: #fff;
+  border-color: var(--driver-line);
+  color: var(--driver-ink);
+  height: 40px;
+  min-height: 40px;
+  width: 40px;
+}
+
+.falaj-notification-center.driver .falaj-notification-bell:hover,
+.falaj-notification-center.driver .falaj-notification-bell:focus-visible {
+  background: var(--driver-soft);
+}
+
+.falaj-notification-bell > strong {
+  align-items: center;
+  background: #d95045;
+  border: 2px solid #063f3d;
+  border-radius: 999px;
+  color: #fff;
+  display: flex;
+  font-size: 10px;
+  height: 19px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 19px;
+  padding: 0 3px;
+  position: absolute;
+  inset-inline-end: -6px;
+  top: -6px;
+}
+
+.falaj-notification-center.driver .falaj-notification-bell > strong {
+  border-color: #fff;
+}
+
+.falaj-notification-panel {
+  background: #fff;
+  border: 1px solid #dce7e5;
+  border-radius: 8px;
+  box-shadow: 0 20px 48px rgba(5, 42, 43, 0.2);
+  color: #163c3b;
+  inset-inline-end: 0;
+  overflow: hidden;
+  position: absolute;
+  top: calc(100% + 10px);
+  width: min(360px, calc(100vw - 32px));
+  z-index: 120;
+}
+
+.falaj-notification-panel > header {
+  align-items: center;
+  border-bottom: 1px solid #e4edeb;
+  display: flex;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 10px 12px;
+}
+
+.falaj-notification-panel > header > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.falaj-notification-panel h2 {
+  color: #123c3b;
+  font-size: 15px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.falaj-notification-panel > header button,
+.falaj-notification-toast-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  color: #55706e;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.falaj-notification-panel > header button:hover,
+.falaj-notification-panel > header button:focus-visible,
+.falaj-notification-toast-close:hover,
+.falaj-notification-toast-close:focus-visible {
+  background: #eef5f3;
+  box-shadow: none;
+  color: #087970;
+  transform: none;
+}
+
+.falaj-notification-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.falaj-notification-list article {
+  border-bottom: 1px solid #edf2f1;
+  margin: 0;
+}
+
+.falaj-notification-list article:last-child {
+  border-bottom: 0;
+}
+
+.falaj-notification-list article.unread {
+  background: #f3faf8;
+}
+
+.falaj-notification-list article > button {
+  align-items: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 0;
+  padding: 13px 12px;
+  text-align: start;
+  width: 100%;
+}
+
+.falaj-notification-list article > button:hover,
+.falaj-notification-list article > button:focus-visible {
+  background: #eaf5f2;
+  box-shadow: none;
+  transform: none;
+}
+
+.falaj-notification-list article > button > span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.falaj-notification-list article strong {
+  color: #173f3d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.falaj-notification-list article small {
+  color: #5e7372;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.falaj-notification-list article time {
+  color: #849694;
+  font-size: 10px;
+}
+
+.falaj-notification-kind {
+  align-items: center;
+  background: #e5f3f0;
+  border-radius: 7px;
+  color: #087970;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.falaj-notification-kind.product {
+  background: #fff4d8;
+  color: #a56600;
+}
+
+.falaj-notification-kind.supplier {
+  background: #fde9e6;
+  color: #b64239;
+}
+
+.falaj-notification-empty {
+  align-items: center;
+  color: #6f8381;
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  min-height: 180px;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.falaj-notification-empty strong {
+  color: #274b49;
+  font-size: 14px;
+}
+
+.falaj-notification-empty span {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 260px;
+}
+
+.falaj-notification-panel > footer {
+  align-items: center;
+  background: #f7faf9;
+  border-top: 1px solid #e4edeb;
+  color: #718381;
+  display: flex;
+  font-size: 10px;
+  gap: 7px;
+  min-height: 32px;
+  padding: 7px 12px;
+}
+
+.falaj-notification-panel > footer > span {
+  background: #c08b26;
+  border-radius: 999px;
+  height: 7px;
+  width: 7px;
+}
+
+.falaj-notification-panel > footer.connected > span {
+  background: #25a16f;
+}
+
+.falaj-notification-toast {
+  align-items: start;
+  background: #fff;
+  border: 1px solid #dce7e5;
+  border-inline-start: 4px solid #087970;
+  border-radius: 8px;
+  box-shadow: 0 20px 48px rgba(5, 42, 43, 0.2);
+  color: #173f3d;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  inset-inline-end: 20px;
+  padding: 14px;
+  position: fixed;
+  top: 20px;
+  width: min(390px, calc(100vw - 40px));
+  z-index: 140;
+}
+
+.falaj-notification-toast.product {
+  border-inline-start-color: #c48718;
+}
+
+.falaj-notification-toast.supplier {
+  border-inline-start-color: #c84f45;
+}
+
+.falaj-notification-toast > div {
+  min-width: 0;
+}
+
+.falaj-notification-toast strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.falaj-notification-toast p {
+  color: #5e7372;
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 3px 0 9px;
+}
+
+.falaj-notification-toast > div > button {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: #087970;
+  font-size: 12px;
+  min-height: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.falaj-notification-toast > div > button:hover,
+.falaj-notification-toast > div > button:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  color: #055e59;
+  transform: none;
+}
+
+.falaj-notification-toast-close {
+  height: 30px;
+  min-height: 30px;
+  width: 30px;
+}
+
+@media (max-width: 760px) {
+  .falaj-sidebar-brand-row .brand small {
+    display: none;
+  }
+
+  .falaj-notification-center.sidebar .falaj-notification-panel {
+    inset-inline: 12px;
+    position: fixed;
+    top: 72px;
+    width: auto;
+  }
+
+  .falaj-notification-center.driver .falaj-notification-bell {
+    height: 38px;
+    min-height: 38px;
+    width: 38px;
+  }
+
+  .falaj-notification-center.driver .falaj-notification-panel {
+    inset-inline: 12px;
+    position: fixed;
+    top: 70px;
+    width: auto;
+  }
+
+  .falaj-notification-toast {
+    inset-inline: 12px;
+    top: 74px;
+    width: auto;
+  }
+}

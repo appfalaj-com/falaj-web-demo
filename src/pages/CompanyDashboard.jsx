@@ -4,6 +4,7 @@ import { updateCompanyLogo, validateCompanyLogoFile } from "../services/companyA
 import { getDriversByCompanyFromSupabase } from "../services/driverService.js";
 import { getOrdersByCompanyFromSupabase } from "../services/orderService.js";
 import { getProductsByCompanyFromSupabase } from "../services/productService.js";
+import { FALAJ_REALTIME_REFRESH_EVENT } from "../services/realtimeEvents.js";
 
 const PRODUCT_STATUS_LABELS = {
   pending_review: "قيد المراجعة",
@@ -45,9 +46,11 @@ export default function CompanyDashboard({ companyId, company, onCompanyUpdated,
   useEffect(() => {
     let cancelled = false;
 
-    async function loadDashboard() {
-      setIsLoading(true);
-      setErrorMessage("");
+    async function loadDashboard(options = {}) {
+      if (!options.silent) {
+        setIsLoading(true);
+        setErrorMessage("");
+      }
 
       try {
         const results = await Promise.allSettled([
@@ -67,19 +70,28 @@ export default function CompanyDashboard({ companyId, company, onCompanyUpdated,
           setProducts(productsResult.status === "fulfilled" ? productsResult.value : []);
           setOrders(ordersResult.status === "fulfilled" ? ordersResult.value : []);
           setDrivers(driversResult.status === "fulfilled" ? driversResult.value : []);
-          setErrorMessage(getDashboardErrorMessage(failedSections));
+          if (!options.silent || failedSections.length === 0) {
+            setErrorMessage(getDashboardErrorMessage(failedSections));
+          }
 
           if (failedSections.length > 0) {
             console.warn("Company dashboard partial load failure", summarizeDashboardFailures(results));
           }
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && !options.silent) setIsLoading(false);
+      }
+    }
+
+    function handleRealtimeRefresh(event) {
+      if (["orders", "products"].includes(event.detail?.table)) {
+        loadDashboard({ silent: true });
       }
     }
 
     if (companyId) {
       loadDashboard();
+      window.addEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     } else {
       setIsLoading(false);
       setErrorMessage("تعذر تحديد الشركة الحالية.");
@@ -87,6 +99,7 @@ export default function CompanyDashboard({ companyId, company, onCompanyUpdated,
 
     return () => {
       cancelled = true;
+      window.removeEventListener(FALAJ_REALTIME_REFRESH_EVENT, handleRealtimeRefresh);
     };
   }, [companyId]);
 

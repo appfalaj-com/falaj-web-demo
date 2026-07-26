@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh.js";
 
 const STATUS_LABELS = {
   new: "قيد المراجعة",
@@ -30,6 +31,11 @@ export default function AdminSupplierRequestsPage() {
   const [activatingRequestId, setActivatingRequestId] = useState(null);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  useRealtimeRefresh(
+    () => loadRequests({ silent: true }),
+    ["supplier_join_requests"]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -84,9 +90,11 @@ export default function AdminSupplierRequestsPage() {
     visibleRequests[0] ??
     null;
 
-  async function loadRequests() {
-    setIsLoading(true);
-    setErrorMessage("");
+  async function loadRequests(options = {}) {
+    if (!options.silent) {
+      setIsLoading(true);
+      setErrorMessage("");
+    }
 
     try {
       const data = await fetchSupplierRequests();
@@ -96,9 +104,13 @@ export default function AdminSupplierRequestsPage() {
         return data[0]?.id ?? null;
       });
     } catch (error) {
-      setErrorMessage(error.message || "تعذر تحميل طلبات الانضمام.");
+      if (!options.silent) {
+        setErrorMessage(error.message || "تعذر تحميل طلبات الانضمام.");
+      }
     } finally {
-      setIsLoading(false);
+      if (!options.silent) {
+        setIsLoading(false);
+      }
     }
   }
 

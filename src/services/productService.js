@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient.js";
+import { markLocalRealtimeMutation } from "./realtimeEvents.js";
 
 const PRODUCT_IMAGE_BUCKET = "product-images";
 const PRODUCT_IMAGE_MAX_SIZE_BYTES = 3 * 1024 * 1024;
@@ -264,6 +265,7 @@ export async function updateCompanyProductForReview(companyId, productId, produc
     : product.imageUrl || null;
 
   const commercialFields = buildCommercialProductFields(product);
+  markLocalRealtimeMutation("products", productId);
   const { data, error } = await supabase
     .from("products")
     .update({
@@ -308,6 +310,7 @@ export async function updateCompanyProductAvailability(companyId, productId, isA
     throw new Error("Supabase client is not configured.");
   }
 
+  markLocalRealtimeMutation("products", productId);
   const { data, error } = await supabase
     .from("products")
     .update({ is_available: Boolean(isAvailable) })
@@ -328,6 +331,7 @@ export async function updateApprovedCompanyProductVisibility(companyId, productI
     throw new Error("Supabase client is not configured.");
   }
 
+  markLocalRealtimeMutation("products", productId);
   const { data, error } = await supabase
     .from("products")
     .update({ is_visible: Boolean(isVisible) })

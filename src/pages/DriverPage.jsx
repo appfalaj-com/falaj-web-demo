@@ -20,6 +20,8 @@ import {
   WalletCards,
 } from "lucide-react";
 import LanguageToggle from "../components/LanguageToggle.jsx";
+import RealtimeNotificationCenter from "../components/RealtimeNotificationCenter.jsx";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh.js";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 import { supabase } from "../lib/supabaseClient.js";
 import {
@@ -292,6 +294,11 @@ export default function DriverPage({ onNavigate }) {
     loadDriverContext();
   }, []);
 
+  useRealtimeRefresh(
+    () => loadDriverContext({ silent: true }),
+    ["orders"]
+  );
+
   const activeOrders = useMemo(
     () => orders.filter((order) => DRIVER_ACTIVE_STATUSES.includes(order.status)),
     [orders]
@@ -429,10 +436,12 @@ export default function DriverPage({ onNavigate }) {
     startForegroundTracking(currentOrder, { silent: true });
   }, [currentOrder?.rawId, currentOrder?.status, driver?.id, startForegroundTracking, stopForegroundTracking]);
 
-  async function loadDriverContext() {
-    setLoading(true);
-    setError("");
-    setMessage("");
+  async function loadDriverContext(options = {}) {
+    if (!options.silent) {
+      setLoading(true);
+      setError("");
+      setMessage("");
+    }
 
     try {
       const { user, driver: linkedDriver } = await getCurrentDriverFromSupabase();
@@ -473,9 +482,13 @@ export default function DriverPage({ onNavigate }) {
           hint: loadError?.hint,
         });
       }
-      setError(copy.messages.loadFailed);
+      if (!options.silent) {
+        setError(copy.messages.loadFailed);
+      }
     } finally {
-      setLoading(false);
+      if (!options.silent) {
+        setLoading(false);
+      }
     }
   }
 
@@ -678,6 +691,16 @@ export default function DriverPage({ onNavigate }) {
         </a>
 
         <div className="falaj-driver-bar-actions">
+          {driver ? (
+            <RealtimeNotificationCenter
+              role="driver"
+              companyId={driver.companyId}
+              driverId={driver.id}
+              currentPath="/driver"
+              onNavigate={onNavigate}
+              placement="driver"
+            />
+          ) : null}
           <LanguageToggle className="falaj-driver-language" />
           {driver ? (
             <button
