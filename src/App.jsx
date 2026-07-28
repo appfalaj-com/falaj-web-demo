@@ -19,6 +19,7 @@ import CompanyOrdersPage from "./pages/CompanyOrdersPage.jsx";
 import CompanyPendingReviewPage from "./pages/CompanyPendingReviewPage.jsx";
 import CompanyProductsPage from "./pages/CompanyProductsPage.jsx";
 import CompanySetPasswordPage from "./pages/CompanySetPasswordPage.jsx";
+import CustomerAuthCallbackPage from "./pages/CustomerAuthCallbackPage.jsx";
 import DriverAcceptInvitePage from "./pages/DriverAcceptInvitePage.jsx";
 import DriverLoginPage from "./pages/DriverLoginPage.jsx";
 import DriverPage from "./pages/DriverPage.jsx";
@@ -192,6 +193,10 @@ export default function App() {
 
   if (currentPath === "/supplier-join") {
     return <SupplierJoinPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/customer/auth/callback") {
+    return <CustomerAuthCallbackPage onNavigate={navigate} />;
   }
 
   if (currentPath === "/admin/login") {
