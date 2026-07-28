@@ -90,12 +90,12 @@ if (!/\.functions\.invoke\("company-request-password-reset"/.test(companyAuthSou
   failures.push("Company password reset must go through the intermediate company-request-password-reset function.");
 }
 
-if (!companyResetSource.includes("COMPANY_RESET_TICKET_TTL_MINUTES = 30")) {
-  failures.push("Company reset tickets must expire after 30 minutes.");
+if (!companyResetSource.includes("COMPANY_RESET_TICKET_TTL_MINUTES = 60")) {
+  failures.push("Company reset tickets must expire after 60 minutes.");
 }
 
-if (!sendDriverInviteSource.includes("DRIVER_INVITE_TICKET_TTL_MINUTES = 30")) {
-  failures.push("Driver invite tickets must expire after 30 minutes.");
+if (!sendDriverInviteSource.includes("DRIVER_INVITE_TICKET_TTL_MINUTES = 60")) {
+  failures.push("Driver invite tickets must expire after 60 minutes.");
 }
 
 if (/href="\$\{escapeHtml\((?:inviteLinkResult\.actionLink|actionLinkResult\.actionLink|data\.properties\.action_link|action_link)\)\}/.test(sendDriverInviteSource)) {

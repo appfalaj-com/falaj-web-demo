@@ -238,7 +238,7 @@ export default function CompanyDriversPage({ companyId }) {
       {message ? <p className="auth-alert success">{message}</p> : null}
       {inviteLink ? (
         <div className="auth-alert success driver-invite-link-alert">
-          <span>إذا لم يصل البريد، انسخ هذا الرابط وأرسله للسائق. الرابط صالح لمدة 30 دقيقة.</span>
+          <span>إذا لم يصل البريد، انسخ هذا الرابط وأرسله للسائق. الرابط صالح لمدة 60 دقيقة.</span>
           <a href={inviteLink} target="_blank" rel="noreferrer">
             فتح الرابط
           </a>

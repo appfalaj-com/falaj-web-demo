@@ -28,7 +28,7 @@ type ProfileRow = {
 };
 
 const DRIVER_ACCEPT_INVITE_URL = "https://www.appfalaj.com/driver/accept-invite";
-const DRIVER_INVITE_TICKET_TTL_MINUTES = 30;
+const DRIVER_INVITE_TICKET_TTL_MINUTES = 60;
 const ACCOUNT_EMAIL_ALREADY_USED_ERROR =
   "هذا البريد مستخدم مسبقًا في فلج. استخدم بريدًا مختلفًا.";
 

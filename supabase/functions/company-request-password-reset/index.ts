@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const COMPANY_ACCEPT_RESET_URL = "https://www.appfalaj.com/company/accept-reset";
-const COMPANY_RESET_TICKET_TTL_MINUTES = 30;
+const COMPANY_RESET_TICKET_TTL_MINUTES = 60;
 
 type AuthUser = {
   id: string;
