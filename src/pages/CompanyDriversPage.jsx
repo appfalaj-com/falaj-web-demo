@@ -130,8 +130,22 @@ export default function CompanyDriversPage({ companyId }) {
           phone: form.phone.trim(),
           email: form.email.trim(),
         });
-        setCompanyDrivers((current) => [createdDriver, ...current]);
-        setMessage("تم إضافة السائق. يمكن ربطه بحساب دخول لاحقًا.");
+
+        if (isValidEmail(createdDriver.email)) {
+          try {
+            const inviteResult = await sendDriverInviteFromSupabase(createdDriver.id);
+            setInviteLink(inviteResult.accept_link || "");
+            const refreshedDrivers = await getDriversByCompanyFromSupabase(companyId);
+            setCompanyDrivers(refreshedDrivers);
+            setMessage(inviteResult.message || "تم إضافة السائق وإرسال دعوة الدخول.");
+          } catch (inviteError) {
+            setCompanyDrivers((current) => [createdDriver, ...current]);
+            setErrorMessage(driverSafeErrorMessage(inviteError, "تم إضافة السائق، لكن تعذر إرسال دعوة الدخول."));
+          }
+        } else {
+          setCompanyDrivers((current) => [createdDriver, ...current]);
+          setMessage("تم إضافة السائق. أضف بريدًا صحيحًا لإرسال دعوة الدخول.");
+        }
       }
 
       closeForm();

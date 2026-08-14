@@ -139,11 +139,13 @@ export default function AdminSupplierRequestsPage() {
       if (error) throw error;
 
       const inviteResult = await invokeSupplierInvite(requestId);
-      await loadRequests();
 
       if (inviteResult.ok) {
+        await activateSupplierCompany(requestId);
+        await loadRequests();
         setMessage(inviteResult.message || "تم قبول الطلب وتم إرسال دعوة الدخول إلى بريد المورد.");
       } else {
+        await loadRequests();
         setErrorMessage(`تم قبول الطلب وإنشاء ملف المورد، لكن تعذر إرسال الدعوة: ${inviteResult.message}`);
       }
     } catch (error) {
@@ -245,30 +247,7 @@ export default function AdminSupplierRequestsPage() {
     setActivatingRequestId(requestId);
 
     try {
-      const userId = await getCurrentUserId();
-      const reviewedAt = new Date().toISOString();
-      await validateSupplierLinkBeforeActivation(request.company.id);
-
-      const { error: companyError } = await supabase
-        .from("companies")
-        .update({
-          is_active: true,
-          onboarding_status: "activated",
-        })
-        .eq("id", request.company.id);
-
-      if (companyError) throw companyError;
-
-      const { error: requestError } = await supabase
-        .from("supplier_join_requests")
-        .update({
-          status: "activated",
-          reviewed_at: request.reviewed_at || reviewedAt,
-          reviewed_by: request.reviewed_by || userId,
-        })
-        .eq("id", requestId);
-
-      if (requestError) throw requestError;
+      await activateSupplierCompany(requestId, request);
 
       setMessage("تم تفعيل المورد بنجاح، يمكنه الآن الدخول إلى لوحة الموردين.");
       await loadRequests();
@@ -617,6 +596,63 @@ async function attachCompaniesToRequests(requests) {
     ...request,
     company: companiesByRequestId.get(request.id) ?? null,
   }));
+}
+
+async function activateSupplierCompany(requestId, existingRequest = null) {
+  const userId = await getCurrentUserId();
+  const reviewedAt = new Date().toISOString();
+  const request = existingRequest || await fetchSupplierRequestForActivation(requestId);
+  const company = request?.company || await fetchCompanyForJoinRequest(requestId);
+
+  if (!company?.id) {
+    throw new Error("تعذر العثور على ملف المورد المرتبط بهذا الطلب.");
+  }
+
+  await validateSupplierLinkBeforeActivation(company.id);
+
+  const { error: companyError } = await supabase
+    .from("companies")
+    .update({
+      is_active: true,
+      onboarding_status: "activated",
+    })
+    .eq("id", company.id);
+
+  if (companyError) throw companyError;
+
+  const { error: requestError } = await supabase
+    .from("supplier_join_requests")
+    .update({
+      status: "activated",
+      reviewed_at: request?.reviewed_at || reviewedAt,
+      reviewed_by: request?.reviewed_by || userId,
+    })
+    .eq("id", requestId);
+
+  if (requestError) throw requestError;
+}
+
+async function fetchSupplierRequestForActivation(requestId) {
+  const { data, error } = await supabase
+    .from("supplier_join_requests")
+    .select("id, reviewed_at, reviewed_by")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function fetchCompanyForJoinRequest(requestId) {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, owner_id, onboarding_status")
+    .or(`supplier_join_request_id.eq.${requestId},approved_join_request_id.eq.${requestId}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }
 
 async function validateSupplierLinkBeforeActivation(companyId) {
